@@ -1,57 +1,83 @@
 # Tallyable
 
-A tool that turns club receipt photos into reviewed expense rows, flags errors with plain-code rules, and posts approved totals to Google Sheets. Portfolio project. **All data in this repo is fake.**
+**Close out a club event in minutes: receipt photos in, checked expenses, who's owed, and a funder report out.**
 
-## Status
-Week 1 of 4 done, plus a working review app. Week 2: the app reads receipts with Claude when an API key is set, and falls back to a stand-in AI when it is not. Push writes to Google Sheets when it is set up ([setup guide](docs/google_sheets_setup.md)), and to a local CSV when it is not.
+A portfolio project by a student club treasurer. AI reads the receipts, plain code checks the math, and a human approves every row before it reaches the books. **All data in this repo is fake.**
 
 ![Review screen](docs/review_screen.png)
 
-## Run the app
-```bash
-streamlit run app.py
-```
-Click "Use the fake event's 14 receipts instead", tag payers, Draft rows, then Review, Summary (push), and Close out (who's owed, funder flags, report download). Each push logs its time to `output/run_log.csv`.
+## The problem
+After a club event, the treasurer is left holding a pile of receipt photos from a group chat. Then the close-out begins:
+- Type every line into the expense report, the balance sheet, and the ledger.
+- Catch mistakes: a handwritten total that doesn't add up, a missing tip line, the same receipt sent twice, a purchase nobody tagged a payer on.
+- Work out who fronted money and who is still owed.
+- Check the funder's rules before asking for money. UC Davis CFC caps food at $12 a person, requires the club to pay at least 10%, and wants the report within 21 days.
 
-## Use Claude to read receipts
-1. Copy `.env.example` to `.env` and paste your key after `ANTHROPIC_API_KEY=`. Git ignores `.env`; never commit it or paste it anywhere.
-2. Try one receipt: `python -m treasurer.try_one fake_event/receipts/R01.jpg`
-3. Score all 14 photos against the answer key: `python -m treasurer.score_all` (add `--model claude-haiku-5-5` to compare a cheaper model). Results are saved in `output/`. It prints a cost estimate first and stops at `--budget` (default $1).
+It's slow, it's easy to get wrong, and the errors end up in official books.
 
-The default model is Claude Sonnet 5.5. Change it with `TALLYABLE_MODEL` in `.env`. A full run of 14 receipts is estimated at most about $0.01 on Haiku 5.5, $0.28 on Sonnet 5.5, and $0.56 on Opus 5.5.
+## What it does
+1. **Upload** receipt photos (JPG, PNG, HEIC, or PDF) and tag who paid.
+2. **Draft**: Claude transcribes each receipt into line items, tax, tip, and total.
+3. **Review**: six rule checks flag problems. A blocking flag can only be overridden with a written note. Every receipt gets approved or rejected by a person.
+4. **Push** approved rows to Google Sheets. The tool keeps a tidy record and rebuilds the club's balance sheet and ledger layouts from it.
+5. **Close out**: see who's owed, mark paybacks, check funder rules, and download the funder report.
 
-Uploads can be JPG, PNG, WEBP, PDF or HEIC. HEIC needs `python -m pip install pillow-heif`. Rotated photos are turned upright, blurry ones get a warning, and any file that can't be read can be typed in by hand with the photo still attached.
+## Results
+Measured on the fake event: 15 receipts with 6 planted errors and an answer key ([fake_event/](fake_event/)).
 
-Without a key, the app and tests use the stub. Tests never call the API.
-
-## Put it online
-See [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first; the app is gated when it is set.
-
-## Run the tests
-```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pytest
-```
-
-## Layout
-| Path | What |
+| Metric | Result |
 | --- | --- |
-| `treasurer/models.py` | `Receipt` with many `LineItem`s. Money is `Decimal`. |
-| `treasurer/checks.py` | Six rule checks: math, missing payer, duplicate, missing receipt, unusual tax, returned item |
-| `treasurer/loader.py` | Loads the fake answer key into models |
-| `treasurer/extract.py` | `Extractor` interface; `StubExtractor` replays the key with 4 realistic misreads |
-| `treasurer/claude_extract.py` | `ClaudeExtractor`: one vision call per receipt, prompt says transcribe and never reconcile |
-| `treasurer/reader.py` | Picks Claude if `ANTHROPIC_API_KEY` is in `.env`, else the stub |
-| `treasurer/try_one.py`, `score_all.py` | Read one receipt; score all of them against the answer key |
-| `treasurer/score.py` | Field-level accuracy of drafts against the answer key |
-| `treasurer/post.py` | Long-format transaction rows, event totals, idempotent local CSV sink |
-| `treasurer/closeout.py` | Funder rules (UC Davis CFC, ORG), who's owed, funder report CSV |
-| `treasurer/runlog.py` | One row per push in `output/run_log.csv`: receipts, edits, overrides, minutes |
-| `treasurer/sheets.py` | Google Sheets sink: tidy Transactions and Events tabs, rebuilt Balance Sheet and Ledger views |
-| `app.py` | Streamlit: Upload, Review, Summary |
-| `fake_event/` | 15 fake receipts, answer key, 6 planted errors (see its README) |
-| `tests/` | pytest suite graded against the answer key |
+| Planted errors caught by the checks | 6 of 6, with 0 false flags on the 9 clean receipts |
+| Field accuracy of AI drafts (Sonnet 5.5) | _TBD: `python -m treasurer.score_all`_ |
+| Field accuracy (Haiku 5.5) | _TBD_ |
+| API cost for the whole event | _TBD (estimated at most $0.28 on Sonnet 5.5)_ |
+| Time to close out by hand (Excel) | _TBD_ |
+| Time to close out in Tallyable | _TBD: from `output/run_log.csv`_ |
+| Edits needed per receipt | _TBD: from `output/run_log.csv`_ |
+| Posted total vs expected | $571.75 = $571.75 (simulated correct review) |
+
+## Architecture
+```mermaid
+flowchart LR
+    U[Receipt photos<br/>JPG, PNG, HEIC, PDF] --> P[images.py<br/>rotate, shrink, blur check]
+    P --> X{Extractor}
+    X -->|API key set| C[ClaudeExtractor<br/>transcribe, never reconcile]
+    X -->|no key| S[StubExtractor<br/>answer key + planted misreads]
+    C --> D[Draft receipts]
+    S --> D
+    D --> K[checks.py<br/>6 plain-code rules]
+    K --> R[Human review<br/>approve, reject, override with note]
+    R --> T[(Google Sheets<br/>Transactions, Events,<br/>Reimbursements tabs)]
+    T --> V[Rebuilt views<br/>Balance Sheet, Ledger]
+    R --> O[closeout.py<br/>who's owed, funder rules]
+    O --> F[Funder report CSV]
+    R --> L[run_log.csv<br/>time, edits, overrides]
+```
+
+## Key decisions and why
+- **AI only reads, code does the math.** Claude turns pixels into text. Every check is plain Python, so each flag is exact and reproducible and can be explained to a funder.
+- **"Transcribe, never reconcile."** Vision models sometimes quietly change a line so the receipt adds up. The prompt forbids that, because the math check can only catch an error the model leaves in place.
+- **A human approves every row.** The tool drafts and flags. It never posts on its own. Overriding a blocking flag takes a written note, which leaves an audit trail.
+- **Money is `Decimal`, never float.** Cents never drift, and rounding is half-up like a cashier's.
+- **The spreadsheet stays the system of record.** The club already lives in Google Sheets. Tallyable writes tidy tabs (one row per line item) and rebuilds the familiar sideways balance sheet and ledger from them, so the treasurer's layout survives and the data stays analyzable.
+- **Pushing twice never double-counts.** A receipt id that's already posted is skipped.
+- **A stub and an answer key from day one.** The whole app runs and is tested without an API key. A swappable `Extractor` interface means the real model drops in without changing the app, and the same answer key scores it.
+- **Funder rules are data.** CFC and ORG are `RulePack` values, not code paths. A new funder means new numbers, not a rewrite.
+- **Paybacks don't change expenses.** Reimbursing a member settles money the club already owes. It shows in the ledger without moving the balance.
+- **Cost is a feature.** The default model is the mid-tier one. Big photos are shrunk before sending, every run prints a cost estimate, and scoring stops at a $1 budget.
+
+## Run it
+```bash
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+Click "Use the fake event's 14 receipts instead", tag payers, then go through Draft, Review, Summary (push), and Close out.
+
+- **Read receipts with Claude:** copy `.env.example` to `.env` and add `ANTHROPIC_API_KEY`. Try one receipt with `python -m treasurer.try_one fake_event/receipts/R01.jpg`, or score them all with `python -m treasurer.score_all` (`--model claude-haiku-5-5`, `--budget 0.50`). Never commit `.env`.
+- **Google Sheets:** [docs/google_sheets_setup.md](docs/google_sheets_setup.md). Without it, Push writes a local CSV.
+- **Put it online:** [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first.
+- **HEIC photos:** `python -m pip install pillow-heif`.
+- **Tests:** `python -m pytest` (74 tests; they never call the API or touch a real sheet).
 
 ## Rules
 | Flag | Rule | Blocks approval |
@@ -59,12 +85,30 @@ pytest
 | `math_error` | items + tax + tip differs from the printed total by more than $0.01 | Yes |
 | `missing_payer` | no payer | Yes |
 | `possible_duplicate` | same image bytes, or same place, date and total in one event | Yes |
-| `missing_receipt` | no photo | No |
+| `missing_receipt` | no photo | No (but funders block it) |
 | `unusual_tax` | tax over 12% of subtotal | No |
 | `returned_item` | listed, cost and its tax share excluded from totals | No |
 
-A blocking flag can be overridden only with a written note.
+Funder rules (`treasurer/closeout.py`): CFC food cap, max award, 10% club share, report due date; ORG no food, decoration warning, 42-day purchase window, receipt required.
 
-## Week 1 results
-- All 6 planted errors caught, 0 false flags on the 9 clean receipts.
-- A simulated correct review posts $571.75, matching the expected total.
+## Layout
+| Path | What |
+| --- | --- |
+| `app.py` | Streamlit: Upload, Review, Summary, Close out |
+| `treasurer/models.py` | `Receipt` with many `LineItem`s; returned-item and posted amounts |
+| `treasurer/images.py` | Upload prep: rotation, resizing, blur and size warnings, HEIC, PDF |
+| `treasurer/extract.py`, `claude_extract.py`, `reader.py` | Extractor interface, stub, Claude, and the switch between them |
+| `treasurer/checks.py` | The six rule checks |
+| `treasurer/closeout.py` | Funder rules, who's owed, funder report |
+| `treasurer/reimburse.py` | Paybacks to members |
+| `treasurer/post.py`, `sheets.py` | Local CSV sink and Google Sheets sink with balance sheet and ledger views |
+| `treasurer/score.py`, `score_all.py`, `try_one.py` | Accuracy against the answer key |
+| `treasurer/runlog.py` | Time and edit log per push |
+| `fake_event/` | 15 fake receipts, answer key, 6 planted errors |
+| `tests/` | pytest suite |
+
+## Known limits
+- One receipt paid by two people can't be split. Record it as two receipts. An exact 50/50 split gets flagged as a possible duplicate and needs a note.
+- A store refund slip with a negative total can't be entered. Mark the item `returned` on the original receipt instead.
+- The app works on one event at a time (the fake event). Multiple events are supported in the Sheets layer.
+- Funder rules were copied from UC Davis CSI pages on 2026-11-04. Re-check them each quarter.
