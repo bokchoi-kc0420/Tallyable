@@ -2,8 +2,10 @@
 
     python -m treasurer.score_all
     python -m treasurer.score_all --model claude-haiku-5-5
+    python -m treasurer.score_all --budget 0.50
 
-Prints field accuracy, every miss, tokens, cost and time. Costs a few cents per run.
+Prints an estimate first, then field accuracy, every miss, tokens, cost and time.
+Stops early if the running cost passes --budget (default $1.00).
 """
 from __future__ import annotations
 
@@ -12,6 +14,7 @@ import json
 import sys
 import time
 
+from .claude_extract import estimate
 from .extract import ExtractionError
 from .loader import load_answer_key
 from .reader import ANSWER_KEY, ROOT, make_extractor
@@ -20,7 +23,8 @@ from .score import score
 
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", help="e.g. claude-haiku-5-5 (default claude-opus-5-5)")
+    p.add_argument("--model", help="e.g. claude-haiku-5-5 (default: TALLYABLE_MODEL or claude-sonnet-5-5)")
+    p.add_argument("--budget", type=float, default=1.00, help="stop once the run has cost this many dollars")
     args = p.parse_args(argv)
 
     ex, label = make_extractor()
@@ -31,9 +35,17 @@ def main(argv: list[str]) -> int:
         ex.model = args.model
 
     truth = {r.receipt_id: r for r in load_answer_key(ANSWER_KEY) if r.image_file}
+    est = estimate(ex.model, len(truth))
+    print(f"{ex.model}: {len(truth)} receipts, estimated at most ${est:.2f}. Budget ${args.budget:.2f}.")
+    if est > args.budget:
+        print("The estimate is over budget. Use a cheaper --model or raise --budget.")
+        return 1
     drafts, failed = {}, []
     start = time.time()
     for rid, t in truth.items():
+        if ex.cost() >= args.budget:
+            print(f"Stopping: spent ${ex.cost():.3f}, budget ${args.budget:.2f}.")
+            break
         path = ANSWER_KEY.parent / t.image_file
         print(f"reading {path.name} ...", end=" ", flush=True)
         try:

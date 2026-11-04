@@ -16,7 +16,9 @@ Click "Use the fake event's 14 receipts instead", tag payers, Draft rows, then R
 ## Use Claude to read receipts
 1. Copy `.env.example` to `.env` and paste your key after `ANTHROPIC_API_KEY=`. Git ignores `.env`; never commit it or paste it anywhere.
 2. Try one receipt: `python -m treasurer.try_one fake_event/receipts/R01.jpg`
-3. Score all 14 photos against the answer key: `python -m treasurer.score_all` (add `--model claude-haiku-5-5` to compare a cheaper model). Results are saved in `output/`.
+3. Score all 14 photos against the answer key: `python -m treasurer.score_all` (add `--model claude-haiku-5-5` to compare a cheaper model). Results are saved in `output/`. It prints a cost estimate first and stops at `--budget` (default $1).
+
+The default model is Claude Sonnet 5.5. Change it with `TALLYABLE_MODEL` in `.env`. A full run of 14 receipts is estimated at most about $0.01 on Haiku 5.5, $0.28 on Sonnet 5.5, and $0.56 on Opus 5.5.
 
 Without a key, the app and tests use the stub. Tests never call the API.
 

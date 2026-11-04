@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 from .checks import run_checks
+from .claude_extract import estimate
 from .extract import ExtractionError
 from .reader import make_extractor
 
@@ -22,6 +23,7 @@ def main(argv: list[str]) -> int:
     if label != "claude":
         print("No ANTHROPIC_API_KEY found in .env, so this would only run the stub. Add the key first.")
         return 1
+    print(f"Reading with {ex.model} (estimated at most ${estimate(ex.model, 1):.3f})...\n")
     start = time.time()
     try:
         r = ex.extract(path.read_bytes(), path.name, "EVT-FAKE-01", path.stem.upper())

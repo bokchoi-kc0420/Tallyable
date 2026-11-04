@@ -29,7 +29,7 @@ def test_maps_reading_to_receipt():
     assert r.total == Decimal("31.07") and r.payer is None and r.image_hash
     assert r.items[0].amount == Decimal("9.98")
     call = client.calls[0]
-    assert call["model"] == "claude-opus-5-5" and call["output_format"] is ExtractedReceipt
+    assert call["model"] == "claude-sonnet-5-5" and call["output_format"] is ExtractedReceipt
     assert call["messages"][0]["content"][0]["source"]["media_type"] == "image/jpeg"
     assert ex.cost() == pytest.approx(1500 * 4 / 1e6 + 300 * 20 / 1e6)
 

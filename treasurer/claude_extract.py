@@ -21,10 +21,18 @@ from pydantic import BaseModel, Field
 from .extract import ExtractionError
 from .models import LineItem, Receipt
 
-MODEL = "claude-opus-5-5"
+MODEL = "claude-sonnet-5-5"  # override with TALLYABLE_MODEL in .env
 EFFORT = "medium"  # transcription, not deep reasoning; try "low" and compare scores
 PRICE_PER_MTOK = {"claude-opus-5-5": (4.00, 20.00), "claude-sonnet-5-5": (2.00, 10.00),
                   "claude-haiku-5-5": (0.10, 0.50)}
+# Rough upper bound per receipt: image + prompt in, transcription + thinking out.
+EST_TOKENS_PER_RECEIPT = (2500, 1500)
+
+
+def estimate(model: str, receipts: int) -> float:
+    """Upper-bound dollars for reading `receipts` photos with `model`."""
+    inp, out = PRICE_PER_MTOK.get(model, PRICE_PER_MTOK["claude-opus-5-5"])
+    return receipts * (EST_TOKENS_PER_RECEIPT[0] * inp + EST_TOKENS_PER_RECEIPT[1] * out) / 1e6
 
 SYSTEM = """You transcribe store receipts for a student club treasurer.
 
@@ -131,6 +139,6 @@ class ClaudeExtractor:
         """Estimated dollars spent so far, at list prices."""
         total = 0.0
         for u in self.usage:
-            inp, out = PRICE_PER_MTOK.get(u["model"], PRICE_PER_MTOK[MODEL])
+            inp, out = PRICE_PER_MTOK.get(u["model"], PRICE_PER_MTOK["claude-opus-5-5"])
             total += u["input"] * inp / 1e6 + u["output"] * out / 1e6
         return total
