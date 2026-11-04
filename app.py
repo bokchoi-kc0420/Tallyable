@@ -16,6 +16,7 @@ import pandas as pd
 import streamlit as st
 
 from treasurer import closeout as co
+from treasurer import session_store
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.extract import ExtractionError
 from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
@@ -24,7 +25,6 @@ from treasurer.post import LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.runlog import log_run, minutes, read_runs
-from treasurer import session_store
 from treasurer.sheets import EventInfo, GoogleSheetsSink, grid_to_csv, local_views
 
 ROOT = Path(__file__).parent
@@ -400,7 +400,7 @@ elif page == "3. Summary":
         st.caption("The same layouts the Google Sheet gets, for approved receipts. Opens in Excel or Sheets.")
         views = local_views(receipts, EVENT, income, sink.reimbursements())
         cols = st.columns(len(views))
-        for col, (title, grid) in zip(cols, views.items()):
+        for col, (title, grid) in zip(cols, views.items(), strict=True):
             col.download_button(title, grid_to_csv(grid), file_name=f"{EVENT_ID}_{title.replace(' ', '_')}.csv",
                                 mime="text/csv", key=f"dl-{title}")
 

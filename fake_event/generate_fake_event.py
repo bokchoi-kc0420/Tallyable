@@ -11,7 +11,7 @@ from __future__ import annotations
 import csv
 import json
 import random
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont

@@ -56,7 +56,7 @@ def num(x: Decimal) -> float:
 
 # ---------- tidy rows -> rendered views (pure functions, no network) ----------
 
-def _group(tx: list[dict]) -> "OrderedDict[str, OrderedDict[str, list[dict]]]":
+def _group(tx: list[dict]) -> OrderedDict[str, OrderedDict[str, list[dict]]]:
     """event_id -> receipt_id -> line-item rows, in the order they were posted."""
     out: OrderedDict = OrderedDict()
     for row in tx:
@@ -87,7 +87,7 @@ def _receipt_lines(items: list[dict]) -> list[list]:
     return lines
 
 
-def event_block(event: dict, receipts: "OrderedDict[str, list[dict]]") -> list[list]:
+def event_block(event: dict, receipts: OrderedDict[str, list[dict]]) -> list[list]:
     """One event's 3-column block of the balance sheet."""
     assets = [[src, "", num(D(event.get(src, 0)))] for src in INCOME_SOURCES]
     total_assets = sum((D(event.get(src, 0)) for src in INCOME_SOURCES), Decimal("0"))
@@ -130,7 +130,7 @@ def expense_tab_title(event: dict) -> str:
     return f"Expense Report: {event['name']}"[:95]
 
 
-def render_expense_report(event: dict, receipts: "OrderedDict[str, list[dict]]") -> list[list]:
+def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -> list[list]:
     """The club's per-event expense report. In the paper version tax, tip and total
     are merged cells spanning a receipt's item rows; here they sit on the receipt's
     first row and the rows below are left blank, which reads the same way.
@@ -199,7 +199,7 @@ class GoogleSheetsSink:
         self.book = spreadsheet
 
     @classmethod
-    def from_env(cls, root: Path, key_info: dict | None = None) -> "GoogleSheetsSink | None":
+    def from_env(cls, root: Path, key_info: dict | None = None) -> GoogleSheetsSink | None:
         """None if Sheets is not set up, so the app can fall back to CSV.
 
         Locally the key is a file named in .env. On Streamlit Cloud there is no file,

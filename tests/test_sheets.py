@@ -8,7 +8,7 @@ import pytest
 
 from treasurer.loader import load_answer_key
 from treasurer.models import Status
-from treasurer.sheets import (BALANCE, EVENTS, LEDGER, TX, EventInfo, GoogleSheetsSink)
+from treasurer.sheets import BALANCE, EVENTS, LEDGER, TX, EventInfo, GoogleSheetsSink
 
 KEY = Path(__file__).parent.parent / "fake_event" / "answer_key.csv"
 EVENT = EventInfo("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14))
@@ -39,7 +39,7 @@ class FakeWorksheet:
         if not self.cells:
             return []
         head = self.cells[0]
-        return [dict(zip(head, [*r, *[""] * (len(head) - len(r))])) for r in self.cells[1:]]
+        return [dict(zip(head, [*r, *[""] * (len(head) - len(r))], strict=False)) for r in self.cells[1:]]
 
 
 class FakeBook:
