@@ -206,8 +206,8 @@ if page == "1. Upload":
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
     else:
-        st.warning("No API key found, so receipts are read by the stub, which only knows the fake event's "
-                   "answer key. Add ANTHROPIC_API_KEY to .env and restart to use Claude.")
+        st.info("Demo mode: receipts are read by a stand-in that only knows the fake event (with a few "
+                "planted misreads to catch). Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.")
     files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True)
     if st.button("Use the fake event's 14 receipts instead"):
         files = None
@@ -353,6 +353,9 @@ elif page == "2. Review":
 elif page == "3. Summary":
     st.header("Summary and push")
     receipts = list(ss.receipts.values())
+    if not receipts:
+        st.info("Nothing to sum up yet. Upload and review receipts first.")
+        st.stop()
     st.subheader("Income")
     c = st.columns(4)
     income = {k: dec(c[n].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
@@ -365,10 +368,10 @@ elif page == "3. Summary":
     m[2].metric("Net", f"${t['net']}")
     m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more")
 
-    rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer, "status": r.status.value,
+    rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer or "(none)", "status": r.status.value,
              "posts": str(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
              "note": r.review_note or ""} for r in receipts]
-    st.dataframe(pd.DataFrame(rows), width="stretch")
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
     if waiting:
@@ -413,7 +416,7 @@ elif page == "3. Summary":
     runs = read_runs(RUN_LOG)
     if runs:
         st.caption(f"Past runs, from {RUN_LOG}")
-        st.dataframe(pd.DataFrame(runs), width="stretch")
+        st.dataframe(pd.DataFrame(runs), width="stretch", hide_index=True)
 
 # ---------------- Screen 4: Close out ----------------
 else:
@@ -433,7 +436,7 @@ else:
     reimbursed = totals_by_payer(sink.reimbursements(), EVENT_ID)
     lines = co.payer_summary(done, reimbursed)
     st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
-                                "owed": str(x.owed)} for x in lines]), width="stretch")
+                                "owed": str(x.owed)} for x in lines]), width="stretch", hide_index=True)
     owing = [x for x in lines if x.owed > 0]
     if owing:
         with st.form("payback"):

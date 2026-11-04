@@ -6,7 +6,7 @@
 
 A portfolio project by a student club treasurer. AI reads the receipts, plain code checks the math, and a human approves every row before it reaches the books. **All data in this repo is fake.**
 
-![Review screen](docs/review_screen.png)
+![Review screen: a receipt photo next to its drafted lines, with a math flag](docs/review.png)
 
 ## The problem
 After a club event, the treasurer is left holding a pile of receipt photos from a group chat. Then the close-out begins:
@@ -23,6 +23,10 @@ It's slow, it's easy to get wrong, and the errors end up in official books.
 3. **Review**: six rule checks flag problems. A blocking flag can only be overridden with a written note. Every receipt gets approved or rejected by a person.
 4. **Push** approved rows to Google Sheets. The tool keeps a tidy record and rebuilds the club's balance sheet and ledger layouts from it.
 5. **Close out**: see who's owed, mark paybacks, check funder rules, and download the funder report.
+
+| Summary and push | Close out |
+| --- | --- |
+| ![Summary screen](docs/summary.png) | ![Close out screen](docs/closeout.png) |
 
 ## Results
 Measured on the fake event: 15 receipts with 6 planted errors and an answer key ([fake_event/](fake_event/)).

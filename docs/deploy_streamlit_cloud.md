@@ -30,7 +30,7 @@ Click **Deploy**. The first build takes a few minutes while it installs `require
 
 ## If something goes wrong
 - **Build fails:** open **Manage app** (bottom right of the app page) to see the log. The last red lines usually name the problem.
-- **"No API key found" banner:** `ANTHROPIC_API_KEY` is missing or misspelled in Secrets. The stub still works.
+- **"Demo mode" banner:** `ANTHROPIC_API_KEY` is missing or misspelled in Secrets. That is fine for a public demo; the stand-in still works.
 - **Sheets error on Summary:** the sheet isn't shared with the service account's `client_email`, or a field in `[gcp_service_account]` was copied wrong.
 - **The app is asleep:** free apps sleep when nobody visits for a while. Click the wake-up button and wait about a minute.
 
