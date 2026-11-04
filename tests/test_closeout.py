@@ -95,3 +95,21 @@ def test_funder_report_csv_has_items_flags_and_owed(approved):
     assert "UC Davis Club Finance Council" in text and "571.75" in text
     assert "club_share_too_low" in text and "R14" in text and "MISSING" in text
     assert "Member A" in text
+
+
+def test_max_request_for_cfc_keeps_club_share(approved):
+    most, steps = co.max_request(EVENT, approved, co.CFC)
+    assert most == Decimal("514.58")           # 571.75 x 90%, half-up
+    assert "club_share_too_low" not in codes(co.check_funder_rules(EVENT, approved, co.CFC, requested=most))
+
+
+def test_max_request_removes_food_over_cap(approved):
+    small = co.Event(EVENT.event_id, EVENT.name, EVENT.event_date, attendees=30)  # cap $360
+    most, steps = co.max_request(small, approved, co.CFC)
+    assert most < Decimal("514.58") and any("over the $360.00 cap" in s for s in steps)
+
+
+def test_max_request_for_org_drops_food_and_caps_at_250(approved):
+    most, steps = co.max_request(EVENT, approved, co.ORG)
+    assert any("doesn't fund" in s for s in steps)
+    assert most <= Decimal("250")

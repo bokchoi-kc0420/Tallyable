@@ -468,6 +468,11 @@ else:
     requested = dec(req_text) if req_text.strip() else None
     event = co.Event(EVENT_ID, EVENT.name, EVENT.date, attendees=attendees)
     flags = co.check_funder_rules(event, done, pack, requested, applied_on)
+    most, steps = co.max_request(event, done, pack)
+    st.metric("Most you can request", f"${most}")
+    with st.expander("How that was worked out"):
+        for s in steps:
+            st.write(md(s))
     due = co.report_due(event, pack)
     if due:
         st.caption(f"{pack.name}: report due {due.isoformat()}")

@@ -145,6 +145,46 @@ def check_funder_rules(event: Event, receipts: list[Receipt], pack: RulePack,
     return flags
 
 
+def max_request(event: Event, receipts: list[Receipt], pack: RulePack) -> tuple[Decimal, list[str]]:
+    """The most the club can ask this funder for, and how it got there, step by step.
+
+    Start from what the event cost (posted amounts). Remove what the funder won't
+    pay for: banned categories (with their share of tax), then any food spending
+    above the per-person cap. Then keep the club's required share, and stop at the
+    funder's maximum award. Each step is a line the treasurer can paste into the
+    application to show the math.
+    """
+    cost = money(sum((r.posted_amount for r in receipts), Decimal("0")))
+    steps = [f"Event cost: ${cost}"]
+    eligible = cost
+
+    banned = Decimal("0")
+    for r in receipts:
+        for i in r.items:
+            if i.category in pack.banned_categories and not i.returned and r.subtotal:
+                banned += i.amount + r.tax * i.amount / r.subtotal  # item plus its share of the tax
+    banned = money(banned)
+    if banned:
+        eligible -= banned
+        steps.append(f"Minus ${banned} in categories {pack.name} doesn't fund: ${eligible}")
+
+    if pack.food_cap_per_person_day is not None:
+        cap = money(pack.food_cap_per_person_day * event.attendees * event.days)
+        over = _food_spend(receipts, pack) - cap
+        if over > 0:
+            eligible -= over
+            steps.append(f"Minus ${money(over)} of food over the ${cap} cap: ${eligible}")
+
+    most = max(eligible, Decimal("0"))
+    if pack.min_club_share is not None:
+        most = money(most * (1 - pack.min_club_share))
+        steps.append(f"Club pays at least {int(pack.min_club_share * 100)}%, so ask for at most ${most}")
+    if pack.max_award is not None and most > pack.max_award:
+        most = pack.max_award
+        steps.append(f"Capped at the ${pack.max_award} maximum award")
+    return money(most), steps
+
+
 def report_due(event: Event, pack: RulePack) -> date | None:
     """CFC wants the expenditure report 21 days after the event. Other funders may have no deadline."""
     if pack.report_due_days_after_event is None:
@@ -190,6 +230,10 @@ def funder_report_csv(event: Event, receipts: list[Receipt], pack: RulePack, req
     w.writerow(["Attendees", event.attendees])
     w.writerow(["Total cost", cost])
     w.writerow(["Requested", requested if requested is not None else ""])
+    most, steps = max_request(event, receipts, pack)
+    w.writerow(["Most the club can request", most])
+    for s in steps:
+        w.writerow(["", s])
     due = report_due(event, pack)
     w.writerow(["Report due", due.isoformat() if due else ""])
     for note in pack.notes:
