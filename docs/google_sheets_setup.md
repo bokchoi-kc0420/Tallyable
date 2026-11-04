@@ -42,7 +42,7 @@ TALLYABLE_SHEET_ID=1AbC...xyz
 pip install -r requirements.txt
 python -m streamlit run app.py
 ```
-Draft the fake event, approve a few receipts, then go to **3. Summary**, type some fake income, and click **Push to Google Sheets**. The sheet gets four tabs:
+Draft the fake event, approve a few receipts, then go to **3. Summary**, type some fake income, and click **Push to Google Sheets**. The sheet gets these tabs:
 
 | Tab | What it is | Edit it? |
 | --- | --- | --- |
@@ -50,6 +50,8 @@ Draft the fake event, approve a few receipts, then go to **3. Summary**, type so
 | Events | One row per event, with income by source | Only to fix mistakes |
 | Balance Sheet | Your sideways layout, one block per event | No, it's rebuilt on every push |
 | Ledger | Date, description, assets, liabilities, running totals, balance | No, it's rebuilt on every push |
+| Reimbursements | One row per payback to a member | Only to fix mistakes |
+| Expense Report: (event) | The club's per-event expense report: place, category, items, unit, price, tax, tip, total, notes | No, it's rebuilt on every push |
 
 Clicking Push again won't double-count anything. Receipts that are already posted are skipped.
 

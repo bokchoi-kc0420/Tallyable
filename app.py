@@ -185,7 +185,7 @@ with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAU
             start_new_event()
             st.rerun()
 EVENT_ID = ss.event["event_id"]
-EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"])
+EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"])
 PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
 st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 

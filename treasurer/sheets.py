@@ -30,7 +30,7 @@ from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
 
 INCOME_SOURCES = ["Zelle", "Venmo", "Cash", "National KSEA funding"]
-EVENT_FIELDS = ["event_id", "name", "date", *INCOME_SOURCES]
+EVENT_FIELDS = ["event_id", "name", "date", *INCOME_SOURCES, "attendees"]
 VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements tabs. Edits here are overwritten on the next push."
 
 TX, EVENTS, BALANCE, LEDGER, REIMB = "Transactions", "Events", "Balance Sheet", "Ledger", "Reimbursements"
@@ -41,6 +41,7 @@ class EventInfo:
     event_id: str
     name: str
     date: date
+    attendees: int | None = None
 
 
 def D(x) -> Decimal:
@@ -120,6 +121,37 @@ def render_balance_sheet(events: list[dict], tx: list[dict]) -> list[list]:
             row.extend(b[r] if r < len(b) else ["", "", ""])
         grid.append(row)
     return grid
+
+
+EXPENSE_HEADER = ["Place", "Category", "Items", "Unit", "Price($)", "VAT (TAX)", "TIP", "Total expenditure", "Notes"]
+
+
+def expense_tab_title(event: dict) -> str:
+    return f"Expense Report: {event['name']}"[:95]
+
+
+def render_expense_report(event: dict, receipts: "OrderedDict[str, list[dict]]") -> list[list]:
+    """The club's per-event expense report. In the paper version tax, tip and total
+    are merged cells spanning a receipt's item rows; here they sit on the receipt's
+    first row and the rows below are left blank, which reads the same way.
+    Notes holds the payer (as the club's sheet does) plus the receipt id and any return."""
+    rows = [[VIEW_NOTE], [event["name"]], ["Date", str(event["date"])],
+            ["Participants", event.get("attendees", "") or ""], [], EXPENSE_HEADER]
+    total = Decimal("0")
+    for rid, items in receipts.items():
+        f = items[0]
+        for n, i in enumerate(items):
+            returned = str(i["returned"]).upper() == "TRUE"
+            note = f"{f['payer'] or 'no payer'} ({rid})" if n == 0 else ""
+            if returned:
+                note = (note + "; " if note else "") + "returned, cost excluded"
+            first = n == 0
+            rows.append([f["place"] if first else "", i["category"], i["item"], i["unit"], num(D(i["price"])),
+                         num(D(f["receipt_tax"])) if first else "", num(D(f["receipt_tip"])) if first else "",
+                         num(D(f["receipt_posted"])) if first else "", note])
+        total += D(f["receipt_posted"])
+    rows += [[], ["", "", "", "", "", "", "TOTAL", num(total), ""]]
+    return rows
 
 
 LEDGER_HEADER = ["DATE", "DESCRIPTION", "ASSETS", "LIABILITIES", "TOTAL ASSETS", "TOTAL LIABILITIES", "BALANCE"]
@@ -214,6 +246,8 @@ class GoogleSheetsSink:
         events = self._records(EVENTS, EVENT_FIELDS)
         tx = tx_ws.get_all_records()
         self._rewrite(BALANCE, render_balance_sheet(events, tx))
+        ev = next(e for e in events if str(e["event_id"]) == event.event_id)
+        self._rewrite(expense_tab_title(ev), render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())))
         self._rewrite(LEDGER, render_ledger(events, tx, self.reimbursements()))
         return [r.receipt_id for r in todo]
 
@@ -231,7 +265,7 @@ class GoogleSheetsSink:
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
         ws = self._tab(EVENTS, EVENT_FIELDS)
         row = [event.event_id, event.name, event.date.isoformat(),
-               *[num(income.get(s, Decimal("0"))) for s in INCOME_SOURCES]]
+               *[num(income.get(s, Decimal("0"))) for s in INCOME_SOURCES], event.attendees or ""]
         ids = [str(r["event_id"]) for r in ws.get_all_records()]
         if event.event_id in ids:
             n = ids.index(event.event_id) + 2  # +1 header, +1 one-based

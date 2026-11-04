@@ -140,3 +140,16 @@ def test_reimbursement_lands_in_ledger_without_moving_balance(approved):
     assert last[1].startswith("Paid back Member A $31.07 via Zelle") and last[2] == last[3] == ""
     assert last[6] == before                                   # balance unchanged
     assert totals_by_payer(sink.reimbursements(), EVENT.event_id) == {"Member A": Decimal("31.07")}
+
+
+def test_expense_report_tab_in_club_format(approved):
+    book = FakeBook()
+    ev = EventInfo(EVENT.event_id, EVENT.name, EVENT.date, attendees=45)
+    GoogleSheetsSink(book).post(approved, ev, INCOME)
+    grid = book.tabs["Expense Report: Fall Mentor Mixer (FAKE)"].cells
+    assert grid[3] == ["Participants", 45]
+    assert grid[5][0] == "Place" and grid[5][-1] == "Notes"
+    body = [r for r in grid[6:] if len(r) == 9 and r[0] != ""]
+    assert body[0][0] == "Bulk Warehouse" and body[0][8].startswith("Member A (R01)")
+    assert Decimal(str(grid[-1][7])) == Decimal("571.75")
+    assert any("returned, cost excluded" in str(r[-1]) for r in grid if r)
