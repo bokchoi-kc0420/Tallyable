@@ -18,6 +18,7 @@ import streamlit as st
 from treasurer import closeout as co
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.extract import ExtractionError
+from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
@@ -67,7 +68,9 @@ if os.getenv("APP_PASSWORD") and not ss.get("authed"):
     st.stop()
 
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
-ss.setdefault("images", {})     # receipt_id -> bytes
+ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to the reader
+ss.setdefault("notes", {})      # receipt_id -> photo warnings (blurry, rotated)
+ss.setdefault("failed", {})     # file name -> (bytes, reason) for files that could not be read
 ss.setdefault("started", time.time())
 ss.setdefault("edits", 0)
 ss.setdefault("drafted_at", None)    # first Draft click, for the run log
@@ -102,6 +105,38 @@ def get_sink():
         return LocalCsvSink(OUT / "transactions.csv"), f"Could not open the Google Sheet, so using local CSV instead: {e}"
 
 
+def manual_form(key: str, image_file: str | None = None, data: tuple[bytes, str] | None = None) -> None:
+    """Type a one-item receipt by hand. Used for lost receipts and for photos the
+    reader could not handle. With `image_file`, the photo stays attached as evidence."""
+    with st.form(key):
+        c = st.columns(3)
+        place = c[0].text_input("Place")
+        d = c[1].date_input("Date", value=date(2026, 11, 14))
+        payer = c[2].selectbox("Payer", PAYERS)
+        c = st.columns(3)
+        item = c[0].text_input("Item")
+        cat = c[1].selectbox("Category", ["Food", "Drink", "Other"])
+        unit = c[2].number_input("Unit", min_value=1, value=1)
+        c = st.columns(4)
+        price = c[0].text_input("Price per unit", "0.00")
+        tax = c[1].text_input("Tax", "0.00")
+        tip = c[2].text_input("Tip", "0.00")
+        total = c[3].text_input("Total", "0.00")
+        st.caption("One line here; add more lines on the Review screen.")
+        if st.form_submit_button("Add") and place and item:
+            rid = next_id(image_file)
+            ss.receipts[rid] = Receipt(receipt_id=rid, event_id=EVENT_ID, place=place, date=d,
+                                       payer=payer or None, tax=dec(tax), tip=dec(tip), total=dec(total),
+                                       image_file=image_file,
+                                       items=[LineItem(category=cat, item=item, unit=int(unit), price=dec(price))])
+            if data:
+                ss.images[rid] = data
+            if image_file:
+                ss.failed.pop(image_file, None)
+            st.success(f"Added {rid}. Check it on Review.")
+            st.rerun()
+
+
 def md(text: str) -> str:
     """Escape $ so Streamlit does not render dollar amounts as LaTeX."""
     return text.replace("$", "\\$")
@@ -119,7 +154,7 @@ if page == "1. Upload":
     else:
         st.warning("No API key found, so receipts are read by the stub, which only knows the fake event's "
                    "answer key. Add ANTHROPIC_API_KEY to .env and restart to use Claude.")
-    files = st.file_uploader("Receipt photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True)
     if st.button("Use the fake event's 14 receipts instead"):
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
@@ -134,33 +169,33 @@ if page == "1. Upload":
         for n, (name, data) in enumerate(sources):
             rid = next_id(name)
             try:
-                r = ex.extract(data, name, EVENT_ID, rid)
+                f = prepare(data, name)
+                r = ex.extract(f.data, f.filename, EVENT_ID, rid)
                 ss.receipts[rid] = r.model_copy(update={"payer": payers[name] or None, "image_file": name})
-                ss.images[rid] = data
+                ss.images[rid] = (f.data, f.media_type)
+                notes = f.warnings + ([f"Reader's note: {r.review_note}"] if r.review_note else [])
+                if notes:
+                    ss.notes[rid] = notes
+                ss.failed.pop(name, None)
+            except UnsupportedFile as e:
+                ss.failed[name] = (None, str(e))
             except ExtractionError as e:
-                st.error(str(e))
+                ss.failed[name] = ((f.data, f.media_type), f"{e} You can type it in by hand below.")
             bar.progress((n + 1) / len(sources))
         ss.demo = []
         ss.drafted_at = ss.drafted_at or time.time()
         cost = f" · about ${ex.cost():.3f} in API calls" if reader == "claude" else ""
         st.success(md(f"Drafted. Go to Review.{cost}"))
 
+    for name, (data, reason) in list(ss.failed.items()):
+        st.error(md(f"{name}: {reason}"))
+        with st.expander(f"Enter {name} by hand"):
+            if data and data[1].startswith("image/"):
+                st.image(data[0], width=360)
+            manual_form(f"manual-{name}", image_file=name, data=data)
+
     with st.expander("Add a purchase with no photo (cash, lost receipt)"):
-        with st.form("manual"):
-            place = st.text_input("Place")
-            d = st.date_input("Date", value=date(2026, 11, 14))
-            payer = st.selectbox("Payer", PAYERS)
-            item = st.text_input("Item")
-            cat = st.selectbox("Category", ["Food", "Drink", "Other"])
-            unit = st.number_input("Unit", min_value=1, value=1)
-            price = st.text_input("Price per unit", "0.00")
-            total = st.text_input("Total", "0.00")
-            if st.form_submit_button("Add") and place and item:
-                rid = next_id()
-                ss.receipts[rid] = Receipt(receipt_id=rid, event_id=EVENT_ID, place=place, date=d,
-                                           payer=payer or None, total=dec(total),
-                                           items=[LineItem(category=cat, item=item, unit=int(unit), price=dec(price))])
-                st.success(f"Added {rid}")
+        manual_form("manual")
 
 # ---------------- Screen 2: Review ----------------
 elif page == "2. Review":
@@ -177,11 +212,16 @@ elif page == "2. Review":
 
     left, right = st.columns([2, 3])
     with left:
-        if rid in ss.images:
-            st.image(ss.images[rid], width="stretch")
+        if rid in ss.images and ss.images[rid][1] == "application/pdf":
+            st.info("PDF receipt.")
+            st.download_button("Open the PDF", ss.images[rid][0], file_name=f"{rid}.pdf", mime="application/pdf")
+        elif rid in ss.images:
+            st.image(ss.images[rid][0], width="stretch")
         else:
             st.warning("No photo for this receipt.")
     with right:
+        for note in ss.notes.get(rid, []):
+            st.warning(md(note))
         for f in flags[rid]:
             {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
         c1, c2, c3 = st.columns(3)

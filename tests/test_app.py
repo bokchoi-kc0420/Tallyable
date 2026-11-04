@@ -95,3 +95,22 @@ def test_password_gate(monkeypatch):
     assert any("Wrong password" in e.value for e in at.error)
     at.text_input[0].set_value("fake-test-pw").run()
     assert at.sidebar.radio[0].value == "1. Upload"
+
+
+def test_unreadable_file_can_be_entered_by_hand():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.session_state["failed"] = {"R16.jpg": (None, "R16.jpg won't open as an image.")}
+    at.run()
+    assert any("won't open" in e.value for e in at.error)
+    labels = {}
+    for t in at.text_input:  # first form on the page is the one for R16
+        labels.setdefault(t.label, t)
+    labels["Place"].set_value("Corner Store")
+    labels["Item"].set_value("Ice")
+    labels["Price per unit"].set_value("3.00")
+    labels["Total"].set_value("3.00")
+    next(b for b in at.button if b.label == "Add").click().run()
+    assert not at.exception
+    r = at.session_state["receipts"]["R16"]
+    assert r.place == "Corner Store" and r.image_file == "R16.jpg"
+    assert "R16.jpg" not in at.session_state["failed"]

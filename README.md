@@ -20,6 +20,8 @@ Click "Use the fake event's 14 receipts instead", tag payers, Draft rows, then R
 
 The default model is Claude Sonnet 5.5. Change it with `TALLYABLE_MODEL` in `.env`. A full run of 14 receipts is estimated at most about $0.01 on Haiku 5.5, $0.28 on Sonnet 5.5, and $0.56 on Opus 5.5.
 
+Uploads can be JPG, PNG, WEBP, PDF or HEIC. HEIC needs `python -m pip install pillow-heif`. Rotated photos are turned upright, blurry ones get a warning, and any file that can't be read can be typed in by hand with the photo still attached.
+
 Without a key, the app and tests use the stub. Tests never call the API.
 
 ## Put it online

@@ -86,7 +86,13 @@ class ClaudeExtractor:
         self.usage: list[dict] = []  # per-receipt token counts
 
     def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str) -> Receipt:
-        media = "image/png" if filename.lower().endswith(".png") else "image/jpeg"
+        ext = filename.lower().rsplit(".", 1)[-1]
+        b64 = base64.standard_b64encode(image).decode()
+        if ext == "pdf":  # Claude reads PDFs directly
+            source = {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}
+        else:
+            media = {"png": "image/png", "webp": "image/webp", "gif": "image/gif"}.get(ext, "image/jpeg")
+            source = {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
         try:
             resp = self._client.beta.messages.parse(
                 model=self.model,
@@ -97,8 +103,7 @@ class ClaudeExtractor:
                 betas=["server-side-fallback-2026-07-01"],
                 fallbacks="default",  # if a safety check declines, the API retries on another model
                 messages=[{"role": "user", "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media,
-                                                  "data": base64.standard_b64encode(image).decode()}},
+                    source,
                     {"type": "text", "text": "Transcribe this receipt."},
                 ]}],
             )

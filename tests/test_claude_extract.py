@@ -44,3 +44,9 @@ def test_refusal_and_bad_date_raise_extraction_error():
 def test_reader_uses_stub_in_tests():
     from treasurer.reader import make_extractor
     assert make_extractor()[1] == "stub"
+
+
+def test_pdf_goes_as_a_document_block():
+    client = FakeClient(reading())
+    ClaudeExtractor(client=client).extract(b"%PDF-1.7", "R16.pdf", "EVT", "R16")
+    assert client.calls[0]["messages"][0]["content"][0]["type"] == "document"
