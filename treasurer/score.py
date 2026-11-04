@@ -1,6 +1,7 @@
 """Score AI drafts against the answer key: share of fields read correctly."""
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
@@ -33,7 +34,12 @@ class Score:
 
 
 def _norm(v):
-    return v.strip().lower() if isinstance(v, str) else v
+    """Compare text the way a person would: same letters count as the same, even if
+    one is typed as a precomposed Korean syllable or accented letter and the other
+    as separate pieces (Unicode NFKC), and ignore case and extra spaces."""
+    if not isinstance(v, str):
+        return v
+    return " ".join(unicodedata.normalize("NFKC", v).casefold().split())
 
 
 def _similar(a: str, b: str) -> float:

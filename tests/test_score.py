@@ -38,3 +38,11 @@ def test_reordered_lines_pair_by_name():
     draft = R03.model_copy(update={"items": list(reversed(R03.items))})
     assert align(R03.items, draft.items)[0] == (0, len(R03.items) - 1)
     assert score({"R03": draft}, {"R03": R03}).overall == 1.0
+
+
+def test_same_korean_text_in_different_unicode_forms_matches():
+    import unicodedata
+    name = "김밥 platter"
+    t = R03.model_copy(update={"items": [R03.items[0].model_copy(update={"item": unicodedata.normalize("NFC", name)})]})
+    d = R03.model_copy(update={"items": [R03.items[0].model_copy(update={"item": unicodedata.normalize("NFD", name) + "  "})]})
+    assert score({"R03": d}, {"R03": t}).misses == []
