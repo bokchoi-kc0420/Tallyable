@@ -5,6 +5,7 @@ is in .env, otherwise with the stub (fake answer key plus planted misreads).
 """
 from __future__ import annotations
 
+import hmac
 import os
 import time
 from datetime import date
@@ -35,6 +36,36 @@ ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.R
 
 st.set_page_config(page_title="Tallyable", layout="wide")
 ss = st.session_state
+
+
+def load_cloud_secrets() -> dict | None:
+    """On Streamlit Cloud, settings live in st.secrets instead of .env. Copy the plain
+    ones into the environment so the rest of the code reads them the same way, and
+    return the Google key table if there is one. Locally, with no secrets file, this
+    does nothing."""
+    try:
+        for k, v in st.secrets.items():
+            if isinstance(v, str):
+                os.environ.setdefault(k, v)
+        return dict(st.secrets["gcp_service_account"]) if "gcp_service_account" in st.secrets else None
+    except Exception:  # no secrets.toml: running locally with .env
+        return None
+
+
+GCP_KEY = load_cloud_secrets()
+
+# Password gate. Only on when APP_PASSWORD is set (always set it before deploying:
+# the app can spend API credit). compare_digest avoids leaking the password by timing.
+if os.getenv("APP_PASSWORD") and not ss.get("authed"):
+    st.header("Tallyable")
+    pw = st.text_input("Password", type="password")
+    if pw and hmac.compare_digest(pw.encode(), os.environ["APP_PASSWORD"].encode()):
+        ss.authed = True
+        st.rerun()
+    if pw:
+        st.error("Wrong password.")
+    st.stop()
+
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
 ss.setdefault("images", {})     # receipt_id -> bytes
 ss.setdefault("started", time.time())
@@ -66,7 +97,7 @@ def next_id(filename: str | None = None) -> str:
 def get_sink():
     """Google Sheets if it is set up, else the local CSV. Returns (sink, error)."""
     try:
-        return GoogleSheetsSink.from_env(ROOT) or LocalCsvSink(OUT / "transactions.csv"), None
+        return GoogleSheetsSink.from_env(ROOT, GCP_KEY) or LocalCsvSink(OUT / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
         return LocalCsvSink(OUT / "transactions.csv"), f"Could not open the Google Sheet, so using local CSV instead: {e}"
 

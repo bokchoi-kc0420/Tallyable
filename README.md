@@ -22,6 +22,9 @@ The default model is Claude Sonnet 5.5. Change it with `TALLYABLE_MODEL` in `.en
 
 Without a key, the app and tests use the stub. Tests never call the API.
 
+## Put it online
+See [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first; the app is gated when it is set.
+
 ## Run the tests
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate

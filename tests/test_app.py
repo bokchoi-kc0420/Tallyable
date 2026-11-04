@@ -85,3 +85,13 @@ def test_mark_paid_back_updates_owed():
     assert not at.exception
     owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
     assert owed["owed"][0] == "0.00"
+
+
+def test_password_gate(monkeypatch):
+    monkeypatch.setenv("APP_PASSWORD", "fake-test-pw")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert at.text_input[0].label == "Password" and not at.sidebar.radio
+    at.text_input[0].set_value("nope").run()
+    assert any("Wrong password" in e.value for e in at.error)
+    at.text_input[0].set_value("fake-test-pw").run()
+    assert at.sidebar.radio[0].value == "1. Upload"
