@@ -7,3 +7,11 @@ os.environ["TALLYABLE_SHEET_ID"] = ""  # and never write to a real Google Sheet
 import tempfile
 
 os.environ["TALLYABLE_OUTPUT_DIR"] = tempfile.mkdtemp(prefix="tallyable-test-")  # keep real logs clean
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def fresh_output_dir(tmp_path, monkeypatch):
+    """Each test gets its own output folder, so saved sessions and logs don't leak between tests."""
+    monkeypatch.setenv("TALLYABLE_OUTPUT_DIR", str(tmp_path / "output"))

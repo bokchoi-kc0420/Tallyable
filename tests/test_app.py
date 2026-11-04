@@ -133,3 +133,31 @@ def test_event_setup_and_start_new_event():
     at.sidebar.checkbox[0].check().run()
     next(b for b in at.sidebar.button if b.label == "Start a new event").click().run()
     assert at.session_state["receipts"] == {}
+
+
+def test_refresh_can_resume_the_saved_session():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    for sb in at.selectbox:
+        if sb.key and sb.key.startswith("payer-R"):
+            sb.set_value("Member A")
+    at.run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.sidebar.radio[0].set_value("2. Review").run()
+    next(b for b in at.button if b.label == "Approve").click().run()
+
+    fresh = AppTest.from_file(APP, default_timeout=30).run()  # a new browser tab
+    assert fresh.session_state["receipts"] == {}
+    assert any("1 reviewed" in i.value for i in fresh.info)
+    next(b for b in fresh.button if b.label == "Resume where I left off").click().run()
+    assert fresh.session_state["receipts"]["R01"].status.value == "approved"
+    assert fresh.session_state["images"]["R01"][1] == "image/jpeg"
+
+
+def test_corrupt_session_file_is_ignored():
+    out = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "session.json").write_text("{not json")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert not at.exception
+    assert not any(b.label == "Resume where I left off" for b in at.button)

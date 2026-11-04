@@ -24,6 +24,7 @@ from treasurer.post import LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.runlog import log_run, minutes, read_runs
+from treasurer import session_store
 from treasurer.sheets import EventInfo, GoogleSheetsSink
 
 ROOT = Path(__file__).parent
@@ -76,6 +77,8 @@ ss.setdefault("drafted_at", None)    # first Draft click, for the run log
 ss.setdefault("review_started", None)
 ss.setdefault("income", {})
 RUN_LOG = OUT / "run_log.csv"
+SESSION_FILE = OUT / "session.json"
+SAVED_KEYS = ("event", "receipts", "images", "notes", "edits", "income", "drafted_at", "review_started", "started")
 
 
 def dec(text: str, default: str = "0") -> Decimal:
@@ -151,6 +154,18 @@ def start_new_event() -> None:
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
     ss.started = time.time()
+    session_store.clear(SESSION_FILE)
+
+
+def save_session() -> None:
+    """Write the session to disk when it changed since the last save."""
+    if not ss.receipts:
+        return
+    state = {k: ss[k] for k in SAVED_KEYS}
+    text = session_store.dump(state)
+    if text != ss.get("_saved"):
+        session_store.save(SESSION_FILE, state)
+        ss._saved = text
 
 
 ss.setdefault("event", dict(DEFAULT_EVENT))
@@ -177,6 +192,16 @@ st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 # ---------------- Screen 1: Upload ----------------
 if page == "1. Upload":
     st.header("Upload receipts")
+    if not ss.receipts and SESSION_FILE.exists():
+        saved = session_store.load(SESSION_FILE)
+        if saved and saved["receipts"]:
+            n = len(saved["receipts"])
+            done = sum(1 for r in saved["receipts"].values() if r.status is not Status.DRAFTED)
+            st.info(f"You have a saved session for {saved['event']['name']}: {n} receipts, {done} reviewed.")
+            if st.button("Resume where I left off"):
+                for k, v in saved.items():
+                    ss[k] = v
+                st.rerun()
     ex, reader = make_extractor()
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
@@ -413,3 +438,5 @@ else:
     st.download_button("Download funder report (CSV)", file_name=f"{EVENT_ID}_{pack.name.split()[-1]}_report.csv",
                        data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
                        mime="text/csv")
+
+save_session()
