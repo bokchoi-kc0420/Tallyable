@@ -290,3 +290,30 @@ def _cell(field: str, v):
     if field == "unit":
         return int(v)
     return v
+
+
+# ---------- the same views without Google Sheets ----------
+
+def local_views(receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal],
+                reimb: list[dict] = ()) -> dict[str, list[list]]:
+    """Balance Sheet, Ledger and Expense Report for one event, built from the app's
+    approved receipts, exactly as the Sheets sink would draw them. For downloads when
+    Sheets isn't set up, and for the online demo."""
+    ev = {"event_id": event.event_id, "name": event.name, "date": event.date.isoformat(),
+          **{s: num(income.get(s, Decimal("0"))) for s in INCOME_SOURCES}, "attendees": event.attendees or ""}
+    tx = [{f: _cell(f, row[f]) for f in TX_FIELDS} for r in receipts
+          if r.status in (Status.APPROVED, Status.POSTED) for row in transaction_rows(r)]
+    mine = [x for x in reimb if str(x["event_id"]) == event.event_id]
+    return {
+        BALANCE: render_balance_sheet([ev], tx),
+        LEDGER: render_ledger([ev], tx, mine),
+        "Expense Report": render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())),
+    }
+
+
+def grid_to_csv(grid: list[list]) -> str:
+    import csv
+    import io
+    buf = io.StringIO()
+    csv.writer(buf).writerows(grid)
+    return buf.getvalue()

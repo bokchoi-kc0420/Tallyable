@@ -25,7 +25,7 @@ from treasurer.reader import make_extractor
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.runlog import log_run, minutes, read_runs
 from treasurer import session_store
-from treasurer.sheets import EventInfo, GoogleSheetsSink
+from treasurer.sheets import EventInfo, GoogleSheetsSink, grid_to_csv, local_views
 
 ROOT = Path(__file__).parent
 OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
@@ -394,6 +394,15 @@ elif page == "3. Summary":
                 "minutes_review_to_push": minutes(ss.review_started, now),
             })
         st.success(f"Posted {len(written)} receipts to {sink.label}" if written else "Nothing new to post.")
+
+    if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
+        st.subheader("Download the books")
+        st.caption("The same layouts the Google Sheet gets, for approved receipts. Opens in Excel or Sheets.")
+        views = local_views(receipts, EVENT, income, sink.reimbursements())
+        cols = st.columns(len(views))
+        for col, (title, grid) in zip(cols, views.items()):
+            col.download_button(title, grid_to_csv(grid), file_name=f"{EVENT_ID}_{title.replace(' ', '_')}.csv",
+                                mime="text/csv", key=f"dl-{title}")
 
     st.subheader("Run stats")
     s = st.columns(3)

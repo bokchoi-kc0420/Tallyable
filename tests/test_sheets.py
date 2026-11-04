@@ -153,3 +153,14 @@ def test_expense_report_tab_in_club_format(approved):
     assert body[0][0] == "Bulk Warehouse" and body[0][8].startswith("Member A (R01)")
     assert Decimal(str(grid[-1][7])) == Decimal("571.75")
     assert any("returned, cost excluded" in str(r[-1]) for r in grid if r)
+
+
+def test_local_views_match_what_sheets_would_draw(approved):
+    from treasurer.sheets import grid_to_csv, local_views
+    ev = EventInfo(EVENT.event_id, EVENT.name, EVENT.date, attendees=45)
+    views = local_views(approved, ev, INCOME)
+    book = FakeBook()
+    GoogleSheetsSink(book).post(approved, ev, INCOME)
+    assert views[BALANCE] == book.tabs[BALANCE].cells
+    assert views[LEDGER] == book.tabs[LEDGER].cells
+    assert "571.75" in grid_to_csv(views["Expense Report"])
