@@ -168,6 +168,12 @@ def max_request(event: Event, receipts: list[Receipt], pack: RulePack) -> tuple[
         eligible -= banned
         steps.append(f"Minus ${banned} in categories {pack.name} doesn't fund: ${eligible}")
 
+    maybe = money(sum((i.amount for r in receipts for i in r.items if not i.returned
+                       and i.category not in pack.banned_categories
+                       and any(k in i.item.lower() for k in pack.suspect_keywords)), Decimal("0")))
+    if maybe:
+        steps.append(f"Includes ${maybe} of items that may count as decorations; remove them if they do")
+
     if pack.food_cap_per_person_day is not None:
         cap = money(pack.food_cap_per_person_day * event.attendees * event.days)
         over = _food_spend(receipts, pack) - cap
