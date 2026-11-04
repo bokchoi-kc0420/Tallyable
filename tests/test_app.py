@@ -114,3 +114,22 @@ def test_unreadable_file_can_be_entered_by_hand():
     r = at.session_state["receipts"]["R16"]
     assert r.place == "Corner Store" and r.image_file == "R16.jpg"
     assert "R16.jpg" not in at.session_state["failed"]
+
+
+def test_event_setup_and_start_new_event():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    name = next(t for t in at.sidebar.text_input if t.label == "Event name")
+    name.set_value("Winter Social (FAKE)").run()
+    assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-WINTER")
+    members = next(t for t in at.sidebar.text_input if t.label == "Members who might pay")
+    members.set_value("Treasurer, Member Z").run()
+    assert "Member Z" in [o for sb in at.selectbox if sb.label == "Payer" for o in sb.options]
+
+    at.button[0].click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.run()
+    assert next(t for t in at.sidebar.text_input if t.label == "Event name").disabled
+    assert all(r.event_id.startswith("EVT-2026-11-14-WINTER") for r in at.session_state["receipts"].values())
+    at.sidebar.checkbox[0].check().run()
+    next(b for b in at.sidebar.button if b.label == "Start a new event").click().run()
+    assert at.session_state["receipts"] == {}

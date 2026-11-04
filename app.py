@@ -29,9 +29,8 @@ from treasurer.sheets import EventInfo, GoogleSheetsSink
 ROOT = Path(__file__).parent
 OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
-EVENT_ID = "EVT-FAKE-01"
-PAYERS = ["", "Member A", "Member B", "Member C", "Member D"]
-EVENT = EventInfo(EVENT_ID, "Fall Mentor Mixer (FAKE)", date(2026, 11, 14))
+DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
+                 "attendees": 45, "members": "Member A, Member B, Member C, Member D"}
 ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
         Status.POSTED: "📤 posted"}
 
@@ -111,7 +110,7 @@ def manual_form(key: str, image_file: str | None = None, data: tuple[bytes, str]
     with st.form(key):
         c = st.columns(3)
         place = c[0].text_input("Place")
-        d = c[1].date_input("Date", value=date(2026, 11, 14))
+        d = c[1].date_input("Date", value=EVENT.date)
         payer = c[2].selectbox("Payer", PAYERS)
         c = st.columns(3)
         item = c[0].text_input("Item")
@@ -142,7 +141,37 @@ def md(text: str) -> str:
     return text.replace("$", "\\$")
 
 
+def event_id_for(name: str, d: date) -> str:
+    slug = "".join(ch for ch in name.upper() if ch.isalnum())[:12] or "EVENT"
+    return f"EVT-{d.isoformat()}-{slug}"
+
+
+def start_new_event() -> None:
+    for k in ("receipts", "images", "notes", "failed"):
+        ss[k] = {}
+    ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
+    ss.started = time.time()
+
+
+ss.setdefault("event", dict(DEFAULT_EVENT))
 page = st.sidebar.radio("Step", ["1. Upload", "2. Review", "3. Summary", "4. Close out"])
+with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
+    locked = bool(ss.receipts)
+    name = st.text_input("Event name", ss.event["name"], disabled=locked)
+    d = st.date_input("Event date", ss.event["date"], disabled=locked)
+    attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
+    members = st.text_input("Members who might pay", ss.event["members"], help="Comma separated")
+    changed = name != ss.event["name"] or d != ss.event["date"]
+    ss.event.update(name=name, date=d, attendees=attendees, members=members,
+                    event_id=event_id_for(name, d) if changed else ss.event["event_id"])
+    if locked:
+        st.caption("Name and date are locked once receipts are drafted.")
+        if st.checkbox("I'm done with this event") and st.button("Start a new event"):
+            start_new_event()
+            st.rerun()
+EVENT_ID = ss.event["event_id"]
+EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"])
+PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
 st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 
 # ---------------- Screen 1: Upload ----------------
@@ -227,7 +256,8 @@ elif page == "2. Review":
         c1, c2, c3 = st.columns(3)
         place = c1.text_input("Place", r.place, key=f"place-{rid}")
         d = c2.date_input("Date", r.date, key=f"date-{rid}")
-        payer = c3.selectbox("Payer", PAYERS, index=PAYERS.index(r.payer or ""), key=f"payer-{rid}")
+        options = PAYERS if (r.payer or "") in PAYERS else [*PAYERS, r.payer]
+        payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
         df = pd.DataFrame([{"category": i.category, "item": i.item, "unit": i.unit, "price": float(i.price),
                             "returned": i.returned} for i in r.items])
         edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch",
@@ -364,7 +394,7 @@ else:
     st.subheader("Funder rules")
     c = st.columns(4)
     pack = {"CFC": co.CFC, "ORG": co.ORG}[c[0].selectbox("Funder", ["CFC", "ORG"])]
-    attendees = int(c[1].number_input("Attendees", min_value=1, value=45))
+    attendees = int(c[1].number_input("Attendees", min_value=1, value=ss.event["attendees"]))
     req_text = c[2].text_input("Requested ($, optional)", "")
     applied_on = c[3].date_input("Applying on", value=date.today())
     requested = dec(req_text) if req_text.strip() else None

@@ -112,5 +112,5 @@ Funder rules (`treasurer/closeout.py`): CFC food cap, max award, 10% club share,
 ## Known limits
 - One receipt paid by two people can't be split. Record it as two receipts. An exact 50/50 split gets flagged as a possible duplicate and needs a note.
 - A store refund slip with a negative total can't be entered. Mark the item `returned` on the original receipt instead.
-- The app works on one event at a time (the fake event). Multiple events are supported in the Sheets layer.
+- The app works on one event at a time. Set the name, date, attendees and members in the sidebar, and use "Start a new event" when you finish one. The Sheets layer keeps every event.
 - Funder rules were copied from UC Davis CSI pages on 2026-11-04. Re-check them each quarter.
