@@ -161,3 +161,33 @@ def test_corrupt_session_file_is_ignored():
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception
     assert not any(b.label == "Resume where I left off" for b in at.button)
+
+
+def drafted_app(payer="Member A"):
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    for sb in at.selectbox:
+        if sb.key and sb.key.startswith("payer-R"):
+            sb.set_value(payer)
+    at.run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.sidebar.radio[0].set_value("2. Review").run()
+    return at
+
+
+def test_approve_moves_to_next_receipt_and_reopen_undoes():
+    at = drafted_app()
+    assert at.sidebar.radio(key="review-pick").value == "R01"
+    next(b for b in at.button if b.label == "Approve").click().run()
+    assert at.sidebar.radio(key="review-pick").value == "R02"
+    at.sidebar.radio(key="review-pick").set_value("R01").run()
+    next(b for b in at.button if b.label == "Reopen").click().run()
+    assert at.session_state["receipts"]["R01"].status.value == "drafted"
+
+
+def test_needs_attention_filter_lists_only_flagged_receipts():
+    at = drafted_app()
+    at.sidebar.selectbox[0].set_value("Needs attention").run()
+    shown = {o.split(" ")[0] for o in at.sidebar.radio(key="review-pick").options}
+    assert {"R02", "R06", "R13"} <= shown   # math errors (stub misreads and planted)
+    assert "R01" not in shown

@@ -259,10 +259,33 @@ elif page == "2. Review":
         st.stop()
     ss.review_started = ss.review_started or time.time()
     flags = run_checks(list(ss.receipts.values()))
-    labels = {rid: f"{rid} · {r.place} · {ICON[r.status]}" + (" ⚠️" if flags[rid] else "")
-              for rid, r in ss.receipts.items()}
-    rid = st.sidebar.radio("Receipts", list(labels), format_func=labels.get)
+    reviewed = sum(1 for x in ss.receipts.values() if x.status is not Status.DRAFTED)
+    st.progress(reviewed / len(ss.receipts), text=f"{reviewed} of {len(ss.receipts)} reviewed")
+
+    def attention(x_rid: str) -> bool:
+        return any(f.severity is not Severity.INFO for f in flags[x_rid]) or bool(ss.notes.get(x_rid))
+
+    show = st.sidebar.selectbox("Show", ["All", "Not reviewed yet", "Needs attention"])
+    ids = [x for x, rec in ss.receipts.items()
+           if show == "All" or (show == "Not reviewed yet" and rec.status is Status.DRAFTED)
+           or (show == "Needs attention" and attention(x))]
+    if not ids:
+        st.success("Nothing left in this view.")
+        st.stop()
+    labels = {x: f"{x} · {ss.receipts[x].place} · {ICON[ss.receipts[x].status]}" + (" ⚠️" if attention(x) else "")
+              for x in ids}
+    if ss.get("next_pick") in ids:  # set by "Approve" so the next receipt opens by itself
+        ss["review-pick"] = ss.pop("next_pick")
+    elif ss.get("review-pick") not in ids:
+        ss["review-pick"] = ids[0]
+    rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick")
     r = ss.receipts[rid]
+
+
+    def next_drafted(after: str) -> str | None:
+        order = list(ss.receipts)
+        rest = order[order.index(after) + 1:] + order[:order.index(after)]
+        return next((x for x in rest if ss.receipts[x].status is Status.DRAFTED), None)
 
     left, right = st.columns([2, 3])
     with left:
@@ -309,13 +332,21 @@ elif page == "2. Review":
         st.caption(md(f"Items + tax + tip = ${r.computed_total} · posts ${r.posted_amount}"))
         note = st.text_input("Override note (needed to approve with a red flag)", r.review_note or "",
                              key=f"note-{rid}")
-        b1, b2 = st.columns(2)
+        b1, b2, b3 = st.columns(3)
         locked = r.status is Status.POSTED
+        if locked:
+            st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
         if b1.button("Approve", type="primary", disabled=locked or not can_approve(flags[rid], note)):
             ss.receipts[rid] = r.model_copy(update={"status": Status.APPROVED, "review_note": note or None})
+            ss.next_pick = next_drafted(rid)
             st.rerun()
         if b2.button("Reject", disabled=locked):
             ss.receipts[rid] = r.model_copy(update={"status": Status.REJECTED, "review_note": note or None})
+            ss.next_pick = next_drafted(rid)
+            st.rerun()
+        if b3.button("Reopen", disabled=locked or r.status is Status.DRAFTED,
+                     help="Undo an approve or reject"):
+            ss.receipts[rid] = r.model_copy(update={"status": Status.DRAFTED})
             st.rerun()
 
 # ---------------- Screen 3: Summary ----------------
