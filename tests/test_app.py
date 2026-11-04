@@ -192,3 +192,21 @@ def test_needs_attention_filter_lists_only_flagged_receipts():
     shown = {o.split(" ")[0] for o in at.sidebar.radio(key="review-pick").options}
     assert {"R02", "R06", "R13"} <= shown   # math errors (stub misreads and planted)
     assert "R01" not in shown
+
+
+def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
+    from treasurer.post import LocalCsvSink
+
+    def boom(self, *a, **k):
+        raise ConnectionError("network down")
+    monkeypatch.setattr(LocalCsvSink, "post", boom)
+    at = drafted_app()
+    for rid, r in list(at.session_state["receipts"].items()):
+        at.session_state["receipts"][rid] = r.model_copy(update={"status": Status.REJECTED})
+    at.session_state["receipts"]["R01"] = at.session_state["receipts"]["R01"].model_copy(
+        update={"status": Status.APPROVED})
+    at.sidebar.radio[0].set_value("3. Summary").run()
+    next(b for b in at.button if b.label.startswith("Push to")).click().run()
+    assert not at.exception
+    assert any("stopped partway" in e.value for e in at.error)
+    assert at.session_state["receipts"]["R01"].status is Status.APPROVED   # not marked posted

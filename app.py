@@ -139,6 +139,14 @@ def manual_form(key: str, image_file: str | None = None, data: tuple[bytes, str]
             st.rerun()
 
 
+def saved_reimbursements(sink) -> list[dict]:
+    try:
+        return sink.reimbursements()
+    except Exception as e:
+        st.error(f"Could not read paybacks from {sink.label}: {e}")
+        return []
+
+
 def md(text: str) -> str:
     """Escape $ so Streamlit does not render dollar amounts as LaTeX."""
     return text.replace("$", "\\$")
@@ -381,8 +389,14 @@ elif page == "3. Summary":
         st.error(err)
     if sink.label != "Google Sheets":
         st.caption("Google Sheets is not set up (see docs/google_sheets_setup.md), so Push writes a local CSV.")
-    if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts):
-        written = sink.post(receipts, EVENT, income)
+    pushed = st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts)
+    try:
+        written = sink.post(receipts, EVENT, income) if pushed else None
+    except Exception as e:  # network drop, sheet unshared mid-push, quota
+        st.error(f"The push stopped partway: {e}. Nothing is double-counted: click Push again and "
+                 "receipts already written are skipped.")
+        written = None
+    if written is not None:
         for rid in written:
             ss.receipts[rid] = ss.receipts[rid].model_copy(update={"status": Status.POSTED})
         if written:
@@ -401,7 +415,7 @@ elif page == "3. Summary":
     if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
         st.subheader("Download the books")
         st.caption("The same layouts the Google Sheet gets, for approved receipts. Opens in Excel or Sheets.")
-        views = local_views(receipts, EVENT, income, sink.reimbursements())
+        views = local_views(receipts, EVENT, income, saved_reimbursements(sink))
         cols = st.columns(len(views))
         for col, (title, grid) in zip(cols, views.items(), strict=True):
             col.download_button(title, grid_to_csv(grid), file_name=f"{EVENT_ID}_{title.replace(' ', '_')}.csv",
@@ -433,7 +447,7 @@ else:
     sink, err = get_sink()
     if err:
         st.error(err)
-    reimbursed = totals_by_payer(sink.reimbursements(), EVENT_ID)
+    reimbursed = totals_by_payer(saved_reimbursements(sink), EVENT_ID)
     lines = co.payer_summary(done, reimbursed)
     st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
                                 "owed": str(x.owed)} for x in lines]), width="stretch", hide_index=True)
@@ -453,9 +467,13 @@ else:
                 if problem:
                     st.error(md(problem))
                 else:
-                    sink.record_reimbursement(Reimbursement(EVENT_ID, who, when, amt, method, note))
-                    st.success(md(f"Recorded ${amt} paid back to {who}."))
-                    st.rerun()
+                    try:
+                        sink.record_reimbursement(Reimbursement(EVENT_ID, who, when, amt, method, note))
+                    except Exception as e:
+                        st.error(f"Payback not saved: {e}. Try again.")
+                    else:
+                        st.success(md(f"Recorded ${amt} paid back to {who}."))
+                        st.rerun()
     else:
         st.success("Everyone has been paid back.")
 
