@@ -1,10 +1,8 @@
-"""Event close-out: funder rules and "who is owed what". YOUR VERSION.
+"""Event close-out: funder rules and "who is owed what".
 
-Fill in the four functions marked TODO. Run:
-    pytest research/starter -q                       # tests your version
-    CLOSEOUT_IMPL=solution pytest research/starter -q  # tests the reference
-The dataclasses and rule packs are done for you; the logic is yours.
-All rules are plain Python over APPROVED receipts. No AI.
+All rules are plain Python over APPROVED receipts. No AI: a funder flag has to be
+exact and reproducible, because a treasurer may have to defend it to the funder.
+Run the tests with:  pytest research/starter -q
 
 Rules are taken from UC Davis CSI pages read on 2026-11-04:
 - Club Finance Council (CFC): https://csi.ucdavis.edu/manage-your-org/grants/cfc
@@ -67,27 +65,89 @@ ORG = RulePack(
 )
 
 
+def _food_spend(receipts: list[Receipt], pack: RulePack) -> Decimal:
+    """Food and drink cost before tax, minus returned items. Tax is left out on
+    purpose: the cap is per person, and counting tax would make it stricter
+    than the funder wrote. Change this if the funder says otherwise."""
+    total = Decimal("0")
+    for r in receipts:
+        total += sum((i.amount for i in r.items if i.category in pack.food_categories and not i.returned),
+                     Decimal("0"))
+    return money(total)
+
+
 def check_funder_rules(event: Event, receipts: list[Receipt], pack: RulePack,
                        requested: Decimal | None = None, applied_on: date | None = None) -> list[Flag]:
-    """TODO. Return Flags for one event against one funder. `receipts` = approved only.
+    """Flags for one event against one funder. `receipts` = approved receipts only.
 
-    Codes the tests expect (use Severity.BLOCK unless noted):
-      food_over_cap        Food+Drink item amounts (pre-tax, minus returned) > cap x attendees x days
-      over_max_award       requested > pack.max_award
-      club_share_too_low   requested > event cost x (1 - min_club_share); cost = sum of posted_amount
-      banned_category      an item whose category is in pack.banned_categories
-      maybe_banned (WARN)  an item name containing one of pack.suspect_keywords
-      outside_window       receipt date more than purchase_window_days before applied_on
-      no_receipt_for_funder  receipt with no image_file
-    Skip any rule whose RulePack field is None. Put the numbers in the message:
-    a treasurer should be able to act on the flag without opening the code.
+    Each rule is skipped when its RulePack field is None, so a funder without
+    that rule needs no special code. Every message carries the numbers, so a
+    treasurer can act on it without opening this file.
     """
-    raise NotImplementedError
+    flags: list[Flag] = []
+    # Event cost = what actually reaches the balance sheet (returned items excluded).
+    cost = money(sum((r.posted_amount for r in receipts), Decimal("0")))
+
+    # Rule 1, food cap (CFC): food and drink may cost at most $12 per person per day.
+    # Cap = rate x attendees x days. Blocks, because the funder will not pay the excess.
+    if pack.food_cap_per_person_day is not None:
+        cap = money(pack.food_cap_per_person_day * event.attendees * event.days)
+        food = _food_spend(receipts, pack)
+        if food > cap:
+            flags.append(Flag("food_over_cap", Severity.BLOCK,
+                              f"Food and drink ${food} is over the cap of ${cap} "
+                              f"(${pack.food_cap_per_person_day} x {event.attendees} people x {event.days} day)"))
+
+    # Rules 2 and 3 only apply once we know how much the club is asking for.
+    if requested is not None:
+        # Rule 2, max award: one application can't ask for more than the funder's ceiling.
+        if pack.max_award is not None and requested > pack.max_award:
+            flags.append(Flag("over_max_award", Severity.BLOCK,
+                              f"Request ${requested} is over the ${pack.max_award} maximum"))
+        # Rule 3, club share (CFC): the club must pay at least 10% of the cost itself,
+        # so the most it can request is cost x 90%, rounded half up to the cent.
+        if pack.min_club_share is not None and cost > 0:
+            max_grant = money(cost * (1 - pack.min_club_share))
+            if requested > max_grant:
+                flags.append(Flag("club_share_too_low", Severity.BLOCK,
+                                  f"Request ${requested} leaves the club paying under "
+                                  f"{int(pack.min_club_share * 100)}% of ${cost}; ask for at most ${max_grant}"))
+
+    # Rules 4 to 7 look at each receipt on its own.
+    for r in receipts:
+        # Rule 4, banned category (ORG): no food or drink. Returned items don't count,
+        # since the club didn't end up paying for them.
+        banned = [i.item for i in r.items if i.category in pack.banned_categories and not i.returned]
+        if banned:
+            flags.append(Flag("banned_category", Severity.BLOCK,
+                              f"{r.receipt_id}: {', '.join(banned)} not allowed by {pack.name}"))
+        # Rule 5, maybe banned (ORG): decorations are banned, but "decoration" isn't a
+        # category we track. Keyword matches only WARN, so a human makes the call.
+        maybe = [i.item for i in r.items
+                 if not i.returned and any(k in i.item.lower() for k in pack.suspect_keywords)]
+        if maybe:
+            flags.append(Flag("maybe_banned", Severity.WARN,
+                              f"{r.receipt_id}: check whether {', '.join(maybe)} counts as a decoration"))
+        # Rule 6, purchase window (ORG): only purchases from the 42 days before the
+        # application date can be reimbursed.
+        if pack.purchase_window_days is not None and applied_on is not None:
+            if (applied_on - r.date).days > pack.purchase_window_days:
+                flags.append(Flag("outside_window", Severity.BLOCK,
+                                  f"{r.receipt_id}: bought {r.date}, more than "
+                                  f"{pack.purchase_window_days} days before applying on {applied_on}"))
+        # Rule 7, receipt required: funders need a receipt for every purchase. In the app,
+        # a missing photo only WARNS, but for a funder it BLOCKS.
+        if not r.image_file:
+            flags.append(Flag("no_receipt_for_funder", Severity.BLOCK,
+                              f"{r.receipt_id}: funder needs a receipt for every purchase"))
+    return flags
 
 
 def report_due(event: Event, pack: RulePack) -> date | None:
-    """TODO. Event date + report_due_days_after_event, or None if the pack has no deadline."""
-    raise NotImplementedError
+    """CFC wants the expenditure report 21 days after the event. Other funders may have no deadline."""
+    if pack.report_due_days_after_event is None:
+        return None
+    return event.event_date + timedelta(days=pack.report_due_days_after_event)
 
 
 @dataclass(frozen=True)
@@ -102,8 +162,12 @@ class PayerLine:
 
 
 def payer_summary(receipts: list[Receipt], reimbursed: dict[str, Decimal] | None = None) -> list[PayerLine]:
-    """TODO. One PayerLine per payer: fronted = sum of posted_amount, reimbursed from the dict.
-    Group receipts with no payer under "(no payer)". Sort by owed, biggest first.
-    Hint: collections.defaultdict, and use money() so cents never drift.
-    """
-    raise NotImplementedError
+    """Who fronted how much, and who is still owed. `reimbursed` maps payer -> amount
+    already paid back (from the ledger). Receipts with no payer are grouped under
+    "(no payer)" so the money never disappears from the summary."""
+    reimbursed = reimbursed or {}
+    fronted: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    for r in receipts:
+        fronted[(r.payer or "").strip() or "(no payer)"] += r.posted_amount
+    return sorted((PayerLine(p, money(v), money(reimbursed.get(p, Decimal("0"))))
+                   for p, v in fronted.items()), key=lambda line: -line.owed)

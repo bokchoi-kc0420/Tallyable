@@ -4,7 +4,7 @@ This is the output of the market-fit research thread. It sits separate from the 
 
 | File | What it is | Status |
 | --- | --- | --- |
-| `closeout.py` | **Your exercise.** Funder rules (UC Davis CFC, ORG) and a "who's owed" summary, as stubs | Stubs. The 10 tests fail until you write it. |
+| `closeout.py` | Funder rules (UC Davis CFC, ORG) and a "who's owed" summary. Each rule is commented | 10 of 10 tests pass |
 | `test_closeout.py` | Tests graded against the fake event | Run them from the repo root |
 | `claude_extractor_draft.py` | The first draft of `ClaudeExtractor` | Superseded by `treasurer/claude_extract.py` |
 | `design_prompts.md` | FigJam, review-screen, owed-panel, and funder-report prompts | |
