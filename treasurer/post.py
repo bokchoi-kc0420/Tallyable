@@ -1,6 +1,6 @@
 """Turn approved receipts into rows for the sheets.
 
-Week 4 swaps `LocalCsvSink` for a Google Sheets sink with the same `post`.
+`LocalCsvSink` is the fallback when Google Sheets is not set up (see sheets.py).
 The sink is idempotent: a receipt id that was already posted is skipped,
 so clicking Push twice never double-counts.
 """
@@ -43,7 +43,9 @@ class LocalCsvSink:
         with open(self.path, newline="") as fh:
             return {row["receipt_id"] for row in csv.DictReader(fh)}
 
-    def post(self, receipts: list[Receipt]) -> list[str]:
+    label = "local CSV"
+
+    def post(self, receipts: list[Receipt], event=None, income=None) -> list[str]:
         """Write approved, not-yet-posted receipts. Returns the ids written."""
         done = self.posted_ids()
         todo = [r for r in receipts if r.status is Status.APPROVED and r.receipt_id not in done]

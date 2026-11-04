@@ -18,12 +18,13 @@ from treasurer.extract import ExtractionError
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
+from treasurer.sheets import EventInfo, GoogleSheetsSink
 
 ROOT = Path(__file__).parent
 FAKE = ROOT / "fake_event"
 EVENT_ID = "EVT-FAKE-01"
 PAYERS = ["", "Member A", "Member B", "Member C", "Member D"]
-SINK = LocalCsvSink(ROOT / "output" / "transactions.csv")
+EVENT = EventInfo(EVENT_ID, "Fall Mentor Mixer (FAKE)", date(2026, 11, 14))
 ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
         Status.POSTED: "📤 posted"}
 
@@ -59,7 +60,7 @@ def md(text: str) -> str:
 
 
 page = st.sidebar.radio("Step", ["1. Upload", "2. Review", "3. Summary"])
-st.sidebar.caption(f"Event: Fall Mentor Mixer (FAKE) · {len(ss.receipts)} receipts")
+st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 
 # ---------------- Screen 1: Upload ----------------
 if page == "1. Upload":
@@ -195,11 +196,18 @@ else:
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
     if waiting:
         st.warning(f"Review these first: {', '.join(waiting)}")
-    if st.button("Push (local CSV until Sheets is wired up)", type="primary", disabled=bool(waiting) or not receipts):
-        written = SINK.post(receipts)
+    try:
+        sink = GoogleSheetsSink.from_env(ROOT) or LocalCsvSink(ROOT / "output" / "transactions.csv")
+    except Exception as e:  # bad key file, sheet not shared, no network
+        st.error(f"Could not open the Google Sheet, so pushing to local CSV instead: {e}")
+        sink = LocalCsvSink(ROOT / "output" / "transactions.csv")
+    if sink.label != "Google Sheets":
+        st.caption("Google Sheets is not set up (see docs/google_sheets_setup.md), so Push writes a local CSV.")
+    if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts):
+        written = sink.post(receipts, EVENT, income)
         for rid in written:
             ss.receipts[rid] = ss.receipts[rid].model_copy(update={"status": Status.POSTED})
-        st.success(f"Posted {len(written)} receipts to {SINK.path.name}" if written else "Nothing new to post.")
+        st.success(f"Posted {len(written)} receipts to {sink.label}" if written else "Nothing new to post.")
 
     st.subheader("Run stats")
     s = st.columns(3)

@@ -3,7 +3,7 @@
 A tool that turns club receipt photos into reviewed expense rows, flags errors with plain-code rules, and posts approved totals to Google Sheets. Portfolio project. **All data in this repo is fake.**
 
 ## Status
-Week 1 of 4 done, plus a working review app. Week 2: the app reads receipts with Claude when an API key is set, and falls back to a stand-in AI when it is not. The Google Sheets push (week 4) is the piece left to swap in.
+Week 1 of 4 done, plus a working review app. Week 2: the app reads receipts with Claude when an API key is set, and falls back to a stand-in AI when it is not. Push writes to Google Sheets when it is set up ([setup guide](docs/google_sheets_setup.md)), and to a local CSV when it is not.
 
 ![Review screen](docs/review_screen.png)
 
@@ -41,6 +41,7 @@ pytest
 | `treasurer/try_one.py`, `score_all.py` | Read one receipt; score all of them against the answer key |
 | `treasurer/score.py` | Field-level accuracy of drafts against the answer key |
 | `treasurer/post.py` | Long-format transaction rows, event totals, idempotent local CSV sink |
+| `treasurer/sheets.py` | Google Sheets sink: tidy Transactions and Events tabs, rebuilt Balance Sheet and Ledger views |
 | `app.py` | Streamlit: Upload, Review, Summary |
 | `fake_event/` | 15 fake receipts, answer key, 6 planted errors (see its README) |
 | `tests/` | pytest suite graded against the answer key |
