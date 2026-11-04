@@ -1,0 +1,46 @@
+"""ClaudeExtractor against a fake client: no network, no key."""
+from decimal import Decimal
+from types import SimpleNamespace as NS
+
+import pytest
+
+from treasurer.claude_extract import ClaudeExtractor, ExtractedItem, ExtractedReceipt
+from treasurer.extract import ExtractionError
+
+
+class FakeClient:
+    def __init__(self, parsed, stop_reason="end_turn"):
+        self.calls = []
+        resp = NS(parsed_output=parsed, stop_reason=stop_reason, model="claude-opus-5-5",
+                  usage=NS(input_tokens=1500, output_tokens=300))
+        self.beta = NS(messages=NS(parse=lambda **kw: self.calls.append(kw) or resp))
+
+
+def reading(**over):
+    base = dict(place="Bulk Warehouse", date="2026-11-12", tax="1.61", tip="0.00", total="$31.07",
+                items=[ExtractedItem(item="Water 24pk", category="Drink", unit=2, price="4.99")])
+    return ExtractedReceipt(**{**base, **over})
+
+
+def test_maps_reading_to_receipt():
+    client = FakeClient(reading())
+    ex = ClaudeExtractor(client=client)
+    r = ex.extract(b"jpg-bytes", "R01.jpg", "EVT", "R01")
+    assert r.total == Decimal("31.07") and r.payer is None and r.image_hash
+    assert r.items[0].amount == Decimal("9.98")
+    call = client.calls[0]
+    assert call["model"] == "claude-opus-5-5" and call["output_format"] is ExtractedReceipt
+    assert call["messages"][0]["content"][0]["source"]["media_type"] == "image/jpeg"
+    assert ex.cost() == pytest.approx(1500 * 4 / 1e6 + 300 * 20 / 1e6)
+
+
+def test_refusal_and_bad_date_raise_extraction_error():
+    with pytest.raises(ExtractionError):
+        ClaudeExtractor(client=FakeClient(None, "refusal")).extract(b"x", "R01.jpg", "EVT", "R01")
+    with pytest.raises(ExtractionError):
+        ClaudeExtractor(client=FakeClient(reading(date="Nov 12"))).extract(b"x", "R01.jpg", "EVT", "R01")
+
+
+def test_reader_uses_stub_in_tests():
+    from treasurer.reader import make_extractor
+    assert make_extractor()[1] == "stub"

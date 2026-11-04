@@ -3,7 +3,7 @@
 A tool that turns club receipt photos into reviewed expense rows, flags errors with plain-code rules, and posts approved totals to Google Sheets. Portfolio project. **All data in this repo is fake.**
 
 ## Status
-Week 1 of 4 done, plus a working review app on a stand-in AI. The Claude API call (week 2) and the Google Sheets push (week 4) are the two pieces left to swap in.
+Week 1 of 4 done, plus a working review app. Week 2: the app reads receipts with Claude when an API key is set, and falls back to a stand-in AI when it is not. The Google Sheets push (week 4) is the piece left to swap in.
 
 ![Review screen](docs/review_screen.png)
 
@@ -12,6 +12,13 @@ Week 1 of 4 done, plus a working review app on a stand-in AI. The Claude API cal
 streamlit run app.py
 ```
 Click "Use the fake event's 14 receipts instead", tag payers, Draft rows, then Review.
+
+## Use Claude to read receipts
+1. Copy `.env.example` to `.env` and paste your key after `ANTHROPIC_API_KEY=`. Git ignores `.env`; never commit it or paste it anywhere.
+2. Try one receipt: `python -m treasurer.try_one fake_event/receipts/R01.jpg`
+3. Score all 14 photos against the answer key: `python -m treasurer.score_all` (add `--model claude-haiku-5-5` to compare a cheaper model). Results are saved in `output/`.
+
+Without a key, the app and tests use the stub. Tests never call the API.
 
 ## Run the tests
 ```bash
@@ -27,6 +34,9 @@ pytest
 | `treasurer/checks.py` | Six rule checks: math, missing payer, duplicate, missing receipt, unusual tax, returned item |
 | `treasurer/loader.py` | Loads the fake answer key into models |
 | `treasurer/extract.py` | `Extractor` interface; `StubExtractor` replays the key with 4 realistic misreads |
+| `treasurer/claude_extract.py` | `ClaudeExtractor`: one vision call per receipt, prompt says transcribe and never reconcile |
+| `treasurer/reader.py` | Picks Claude if `ANTHROPIC_API_KEY` is in `.env`, else the stub |
+| `treasurer/try_one.py`, `score_all.py` | Read one receipt; score all of them against the answer key |
 | `treasurer/score.py` | Field-level accuracy of drafts against the answer key |
 | `treasurer/post.py` | Long-format transaction rows, event totals, idempotent local CSV sink |
 | `app.py` | Streamlit: Upload, Review, Summary |

@@ -1,6 +1,7 @@
 """Streamlit app: Upload -> Review -> Summary. Run with `streamlit run app.py`.
 
-Core workflow only, no styling. The AI step is the stub until week 2.
+Core workflow only, no styling. Reads receipts with Claude when ANTHROPIC_API_KEY
+is in .env, otherwise with the stub (fake answer key plus planted misreads).
 """
 from __future__ import annotations
 
@@ -13,9 +14,10 @@ import pandas as pd
 import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
-from treasurer.extract import ExtractionError, StubExtractor
+from treasurer.extract import ExtractionError
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
+from treasurer.reader import make_extractor
 
 ROOT = Path(__file__).parent
 FAKE = ROOT / "fake_event"
@@ -62,6 +64,12 @@ st.sidebar.caption(f"Event: Fall Mentor Mixer (FAKE) · {len(ss.receipts)} recei
 # ---------------- Screen 1: Upload ----------------
 if page == "1. Upload":
     st.header("Upload receipts")
+    ex, reader = make_extractor()
+    if reader == "claude":
+        st.success(f"Reading receipts with Claude ({ex.model}).")
+    else:
+        st.warning("No API key found, so receipts are read by the stub, which only knows the fake event's "
+                   "answer key. Add ANTHROPIC_API_KEY to .env and restart to use Claude.")
     files = st.file_uploader("Receipt photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     if st.button("Use the fake event's 14 receipts instead"):
         files = None
@@ -73,7 +81,6 @@ if page == "1. Upload":
         payers[name] = st.selectbox(f"Payer for {name}", PAYERS, key=f"payer-{name}")
 
     if sources and st.button("Draft rows", type="primary"):
-        ex = StubExtractor(FAKE / "answer_key.csv")
         bar = st.progress(0.0)
         for n, (name, data) in enumerate(sources):
             rid = next_id(name)
@@ -85,7 +92,8 @@ if page == "1. Upload":
                 st.error(str(e))
             bar.progress((n + 1) / len(sources))
         ss.demo = []
-        st.success("Drafted. Go to Review.")
+        cost = f" · about ${ex.cost():.3f} in API calls" if reader == "claude" else ""
+        st.success(md(f"Drafted. Go to Review.{cost}"))
 
     with st.expander("Add a purchase with no photo (cash, lost receipt)"):
         with st.form("manual"):

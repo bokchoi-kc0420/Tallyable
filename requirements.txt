@@ -3,3 +3,5 @@ pillow>=10.0
 pytest>=8.0
 streamlit>=1.50
 pandas>=2.0
+anthropic>=2.4
+python-dotenv>=1.0

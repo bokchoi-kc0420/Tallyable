@@ -9,3 +9,4 @@ service_account*.json
 *.key
 secrets.toml
 .streamlit/secrets.toml
+output/
