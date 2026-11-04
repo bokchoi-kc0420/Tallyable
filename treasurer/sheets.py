@@ -27,12 +27,13 @@ from pathlib import Path
 
 from .models import Receipt, Status
 from .post import TX_FIELDS, transaction_rows
+from .reimburse import REIMB_FIELDS
 
 INCOME_SOURCES = ["Zelle", "Venmo", "Cash", "National KSEA funding"]
 EVENT_FIELDS = ["event_id", "name", "date", *INCOME_SOURCES]
-VIEW_NOTE = "Built by Tallyable from the Transactions and Events tabs. Edits here are overwritten on the next push."
+VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements tabs. Edits here are overwritten on the next push."
 
-TX, EVENTS, BALANCE, LEDGER = "Transactions", "Events", "Balance Sheet", "Ledger"
+TX, EVENTS, BALANCE, LEDGER, REIMB = "Transactions", "Events", "Balance Sheet", "Ledger", "Reimbursements"
 
 
 @dataclass(frozen=True)
@@ -124,11 +125,12 @@ def render_balance_sheet(events: list[dict], tx: list[dict]) -> list[list]:
 LEDGER_HEADER = ["DATE", "DESCRIPTION", "ASSETS", "LIABILITIES", "TOTAL ASSETS", "TOTAL LIABILITIES", "BALANCE"]
 
 
-def render_ledger(events: list[dict], tx: list[dict]) -> list[list]:
-    """One row per income source and per receipt, by date, with running totals.
+def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) -> list[list]:
+    """One row per income source, receipt and reimbursement, by date, with running totals.
 
     Income is dated on the event day; each receipt on its own date. On the same
-    day, income comes first.
+    day, income comes first. A reimbursement row has no asset or liability amount:
+    it settles an expense that is already counted (see reimburse.py).
     """
     names = {e["event_id"]: e["name"] for e in events}
     entries = []  # (date, order, description, income, expense)
@@ -142,6 +144,10 @@ def render_ledger(events: list[dict], tx: list[dict]) -> list[list]:
             f = items[0]
             entries.append((str(f["date"]), 1, f"{f['place']} ({rid}, paid by {f['payer'] or '?'}): "
                             f"{names.get(event_id, event_id)}", Decimal("0"), D(f["receipt_posted"])))
+    for r in reimb:
+        entries.append((str(r["date"]), 2, f"Paid back {r['payer']} ${D(r['amount']):.2f} via {r['method']} "
+                        f"(settles expenses above): {names.get(str(r['event_id']), r['event_id'])}",
+                        Decimal("0"), Decimal("0")))
     entries.sort(key=lambda x: (x[0], x[1]))
     rows, ta, tl = [[VIEW_NOTE], LEDGER_HEADER], Decimal("0"), Decimal("0")
     for d, _, desc, inc, exp in entries:
@@ -161,14 +167,19 @@ class GoogleSheetsSink:
         self.book = spreadsheet
 
     @classmethod
-    def from_env(cls, root: Path) -> "GoogleSheetsSink | None":
-        """None if Sheets is not set up, so the app can fall back to CSV."""
+    def from_env(cls, root: Path, key_info: dict | None = None) -> "GoogleSheetsSink | None":
+        """None if Sheets is not set up, so the app can fall back to CSV.
+
+        Locally the key is a file named in .env. On Streamlit Cloud there is no file,
+        so the app passes the key's contents from st.secrets as `key_info`."""
         from dotenv import load_dotenv
         load_dotenv(root / ".env")
         key_file, sheet_id = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"), os.getenv("TALLYABLE_SHEET_ID")
-        if not (key_file and sheet_id):
+        if not sheet_id or not (key_file or key_info):
             return None
         import gspread
+        if key_info:
+            return cls(gspread.service_account_from_dict(dict(key_info)).open_by_key(sheet_id))
         path = Path(key_file) if Path(key_file).is_absolute() else root / key_file
         return cls(gspread.service_account(filename=str(path)).open_by_key(sheet_id))
 
@@ -203,8 +214,19 @@ class GoogleSheetsSink:
         events = self._records(EVENTS, EVENT_FIELDS)
         tx = tx_ws.get_all_records()
         self._rewrite(BALANCE, render_balance_sheet(events, tx))
-        self._rewrite(LEDGER, render_ledger(events, tx))
+        self._rewrite(LEDGER, render_ledger(events, tx, self.reimbursements()))
         return [r.receipt_id for r in todo]
+
+    def reimbursements(self) -> list[dict]:
+        return self._records(REIMB, REIMB_FIELDS)
+
+    def record_reimbursement(self, r) -> None:
+        """Append to the Reimbursements tab and rebuild the Ledger view."""
+        row = r.row()
+        self._tab(REIMB, REIMB_FIELDS).append_rows(
+            [[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS]], value_input_option="RAW")
+        self._rewrite(LEDGER, render_ledger(self._records(EVENTS, EVENT_FIELDS),
+                                            self._records(TX, TX_FIELDS), self.reimbursements()))
 
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
         ws = self._tab(EVENTS, EVENT_FIELDS)

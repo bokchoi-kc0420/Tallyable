@@ -58,3 +58,24 @@ class LocalCsvSink:
             for r in todo:
                 w.writerows(transaction_rows(r))
         return [r.receipt_id for r in todo]
+
+    # Reimbursements sit next to the transactions file.
+    @property
+    def _reimb_path(self) -> Path:
+        return self.path.with_name("reimbursements.csv")
+
+    def reimbursements(self) -> list[dict]:
+        if not self._reimb_path.exists():
+            return []
+        with open(self._reimb_path, newline="") as fh:
+            return list(csv.DictReader(fh))
+
+    def record_reimbursement(self, r) -> None:
+        from .reimburse import REIMB_FIELDS
+        new_file = not self._reimb_path.exists()
+        self._reimb_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self._reimb_path, "a", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=REIMB_FIELDS)
+            if new_file:
+                w.writeheader()
+            w.writerow(r.row())

@@ -20,6 +20,7 @@ from treasurer.extract import ExtractionError
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
+from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import EventInfo, GoogleSheetsSink
 
@@ -60,6 +61,14 @@ def next_id(filename: str | None = None) -> str:
     while f"R{n:02d}" in ss.receipts:
         n += 1
     return f"R{n:02d}"
+
+
+def get_sink():
+    """Google Sheets if it is set up, else the local CSV. Returns (sink, error)."""
+    try:
+        return GoogleSheetsSink.from_env(ROOT) or LocalCsvSink(OUT / "transactions.csv"), None
+    except Exception as e:  # bad key file, sheet not shared, no network
+        return LocalCsvSink(OUT / "transactions.csv"), f"Could not open the Google Sheet, so using local CSV instead: {e}"
 
 
 def md(text: str) -> str:
@@ -207,11 +216,9 @@ elif page == "3. Summary":
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
     if waiting:
         st.warning(f"Review these first: {', '.join(waiting)}")
-    try:
-        sink = GoogleSheetsSink.from_env(ROOT) or LocalCsvSink(OUT / "transactions.csv")
-    except Exception as e:  # bad key file, sheet not shared, no network
-        st.error(f"Could not open the Google Sheet, so pushing to local CSV instead: {e}")
-        sink = LocalCsvSink(OUT / "transactions.csv")
+    sink, err = get_sink()
+    if err:
+        st.error(err)
     if sink.label != "Google Sheets":
         st.caption("Google Sheets is not set up (see docs/google_sheets_setup.md), so Push writes a local CSV.")
     if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts):
@@ -254,13 +261,34 @@ else:
         st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
 
     st.subheader("Who is owed")
-    payers = sorted({(r.payer or "").strip() or "(no payer)" for r in done})
-    paid = pd.DataFrame([{"payer": p, "reimbursed": 0.0} for p in payers])
-    paid = st.data_editor(paid, key="reimbursed", disabled=["payer"], width="stretch")
-    reimbursed = {row.payer: dec(f"{row.reimbursed:.2f}") for row in paid.itertuples()}
+    sink, err = get_sink()
+    if err:
+        st.error(err)
+    reimbursed = totals_by_payer(sink.reimbursements(), EVENT_ID)
     lines = co.payer_summary(done, reimbursed)
     st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
                                 "owed": str(x.owed)} for x in lines]), width="stretch")
+    owing = [x for x in lines if x.owed > 0]
+    if owing:
+        with st.form("payback"):
+            st.caption(f"Mark a payback. It is saved to {sink.label} and shows in the ledger.")
+            c = st.columns(4)
+            who = c[0].selectbox("Payer", [x.payer for x in owing])
+            amount = c[1].text_input("Amount", "", help="Leave blank to pay back everything owed")
+            method = c[2].selectbox("Method", METHODS)
+            when = c[3].date_input("Date", value=date.today())
+            note = st.text_input("Note (optional)")
+            if st.form_submit_button("Mark paid back"):
+                owed = next(x.owed for x in owing if x.payer == who)
+                amt, problem = validate(who, amount or str(owed), owed)
+                if problem:
+                    st.error(md(problem))
+                else:
+                    sink.record_reimbursement(Reimbursement(EVENT_ID, who, when, amt, method, note))
+                    st.success(md(f"Recorded ${amt} paid back to {who}."))
+                    st.rerun()
+    else:
+        st.success("Everyone has been paid back.")
 
     st.subheader("Funder rules")
     c = st.columns(4)

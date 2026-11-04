@@ -62,3 +62,26 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
     assert list(owed["payer"]) == ["Member A"] and owed["owed"][0] == "31.07"
     assert any(b.label.startswith("Download funder report") for b in at.get("download_button"))
+
+
+def test_mark_paid_back_updates_owed():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button[0].click().run()
+    for sb in at.selectbox:
+        if sb.key and sb.key.startswith("payer-R"):
+            sb.set_value("Member B")
+    at.run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    r = at.session_state["receipts"]["R01"]
+    at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED, "payer": "Member B"})
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    form_amount = next(t for t in at.text_input if t.label == "Amount")
+    form_amount.set_value("99.00")
+    next(b for b in at.button if b.label == "Mark paid back").click().run()
+    assert any("overpay" in e.value for e in at.error)       # more than owed is blocked
+    form_amount = next(t for t in at.text_input if t.label == "Amount")
+    form_amount.set_value("")
+    next(b for b in at.button if b.label == "Mark paid back").click().run()
+    assert not at.exception
+    owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
+    assert owed["owed"][0] == "0.00"

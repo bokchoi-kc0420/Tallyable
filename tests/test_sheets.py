@@ -127,3 +127,16 @@ def test_second_event_goes_sideways_and_ledger_runs(approved):
 
 def test_from_env_returns_none_without_setup(tmp_path):
     assert GoogleSheetsSink.from_env(tmp_path) is None
+
+
+def test_reimbursement_lands_in_ledger_without_moving_balance(approved):
+    from treasurer.reimburse import Reimbursement, totals_by_payer
+    book = FakeBook()
+    sink = GoogleSheetsSink(book)
+    sink.post(approved, EVENT, INCOME)
+    before = book.tabs[LEDGER].cells[-1][6]
+    sink.record_reimbursement(Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle"))
+    last = book.tabs[LEDGER].cells[-1]
+    assert last[1].startswith("Paid back Member A $31.07 via Zelle") and last[2] == last[3] == ""
+    assert last[6] == before                                   # balance unchanged
+    assert totals_by_payer(sink.reimbursements(), EVENT.event_id) == {"Member A": Decimal("31.07")}
