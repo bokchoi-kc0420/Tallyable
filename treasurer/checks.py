@@ -1,0 +1,101 @@
+"""Rule checks. Plain Python, no AI: every flag is exact and reproducible."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Decimal
+from enum import Enum
+
+from .models import Receipt, money
+
+TOLERANCE = Decimal("0.01")
+MAX_TAX_RATE = Decimal("0.12")
+
+
+class Severity(str, Enum):
+    BLOCK = "block"  # approval disabled until fixed or overridden with a note
+    WARN = "warn"    # shown on the row, does not block
+    INFO = "info"
+
+
+@dataclass(frozen=True)
+class Flag:
+    code: str
+    severity: Severity
+    message: str
+
+
+def check_math(r: Receipt) -> list[Flag]:
+    diff = r.computed_total - r.total
+    if abs(diff) <= TOLERANCE:
+        return []
+    return [Flag("math_error", Severity.BLOCK,
+                 f"Items + tax + tip = ${r.computed_total}, receipt says ${r.total} "
+                 f"(off by ${money(abs(diff))})")]
+
+
+def check_missing_payer(r: Receipt) -> list[Flag]:
+    if r.payer and r.payer.strip():
+        return []
+    return [Flag("missing_payer", Severity.BLOCK, "No payer tagged")]
+
+
+def check_missing_receipt(r: Receipt) -> list[Flag]:
+    if r.image_file:
+        return []
+    return [Flag("missing_receipt", Severity.WARN, "No receipt photo attached")]
+
+
+def check_tax_rate(r: Receipt) -> list[Flag]:
+    if r.subtotal == 0 or r.tax / r.subtotal <= MAX_TAX_RATE:
+        return []
+    pct = money(r.tax / r.subtotal * 100)
+    return [Flag("unusual_tax", Severity.WARN, f"Tax is {pct}% of the subtotal (over 12%)")]
+
+
+def check_returned(r: Receipt) -> list[Flag]:
+    names = [i.item for i in r.items if i.returned]
+    if not names:
+        return []
+    return [Flag("returned_item", Severity.INFO,
+                 f"Returned, listed but excluded: {', '.join(names)} (-${r.returned_amount})")]
+
+
+def check_duplicates(receipts: list[Receipt]) -> dict[str, list[Flag]]:
+    """Flag the LATER receipt of each pair, naming the earlier one.
+
+    A pair is a duplicate if the image bytes match, or if place, date and
+    total match within one event (catches a re-photographed receipt).
+    """
+    out: dict[str, list[Flag]] = {}
+    seen: list[Receipt] = []
+    for r in receipts:
+        for s in seen:
+            if s.event_id != r.event_id:
+                continue
+            same_image = r.image_hash is not None and r.image_hash == s.image_hash
+            same_fields = (r.place.strip().lower() == s.place.strip().lower()
+                           and r.date == s.date and abs(r.total - s.total) <= TOLERANCE)
+            if same_image or same_fields:
+                why = "same image" if same_image else "same place, date and total"
+                out.setdefault(r.receipt_id, []).append(
+                    Flag("possible_duplicate", Severity.BLOCK, f"Possible duplicate of {s.receipt_id} ({why})"))
+                break
+        seen.append(r)
+    return out
+
+
+PER_RECEIPT = [check_math, check_missing_payer, check_missing_receipt, check_tax_rate, check_returned]
+
+
+def run_checks(receipts: list[Receipt]) -> dict[str, list[Flag]]:
+    flags = {r.receipt_id: [f for check in PER_RECEIPT for f in check(r)] for r in receipts}
+    for rid, dup in check_duplicates(receipts).items():
+        flags[rid].extend(dup)
+    return flags
+
+
+def can_approve(flags: list[Flag], override_note: str | None = None) -> bool:
+    """Blocking flags need a written override note; others never block."""
+    if not any(f.severity is Severity.BLOCK for f in flags):
+        return True
+    return bool(override_note and override_note.strip())

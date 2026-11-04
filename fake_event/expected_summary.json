@@ -1,0 +1,126 @@
+{
+  "event": {
+    "event_id": "EVT-FAKE-01",
+    "name": "Fall Mentor Mixer (FAKE)",
+    "date": "2026-11-14",
+    "quarter": "Fall 2026",
+    "attendees": 45,
+    "income": {
+      "Zelle": "264.00",
+      "Venmo": "180.00",
+      "Cash": "96.00",
+      "National KSEA funding": "200.00"
+    }
+  },
+  "receipts": [
+    {
+      "receipt_id": "R01",
+      "printed_total": "31.07",
+      "true_total": "31.07",
+      "expected_posted": "31.07",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R02",
+      "printed_total": "94.18",
+      "true_total": "94.18",
+      "expected_posted": "94.18",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R03",
+      "printed_total": "101.79",
+      "true_total": "101.79",
+      "expected_posted": "101.79",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R04",
+      "printed_total": "6.77",
+      "true_total": "6.77",
+      "expected_posted": "6.77",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R05",
+      "printed_total": "45.17",
+      "true_total": "45.17",
+      "expected_posted": "45.17",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R06",
+      "printed_total": "115.26",
+      "true_total": "110.26",
+      "expected_posted": "110.26",
+      "planted_error": "math_total_mismatch"
+    },
+    {
+      "receipt_id": "R07",
+      "printed_total": "38.98",
+      "true_total": "38.98",
+      "expected_posted": "38.98",
+      "planted_error": "missing_payer"
+    },
+    {
+      "receipt_id": "R08",
+      "printed_total": "21.40",
+      "true_total": "21.40",
+      "expected_posted": "21.40",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R09",
+      "printed_total": "69.79",
+      "true_total": "69.79",
+      "expected_posted": "26.50",
+      "planted_error": "returned_item"
+    },
+    {
+      "receipt_id": "R10",
+      "printed_total": "15.43",
+      "true_total": "15.43",
+      "expected_posted": "15.43",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R11",
+      "printed_total": "101.79",
+      "true_total": "101.79",
+      "expected_posted": "0.00",
+      "planted_error": "duplicate"
+    },
+    {
+      "receipt_id": "R12",
+      "printed_total": "22.43",
+      "true_total": "22.43",
+      "expected_posted": "22.43",
+      "planted_error": "math_hidden_item"
+    },
+    {
+      "receipt_id": "R13",
+      "printed_total": "30.47",
+      "true_total": "30.47",
+      "expected_posted": "30.47",
+      "planted_error": ""
+    },
+    {
+      "receipt_id": "R14",
+      "printed_total": "7.00",
+      "true_total": "7.00",
+      "expected_posted": "7.00",
+      "planted_error": "missing_receipt"
+    },
+    {
+      "receipt_id": "R15",
+      "printed_total": "20.30",
+      "true_total": "20.30",
+      "expected_posted": "20.30",
+      "planted_error": ""
+    }
+  ],
+  "expected_total_expenses": "571.75",
+  "expected_total_income": "740.00",
+  "expected_net": "168.25",
+  "expected_margin_pct": "22.74"
+}
