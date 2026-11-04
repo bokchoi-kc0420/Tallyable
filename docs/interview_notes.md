@@ -40,4 +40,4 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
 - Cost per event: $___
 - Minutes by hand: ___. Minutes in the tool: ___
 - Edits per receipt: ___
-- Tests: 85, running on every push in GitHub Actions
+- Tests: 97, 93% coverage, running on every push in GitHub Actions

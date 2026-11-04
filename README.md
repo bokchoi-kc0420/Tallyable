@@ -83,7 +83,7 @@ Click "Use the fake event's 14 receipts instead", tag payers, then go through Dr
 - **Google Sheets:** [docs/google_sheets_setup.md](docs/google_sheets_setup.md). Without it, Push writes a local CSV.
 - **Put it online:** [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first.
 - **HEIC photos:** `python -m pip install pillow-heif`.
-- **Tests:** `python -m pytest` (85 tests, run on every push; they never call the API or touch a real sheet).
+- **Tests:** `python -m pytest` (97 tests with 93% coverage, run on every push; they never call the API or touch a real sheet).
 
 ## Rules
 | Flag | Rule | Blocks approval |
