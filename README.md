@@ -1,5 +1,7 @@
 # Tallyable
 
+[![tests](https://github.com/bokchoi-kc0420/Tallyable/actions/workflows/tests.yml/badge.svg)](https://github.com/bokchoi-kc0420/Tallyable/actions/workflows/tests.yml)
+
 **Close out a club event in minutes: receipt photos in, checked expenses, who's owed, and a funder report out.**
 
 A portfolio project by a student club treasurer. AI reads the receipts, plain code checks the math, and a human approves every row before it reaches the books. **All data in this repo is fake.**
