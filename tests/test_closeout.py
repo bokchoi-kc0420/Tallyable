@@ -1,22 +1,14 @@
-"""Tests for the event close-out rules, graded against the fake event.
-
-Run from the repo root:  pytest research/starter -q
-"""
-import importlib
-import sys
+"""Tests for the event close-out rules, graded against the fake event."""
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]          # repo root
-sys.path[:0] = [str(ROOT), str(Path(__file__).parent)]
+import treasurer.closeout as co
+from treasurer.loader import load_answer_key
 
-from treasurer.loader import load_answer_key  # noqa: E402
-
-co = importlib.import_module("closeout")
-
+ROOT = Path(__file__).resolve().parents[1]
 KEY = ROOT / "fake_event" / "answer_key.csv"
 EVENT = co.Event("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14), attendees=45)
 
@@ -96,3 +88,10 @@ def test_payer_summary_balances(approved):
     a = next(line for line in lines if line.payer == "Member A")
     assert a.owed == a.fronted - Decimal("10.00")
     assert [line.owed for line in lines] == sorted((line.owed for line in lines), reverse=True)
+
+
+def test_funder_report_csv_has_items_flags_and_owed(approved):
+    text = co.funder_report_csv(EVENT, approved, co.CFC, requested=Decimal("520"))
+    assert "UC Davis Club Finance Council" in text and "571.75" in text
+    assert "club_share_too_low" in text and "R14" in text and "MISSING" in text
+    assert "Member A" in text

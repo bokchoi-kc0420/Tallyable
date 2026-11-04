@@ -5,6 +5,7 @@ is in .env, otherwise with the stub (fake answer key plus planted misreads).
 """
 from __future__ import annotations
 
+import os
 import time
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -13,14 +14,17 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from treasurer import closeout as co
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.extract import ExtractionError
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
+from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import EventInfo, GoogleSheetsSink
 
 ROOT = Path(__file__).parent
+OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
 EVENT_ID = "EVT-FAKE-01"
 PAYERS = ["", "Member A", "Member B", "Member C", "Member D"]
@@ -34,6 +38,10 @@ ss.setdefault("receipts", {})   # receipt_id -> Receipt
 ss.setdefault("images", {})     # receipt_id -> bytes
 ss.setdefault("started", time.time())
 ss.setdefault("edits", 0)
+ss.setdefault("drafted_at", None)    # first Draft click, for the run log
+ss.setdefault("review_started", None)
+ss.setdefault("income", {})
+RUN_LOG = OUT / "run_log.csv"
 
 
 def dec(text: str, default: str = "0") -> Decimal:
@@ -59,7 +67,7 @@ def md(text: str) -> str:
     return text.replace("$", "\\$")
 
 
-page = st.sidebar.radio("Step", ["1. Upload", "2. Review", "3. Summary"])
+page = st.sidebar.radio("Step", ["1. Upload", "2. Review", "3. Summary", "4. Close out"])
 st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 
 # ---------------- Screen 1: Upload ----------------
@@ -93,6 +101,7 @@ if page == "1. Upload":
                 st.error(str(e))
             bar.progress((n + 1) / len(sources))
         ss.demo = []
+        ss.drafted_at = ss.drafted_at or time.time()
         cost = f" · about ${ex.cost():.3f} in API calls" if reader == "claude" else ""
         st.success(md(f"Drafted. Go to Review.{cost}"))
 
@@ -119,6 +128,7 @@ elif page == "2. Review":
     if not ss.receipts:
         st.info("Nothing to review yet. Upload receipts first.")
         st.stop()
+    ss.review_started = ss.review_started or time.time()
     flags = run_checks(list(ss.receipts.values()))
     labels = {rid: f"{rid} · {r.place} · {ICON[r.status]}" + (" ⚠️" if flags[rid] else "")
               for rid, r in ss.receipts.items()}
@@ -174,13 +184,14 @@ elif page == "2. Review":
             st.rerun()
 
 # ---------------- Screen 3: Summary ----------------
-else:
+elif page == "3. Summary":
     st.header("Summary and push")
     receipts = list(ss.receipts.values())
     st.subheader("Income")
     c = st.columns(4)
-    income = {k: dec(c[n].text_input(k, "0.00")) for n, k in
+    income = {k: dec(c[n].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
               enumerate(["Zelle", "Venmo", "Cash", "National KSEA funding"])}
+    ss.income = {k: str(v) for k, v in income.items()}
     t = event_totals(receipts, income)
     m = st.columns(4)
     m[0].metric("Income", f"${t['income']}")
@@ -197,16 +208,27 @@ else:
     if waiting:
         st.warning(f"Review these first: {', '.join(waiting)}")
     try:
-        sink = GoogleSheetsSink.from_env(ROOT) or LocalCsvSink(ROOT / "output" / "transactions.csv")
+        sink = GoogleSheetsSink.from_env(ROOT) or LocalCsvSink(OUT / "transactions.csv")
     except Exception as e:  # bad key file, sheet not shared, no network
         st.error(f"Could not open the Google Sheet, so pushing to local CSV instead: {e}")
-        sink = LocalCsvSink(ROOT / "output" / "transactions.csv")
+        sink = LocalCsvSink(OUT / "transactions.csv")
     if sink.label != "Google Sheets":
         st.caption("Google Sheets is not set up (see docs/google_sheets_setup.md), so Push writes a local CSV.")
     if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts):
         written = sink.post(receipts, EVENT, income)
         for rid in written:
             ss.receipts[rid] = ss.receipts[rid].model_copy(update={"status": Status.POSTED})
+        if written:
+            now, flags = time.time(), run_checks(receipts)
+            ex, reader = make_extractor()
+            log_run(RUN_LOG, {
+                "event_id": EVENT_ID, "reader": reader, "model": getattr(ex, "model", "stub"),
+                "receipts": len(receipts), "posted": len(written), "edits": ss.edits,
+                "overrides": sum(1 for r in receipts if r.review_note and r.status is not Status.REJECTED
+                                 and any(f.severity is Severity.BLOCK for f in flags[r.receipt_id])),
+                "minutes_draft_to_push": minutes(ss.drafted_at, now),
+                "minutes_review_to_push": minutes(ss.review_started, now),
+            })
         st.success(f"Posted {len(written)} receipts to {sink.label}" if written else "Nothing new to post.")
 
     st.subheader("Run stats")
@@ -215,3 +237,50 @@ else:
     s[1].metric("Edits to drafts", ss.edits)
     s[2].metric("Flags open", sum(1 for fl in run_checks(receipts).values() for f in fl if f.severity is Severity.BLOCK)
                 if receipts else 0)
+    runs = read_runs(RUN_LOG)
+    if runs:
+        st.caption(f"Past runs, from {RUN_LOG}")
+        st.dataframe(pd.DataFrame(runs), width="stretch")
+
+# ---------------- Screen 4: Close out ----------------
+else:
+    st.header("Close out the event")
+    done = [r for r in ss.receipts.values() if r.status in (Status.APPROVED, Status.POSTED)]
+    if not done:
+        st.info("Approve some receipts first.")
+        st.stop()
+    waiting = [r.receipt_id for r in ss.receipts.values() if r.status is Status.DRAFTED]
+    if waiting:
+        st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
+
+    st.subheader("Who is owed")
+    payers = sorted({(r.payer or "").strip() or "(no payer)" for r in done})
+    paid = pd.DataFrame([{"payer": p, "reimbursed": 0.0} for p in payers])
+    paid = st.data_editor(paid, key="reimbursed", disabled=["payer"], width="stretch")
+    reimbursed = {row.payer: dec(f"{row.reimbursed:.2f}") for row in paid.itertuples()}
+    lines = co.payer_summary(done, reimbursed)
+    st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
+                                "owed": str(x.owed)} for x in lines]), width="stretch")
+
+    st.subheader("Funder rules")
+    c = st.columns(4)
+    pack = {"CFC": co.CFC, "ORG": co.ORG}[c[0].selectbox("Funder", ["CFC", "ORG"])]
+    attendees = int(c[1].number_input("Attendees", min_value=1, value=45))
+    req_text = c[2].text_input("Requested ($, optional)", "")
+    applied_on = c[3].date_input("Applying on", value=date.today())
+    requested = dec(req_text) if req_text.strip() else None
+    event = co.Event(EVENT_ID, EVENT.name, EVENT.date, attendees=attendees)
+    flags = co.check_funder_rules(event, done, pack, requested, applied_on)
+    due = co.report_due(event, pack)
+    if due:
+        st.caption(f"{pack.name}: report due {due.isoformat()}")
+    if not flags:
+        st.success(f"No {pack.name} rule flags.")
+    for f in flags:
+        {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
+    for note in pack.notes:
+        st.caption(note)
+
+    st.download_button("Download funder report (CSV)", file_name=f"{EVENT_ID}_{pack.name.split()[-1]}_report.csv",
+                       data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
+                       mime="text/csv")

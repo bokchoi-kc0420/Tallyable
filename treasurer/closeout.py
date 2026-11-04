@@ -2,7 +2,7 @@
 
 All rules are plain Python over APPROVED receipts. No AI: a funder flag has to be
 exact and reproducible, because a treasurer may have to defend it to the funder.
-Run the tests with:  pytest research/starter -q
+Tests: tests/test_closeout.py. Shown in the app's Close out step.
 
 Rules are taken from UC Davis CSI pages read on 2026-11-04:
 - Club Finance Council (CFC): https://csi.ucdavis.edu/manage-your-org/grants/cfc
@@ -12,6 +12,8 @@ so a KSEA national pack is the same code with different numbers.
 """
 from __future__ import annotations
 
+import csv
+import io
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -171,3 +173,41 @@ def payer_summary(receipts: list[Receipt], reimbursed: dict[str, Decimal] | None
         fronted[(r.payer or "").strip() or "(no payer)"] += r.posted_amount
     return sorted((PayerLine(p, money(v), money(reimbursed.get(p, Decimal("0"))))
                    for p, v in fronted.items()), key=lambda line: -line.owed)
+
+
+def funder_report_csv(event: Event, receipts: list[Receipt], pack: RulePack, requested: Decimal | None = None,
+                      applied_on: date | None = None, reimbursed: dict[str, Decimal] | None = None) -> str:
+    """The expenditure report a funder asks for, as CSV text: a summary block,
+    every approved line item, the flags still open, and who is owed.
+    Opens in Excel or Google Sheets; save it as PDF from there if the funder wants one."""
+    cost = money(sum((r.posted_amount for r in receipts), Decimal("0")))
+    flags = check_funder_rules(event, receipts, pack, requested, applied_on)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Funder report", pack.name])
+    w.writerow(["Event", event.name])
+    w.writerow(["Event date", event.event_date.isoformat()])
+    w.writerow(["Attendees", event.attendees])
+    w.writerow(["Total cost", cost])
+    w.writerow(["Requested", requested if requested is not None else ""])
+    due = report_due(event, pack)
+    w.writerow(["Report due", due.isoformat() if due else ""])
+    for note in pack.notes:
+        w.writerow(["Note", note])
+    w.writerow([])
+    w.writerow(["Receipt", "Date", "Place", "Payer", "Category", "Item", "Unit", "Price", "Amount", "Returned",
+                "Receipt tax", "Receipt tip", "Receipt posted", "Receipt photo"])
+    for r in receipts:
+        for i in r.items:
+            w.writerow([r.receipt_id, r.date.isoformat(), r.place, r.payer or "", i.category, i.item, i.unit,
+                        i.price, i.amount, "yes" if i.returned else "", r.tax, r.tip, r.posted_amount,
+                        r.image_file or "MISSING"])
+    w.writerow([])
+    w.writerow(["Open flags", len(flags)])
+    for f in flags:
+        w.writerow([f.severity.value, f.code, f.message])
+    w.writerow([])
+    w.writerow(["Payer", "Fronted", "Reimbursed", "Owed"])
+    for line in payer_summary(receipts, reimbursed):
+        w.writerow([line.payer, line.fronted, line.reimbursed, line.owed])
+    return buf.getvalue()

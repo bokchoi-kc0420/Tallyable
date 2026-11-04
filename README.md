@@ -11,7 +11,7 @@ Week 1 of 4 done, plus a working review app. Week 2: the app reads receipts with
 ```bash
 streamlit run app.py
 ```
-Click "Use the fake event's 14 receipts instead", tag payers, Draft rows, then Review.
+Click "Use the fake event's 14 receipts instead", tag payers, Draft rows, then Review, Summary (push), and Close out (who's owed, funder flags, report download). Each push logs its time to `output/run_log.csv`.
 
 ## Use Claude to read receipts
 1. Copy `.env.example` to `.env` and paste your key after `ANTHROPIC_API_KEY=`. Git ignores `.env`; never commit it or paste it anywhere.
@@ -41,6 +41,8 @@ pytest
 | `treasurer/try_one.py`, `score_all.py` | Read one receipt; score all of them against the answer key |
 | `treasurer/score.py` | Field-level accuracy of drafts against the answer key |
 | `treasurer/post.py` | Long-format transaction rows, event totals, idempotent local CSV sink |
+| `treasurer/closeout.py` | Funder rules (UC Davis CFC, ORG), who's owed, funder report CSV |
+| `treasurer/runlog.py` | One row per push in `output/run_log.csv`: receipts, edits, overrides, minutes |
 | `treasurer/sheets.py` | Google Sheets sink: tidy Transactions and Events tabs, rebuilt Balance Sheet and Ledger views |
 | `app.py` | Streamlit: Upload, Review, Summary |
 | `fake_event/` | 15 fake receipts, answer key, 6 planted errors (see its README) |
