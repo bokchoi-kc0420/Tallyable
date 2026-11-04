@@ -49,6 +49,7 @@ Draft the fake event, approve a few receipts, then go to **3. Summary**, type so
 | Transactions | One row per approved line item. This is the record the tool trusts. | Only to fix mistakes |
 | Events | One row per event, with income by source | Only to fix mistakes |
 | Balance Sheet | Your sideways layout, one block per event | No, it's rebuilt on every push |
+| Balance Sheet: Fall 2026 (etc.) | The same layout with only that academic quarter's events | No, it's rebuilt on every push |
 | Ledger | Date, description, assets, liabilities, running totals, balance | No, it's rebuilt on every push |
 | Reimbursements | One row per payback to a member | Only to fix mistakes |
 | Expense Report: (event) | The club's per-event expense report: place, category, items, unit, price, tax, tip, total, notes | No, it's rebuilt on every push |

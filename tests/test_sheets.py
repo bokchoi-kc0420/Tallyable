@@ -164,3 +164,24 @@ def test_local_views_match_what_sheets_would_draw(approved):
     assert views[BALANCE] == book.tabs[BALANCE].cells
     assert views[LEDGER] == book.tabs[LEDGER].cells
     assert "571.75" in grid_to_csv(views["Expense Report"])
+
+
+def test_academic_quarters():
+    from treasurer.sheets import academic_quarter
+    assert academic_quarter("2026-11-14") == "Fall 2026"
+    assert academic_quarter(date(2027, 1, 9)) == "Winter 2027"
+    assert academic_quarter("2027-04-01") == "Spring 2027"
+    assert academic_quarter("2027-07-04") == "Summer 2027"
+
+
+def test_each_quarter_gets_its_own_balance_sheet(approved):
+    book = FakeBook()
+    sink = GoogleSheetsSink(book)
+    sink.post(approved[:2], EVENT, INCOME)
+    winter = EventInfo("EVT-FAKE-03", "New Year Social (FAKE)", date(2027, 1, 20))
+    other = approved[2].model_copy(update={"event_id": "EVT-FAKE-03", "date": date(2027, 1, 19)})
+    sink.post([other], winter, {"Cash": Decimal("20.00")})
+    fall, win = book.tabs["Balance Sheet: Fall 2026"].cells, book.tabs["Balance Sheet: Winter 2027"].cells
+    assert fall[1][0].startswith("Fall Mentor Mixer") and len(fall[1]) == 3
+    assert win[1][0].startswith("New Year Social") and len(win[1]) == 3
+    assert len(book.tabs[BALANCE].cells[1]) == 7   # the all-events tab still has both, side by side

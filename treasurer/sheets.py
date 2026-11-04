@@ -154,6 +154,27 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
     return rows
 
 
+def academic_quarter(d: str | date) -> str:
+    """UC Davis runs on quarters: Fall (Sep-Dec), Winter (Jan-Mar), Spring (Apr-Jun),
+    Summer (Jul-Aug). The club starts a new balance sheet each quarter."""
+    d = date.fromisoformat(str(d)[:10])
+    name = {9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Winter", 2: "Winter", 3: "Winter",
+            4: "Spring", 5: "Spring", 6: "Spring", 7: "Summer", 8: "Summer"}[d.month]
+    return f"{name} {d.year}"
+
+
+def quarter_tabs(events: list[dict], tx: list[dict]) -> dict[str, list[list]]:
+    """One balance sheet per academic quarter, holding that quarter's events."""
+    by_q: dict[str, list[dict]] = OrderedDict()
+    for e in sorted(events, key=lambda e: str(e["date"])):
+        by_q.setdefault(academic_quarter(e["date"]), []).append(e)
+    out = {}
+    for q, evs in by_q.items():
+        ids = {str(e["event_id"]) for e in evs}
+        out[f"{BALANCE}: {q}"] = render_balance_sheet(evs, [r for r in tx if str(r["event_id"]) in ids])
+    return out
+
+
 LEDGER_HEADER = ["DATE", "DESCRIPTION", "ASSETS", "LIABILITIES", "TOTAL ASSETS", "TOTAL LIABILITIES", "BALANCE"]
 
 
@@ -210,10 +231,13 @@ class GoogleSheetsSink:
         if not sheet_id or not (key_file or key_info):
             return None
         import gspread
+        from gspread.http_client import BackOffHTTPClient  # waits and retries when Google rate-limits us
         if key_info:
-            return cls(gspread.service_account_from_dict(dict(key_info)).open_by_key(sheet_id))
-        path = Path(key_file) if Path(key_file).is_absolute() else root / key_file
-        return cls(gspread.service_account(filename=str(path)).open_by_key(sheet_id))
+            client = gspread.service_account_from_dict(dict(key_info), http_client=BackOffHTTPClient)
+        else:
+            path = Path(key_file) if Path(key_file).is_absolute() else root / key_file
+            client = gspread.service_account(filename=str(path), http_client=BackOffHTTPClient)
+        return cls(client.open_by_key(sheet_id))
 
     @property
     def label(self) -> str:
@@ -246,6 +270,8 @@ class GoogleSheetsSink:
         events = self._records(EVENTS, EVENT_FIELDS)
         tx = tx_ws.get_all_records()
         self._rewrite(BALANCE, render_balance_sheet(events, tx))
+        for title, grid in quarter_tabs(events, tx).items():
+            self._rewrite(title, grid)
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())))
         self._rewrite(LEDGER, render_ledger(events, tx, self.reimbursements()))
