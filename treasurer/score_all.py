@@ -59,6 +59,7 @@ def main(argv: list[str]) -> int:
     s = score(drafts, truth)
     print(f"\nModel {ex.model} · {len(drafts)}/{len(truth)} receipts read · {secs:.0f}s · ~${ex.cost():.3f}")
     print(f"Overall field accuracy: {s.overall:.1%}")
+    print(f"Invented lines: {s.extra_lines}")
     for f, acc in s.by_field().items():
         print(f"  {f:<9} {acc:.1%}")
     if s.misses:
@@ -70,7 +71,7 @@ def main(argv: list[str]) -> int:
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps({
         "model": ex.model, "seconds": round(secs, 1), "cost_usd": round(ex.cost(), 4),
-        "overall": s.overall, "by_field": s.by_field(), "misses": s.misses, "failed": failed,
+        "overall": s.overall, "extra_lines": s.extra_lines, "by_field": s.by_field(), "misses": s.misses, "failed": failed,
         "usage": ex.usage,
         "drafts": {rid: json.loads(r.model_dump_json()) for rid, r in drafts.items()},
     }, indent=2))
