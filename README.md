@@ -79,7 +79,7 @@ Click "Use the fake event's 14 receipts instead", tag payers, then go through Dr
 - **Google Sheets:** [docs/google_sheets_setup.md](docs/google_sheets_setup.md). Without it, Push writes a local CSV.
 - **Put it online:** [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first.
 - **HEIC photos:** `python -m pip install pillow-heif`.
-- **Tests:** `python -m pytest` (74 tests; they never call the API or touch a real sheet).
+- **Tests:** `python -m pytest` (85 tests, run on every push; they never call the API or touch a real sheet).
 
 ## Rules
 | Flag | Rule | Blocks approval |
@@ -108,6 +108,8 @@ Funder rules (`treasurer/closeout.py`): CFC food cap, max award, 10% club share,
 | `treasurer/runlog.py` | Time and edit log per push |
 | `fake_event/` | 15 fake receipts, answer key, 6 planted errors |
 | `tests/` | pytest suite |
+
+Interview prep: [docs/interview_notes.md](docs/interview_notes.md).
 
 ## Known limits
 - One receipt paid by two people can't be split. Record it as two receipts. An exact 50/50 split gets flagged as a possible duplicate and needs a note.
