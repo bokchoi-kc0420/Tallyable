@@ -346,3 +346,26 @@ def test_income_sources_can_be_added_renamed_and_removed():
     at.button(key="rm-Cash").click().run()
     assert "Cash" not in at.session_state["event"]["sources"]
     assert not at.exception
+
+
+def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch, tmp_path):
+    from treasurer import sheets
+    from treasurer.post import LocalCsvSink
+
+    class FakeSheet(LocalCsvSink):
+        label = "Google Sheets"
+        url = "https://docs.google.com/spreadsheets/d/fake"
+
+    monkeypatch.setattr(sheets.GoogleSheetsSink, "from_env", classmethod(lambda cls, *a: FakeSheet(tmp_path / "t.csv")))
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    for rid in list(at.session_state["receipts"]):
+        at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
+            update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
+    at.sidebar.radio[0].set_value("3. Summary").run()
+    next(b for b in at.button if b.label == "Push to Google Sheets").click().run()
+    assert not at.exception
+    assert any(e.label.startswith("Download a copy instead") for e in at.expander)
+    assert [lb.label for lb in at.get("link_button")] == ["Open the sheet"]

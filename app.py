@@ -175,7 +175,7 @@ st.markdown("""<style>
 /* Fredoka for labels, buttons, tabs and names; Inter stays for sentences and typed values */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: Fredoka, sans-serif !important;
   font-weight: 500 !important; font-size: 1rem !important; color: #1F2A22; }
-.stButton button p, .stDownloadButton button p, .stFormSubmitButton button p {
+.stButton button p, .stDownloadButton button p, .stFormSubmitButton button p, .stLinkButton a p {
   font-family: Fredoka, sans-serif !important; font-weight: 600 !important; font-size: 1rem !important; }
 [data-testid="stExpander"] summary p { font-family: Fredoka, sans-serif !important; font-weight: 600 !important;
   font-size: 1.02rem !important; }
@@ -978,21 +978,31 @@ elif page == "3. Summary":
         ss.last_push = (f"**Posted {len(written)} receipts to {sink.label}.**" if written
                         else "**Already up to date:** every approved receipt is in the books.")
         st.rerun()  # redraw the table and step bar with the posted status
+    url = getattr(sink, "url", None)
     if ss.get("last_push") and not any(r.status is Status.APPROVED for r in ss.receipts.values()):
-        url = getattr(sink, "url", None)
-        link = f" [Open the sheet]({url})." if url else ""
-        next_step(ss.last_push + link + " Next, see who's owed money and check the funder's rules.",
-                  "Go to Close out →", "4. Close out", "to-closeout")
+        with st.container(border=True, key="after-push"):
+            c = st.columns([2.6, 1.3, 1.4], vertical_alignment="center")
+            c[0].markdown(md(ss.last_push + " Next, see who's owed money and check the funder's rules."))
+            if url:
+                c[1].link_button("Open the sheet", url, icon=":material/open_in_new:", width="stretch")
+            c[2].button("Go to Close out →", type="primary", on_click=go, args=("4. Close out",), key="to-closeout",
+                        width="stretch")
 
     if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
-        st.subheader("Download the books")
-        st.caption("Every report in one formatted Excel file, for approved receipts. Open it in Excel, or bring it "
-                   "into your own Google Sheet with File > Import. No sharing needed.")
-        views = local_views(receipts, EVENT, income, saved_reimbursements(sink))
-        st.download_button("Download the whole book (Excel)", type="primary", icon=":material/download:",
-                           data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
-                           file_name=f"{EVENT_ID}_books.xlsx", key="dl-xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        on_sheets = sink.label == "Google Sheets"
+        # With Google Sheets connected the books are already there, so the Excel copy is tucked away:
+        # it must never look like the next step after Push.
+        box = st.expander("Download a copy instead (Excel)") if on_sheets else st.container()
+        with box:
+            if not on_sheets:
+                st.subheader("Download the books")
+            st.caption("Every report in one formatted Excel file, for approved receipts. Open it in Excel, or bring "
+                       "it into your own Google Sheet with File > Import. No sharing needed.")
+            views = local_views(receipts, EVENT, income, saved_reimbursements(sink))
+            st.download_button("Download the whole book (Excel)", type="secondary" if on_sheets else "primary",
+                               icon=":material/download:", data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
+                               file_name=f"{EVENT_ID}_books.xlsx", key="dl-xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         with st.expander("Or one report at a time (CSV)"):
             cols = st.columns(len(views))
             for col, (title, grid) in zip(cols, views.items(), strict=True):
