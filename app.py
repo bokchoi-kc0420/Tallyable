@@ -222,18 +222,29 @@ if page == "1. Upload":
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
     sources = [(f.name, f.getvalue()) for f in files] if files else [(p.name, p.read_bytes()) for p in ss.get("demo", [])]
 
-    payers = {}
-    for name, _ in sources:
-        payers[name] = st.selectbox(f"Payer for {name}", PAYERS, key=f"payer-{name}")
+    if sources:
+        untagged = sum(1 for name, _ in sources if not ss.get(f"payer-{name}"))
+        st.info(md(f"**{len(sources)} receipts loaded.** Pick who paid for each (below), then click **Draft rows**. "
+                   + (f"{untagged} still have no payer; those get flagged in Review." if untagged else "Every receipt has a payer.")))
+        c = st.columns([3, 1, 2], vertical_alignment="bottom")
+        everyone = c[0].selectbox("Set every payer to", PAYERS[1:], key="payer-all")
+        if c[1].button("Apply to all"):
+            for name, _ in sources:
+                ss[f"payer-{name}"] = everyone
+            st.rerun()
+        draft_clicked = c[2].button("Draft rows", type="primary")
+    else:
+        draft_clicked = False
 
-    if sources and st.button("Draft rows", type="primary"):
-        bar = st.progress(0.0)
+    if draft_clicked:
+        bar = st.progress(0.0, text=f"Starting to read {len(sources)} receipts...")
         for n, (name, data) in enumerate(sources):
+            bar.progress(n / len(sources), text=f"Reading {name} ({n + 1} of {len(sources)})...")
             rid = next_id(name)
             try:
                 f = prepare(data, name)
                 r = ex.extract(f.data, f.filename, EVENT_ID, rid)
-                ss.receipts[rid] = r.model_copy(update={"payer": payers[name] or None, "image_file": name})
+                ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
                 ss.images[rid] = (f.data, f.media_type)
                 notes = f.warnings + ([f"Reader's note: {r.review_note}"] if r.review_note else [])
                 if notes:
@@ -243,11 +254,17 @@ if page == "1. Upload":
                 ss.failed[name] = (None, str(e))
             except ExtractionError as e:
                 ss.failed[name] = ((f.data, f.media_type), f"{e} You can type it in by hand below.")
-            bar.progress((n + 1) / len(sources))
+        bar.progress(1.0, text=f"Read {len(sources)} receipts.")
         ss.demo = []
         ss.drafted_at = ss.drafted_at or time.time()
         cost = f" · about ${ex.cost():.3f} in API calls" if reader == "claude" else ""
         st.success(md(f"Drafted. Go to Review.{cost}"))
+
+    if sources:
+        st.subheader("Who paid")
+        grid = st.columns(4)
+        for n, (name, _) in enumerate(sources):
+            grid[n % 4].selectbox(name, PAYERS, key=f"payer-{name}")
 
     for name, (data, reason) in list(ss.failed.items()):
         st.error(md(f"{name}: {reason}"))
