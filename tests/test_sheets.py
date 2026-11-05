@@ -265,3 +265,13 @@ def test_whole_book_exports_to_one_formatted_excel_file(approved):
     assert bs.freeze_panes == "A4"  # note, event title and column headers stay visible
     tx = wb["Transactions"]
     assert tx.max_row == 1 + sum(len(r.items) for r in approved)
+
+
+def test_formatted_currency_cells_read_back_as_numbers():
+    from treasurer.sheets import D
+    assert D("$1,200.50") == Decimal("1200.50")
+    assert D("-$5.00") == D("($5.00)") == Decimal("-5.00")
+    assert D("") == Decimal("0")
+    assert D(500) == Decimal("500")
+    with pytest.raises(ValueError, match="isn't a number"):
+        D("abc")

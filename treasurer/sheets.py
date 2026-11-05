@@ -26,7 +26,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from . import sheet_format as fmt
-from .models import Receipt, Status
+from .models import Receipt, Status, cell_decimal
 from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
 
@@ -54,9 +54,7 @@ class EventInfo:
     attendees: int | None = None
 
 
-def D(x) -> Decimal:
-    """Sheet cell -> Decimal. Cells come back as int, float or str."""
-    return Decimal(str(x).strip() or "0")
+D = cell_decimal  # sheet cell -> Decimal (see models.cell_decimal)
 
 
 def num(x: Decimal) -> float:

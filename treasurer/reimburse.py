@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from .models import money
+from .models import cell_decimal, money
 
 REIMB_FIELDS = ["event_id", "payer", "date", "amount", "method", "note"]
 METHODS = ["Zelle", "Venmo", "Cash", "Check"]
@@ -38,7 +38,7 @@ def totals_by_payer(rows: list[dict], event_id: str) -> dict[str, Decimal]:
     out: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for r in rows:
         if str(r["event_id"]) == event_id:
-            out[str(r["payer"])] += Decimal(str(r["amount"]))
+            out[str(r["payer"])] += cell_decimal(r["amount"])
     return {k: money(v) for k, v in out.items()}
 
 

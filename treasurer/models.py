@@ -7,7 +7,7 @@ The same models will validate the AI's JSON output in week 2.
 from __future__ import annotations
 
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from enum import Enum
 from typing import Literal
 
@@ -92,3 +92,17 @@ class Receipt(BaseModel):
     def posted_amount(self) -> Decimal:
         """What reaches the balance sheet: the total minus returned items."""
         return money(self.total - self.returned_amount)
+
+
+def cell_decimal(x) -> Decimal:
+    """Sheet cell -> Decimal. Cells come back as int, float or str, and once the sheet is
+    formatted as currency, as text like "$1,200.00", "-$5.00" or "($5.00)"."""
+    t = str(x).strip().replace("$", "").replace(",", "").replace(" ", "")
+    if t.startswith("(") and t.endswith(")"):
+        t = "-" + t[1:-1]
+    if t in ("", "-"):
+        return Decimal("0")
+    try:
+        return Decimal(t)
+    except InvalidOperation:
+        raise ValueError(f"'{x}' in the sheet isn't a number. Fix that cell, then push again.") from None
