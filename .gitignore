@@ -10,3 +10,4 @@ service_account*.json
 secrets.toml
 .streamlit/secrets.toml
 output/
+*.lnk
