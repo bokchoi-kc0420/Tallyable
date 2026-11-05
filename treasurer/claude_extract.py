@@ -48,7 +48,13 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 - Dates as YYYY-MM-DD. Money as plain decimals with two places, no currency symbol.
 - Receipts may be partly in Korean. Copy item names as printed; add an English gloss
   in parentheses only if you are sure of it.
-- Category: Food, Drink, or Other (supplies, decorations, anything not eaten or drunk).
+- Category is the one field you judge rather than copy. Decide by what the item IS, not by
+  words in its name:
+  - Food: anything eaten, including sauces, dips, condiments and snacks.
+  - Drink: anything drunk, plus ice bought to chill drinks.
+  - Other: things that are not consumed: plates, cups, napkins, utensils, decorations, supplies.
+  A container word in a name can mislead: judge the contents. "Salsa jar" is Food; an empty
+  "mason jar" is Other. If you can't tell, pick the most likely and say so in `unreadable_note`.
 - Set `returned` only if the receipt marks the item returned or refunded.
 """
 

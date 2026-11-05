@@ -17,6 +17,13 @@ class Score:
     total: dict[str, int] = field(default_factory=dict)
     misses: list[str] = field(default_factory=list)
     extra_lines: int = 0  # lines the AI invented; not in `overall`, reported separately
+    food_side: list[bool] = field(default_factory=list)  # category right on the food/not-food split
+
+    @property
+    def food_side_accuracy(self) -> float:
+        """Funder rules only care whether an item is food/drink or not (CFC food cap, ORG ban),
+        so a Food-vs-Drink mix-up costs nothing; Food-vs-Other does."""
+        return sum(self.food_side) / len(self.food_side) if self.food_side else 0.0
 
     def add(self, name: str, ok: bool, where: str) -> None:
         self.total[name] = self.total.get(name, 0) + 1
@@ -83,6 +90,8 @@ def score(drafts: dict[str, Receipt], truth: dict[str, Receipt]) -> Score:
             for f in ITEM_FIELDS:
                 ok = di is not None and _norm(getattr(d.items[di], f)) == _norm(getattr(t.items[ti], f))
                 s.add(f, ok, f"{rid}.line{ti + 1}")
+            if di is not None:
+                s.food_side.append((t.items[ti].category == "Other") == (d.items[di].category == "Other"))
         used = {di for _, di in pairs if di is not None}
         for di in range(len(d.items) if d else 0):
             if di not in used:

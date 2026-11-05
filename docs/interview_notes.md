@@ -12,7 +12,7 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
   - Built a fake event with an answer key before writing any AI code, so every claim is measurable.
   - Kept the AI to one job, reading receipts. Everything else is deterministic code.
   - Required a human approval for every row, with a written note to override a blocking flag.
-- **Result:** ___% field accuracy on Sonnet 5.5 at about $___ per event. 6 of 6 planted errors caught, 0 false flags. ___ minutes vs ___ by hand.
+- **Result:** 99.0% field accuracy on Sonnet 5.5 (the only misses were 2 category calls) at about $0.07 per event. 6 of 6 planted errors caught, 0 false flags. ___ minutes vs ___ by hand.
 
 ## Decisions you can defend
 | Decision | Why | What you gave up |
@@ -28,6 +28,7 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
 | Funder rules as data (`RulePack`) | A new funder means new numbers, not new code | Odd rules still need code |
 
 ## Questions you'll likely get
+- **"Where did the AI get it wrong?"** Only on category, 2 of 32 lines, like "Sauce cups": food or tableware? Category is a judgment, not something printed on the receipt. So I tightened the definition and started scoring the food-vs-other split separately, because that's the part funder rules use. I wrote general definitions instead of naming those two items, which would just teach the model the test. Even so, the definitions were written after seeing the misses, so the honest check is a second set of fake receipts the prompt has never seen.
 - **"How do you know the AI is right?"** Every receipt is scored field by field against an answer key. Lines are matched by name, so one invented line doesn't count the whole receipt as wrong. In real use, nothing posts without a person approving it.
 - **"What happens when it's wrong?"** The math check catches misread numbers that break the total. A misread name or category is caught in review. Edits are counted, so you can see where the model struggles.
 - **"Why not just use OCR?"** Receipts are messy: handwriting, Korean item names, folded paper. A vision model handles those. Structured output keeps the result in a fixed shape.
@@ -36,8 +37,8 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
 - **"What did you learn?"** Measure before you optimize. Building the answer key first made every later choice, including which model to use, a data question.
 
 ## Numbers to have ready
-- Field accuracy: ___ (Sonnet 5.5), ___ (Haiku 5.5)
-- Cost per event: $___
+- Field accuracy: 99.0% on Sonnet 5.5 (place, date, items, prices, tax, tip and totals all 100%; category 93.8%). Haiku 5.5: ___
+- Cost per event: $0.074 for 14 receipts, 28 seconds
 - Minutes by hand: ___. Minutes in the tool: ___
 - Edits per receipt: ___
 - Tests: 97, 93% coverage, running on every push in GitHub Actions

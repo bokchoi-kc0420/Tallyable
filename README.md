@@ -34,13 +34,15 @@ Measured on the fake event: 15 receipts with 6 planted errors and an answer key 
 | Metric | Result |
 | --- | --- |
 | Planted errors caught by the checks | 6 of 6, with 0 false flags on the 9 clean receipts |
-| Field accuracy of AI drafts (Sonnet 5.5) | _TBD: `python -m treasurer.score_all`_ |
+| Field accuracy of AI drafts (Sonnet 5.5) | **99.0%**: every field 100% except category (93.8%, 2 lines). 0 invented lines. Run of 2026-11-04 |
 | Field accuracy (Haiku 5.5) | _TBD_ |
-| API cost for the whole event | _TBD (estimated at most $0.28 on Sonnet 5.5)_ |
+| API cost for the whole event | **$0.074** for 14 receipts, 28 seconds (Sonnet 5.5) |
 | Time to close out by hand (Excel) | _TBD_ |
 | Time to close out in Tallyable | _TBD: from `output/run_log.csv`_ |
 | Edits needed per receipt | _TBD: from `output/run_log.csv`_ |
 | Posted total vs expected | $571.75 = $571.75 (simulated correct review) |
+
+**What the misses were:** both were category calls, which are judgments, not transcriptions ("Sauce cups (20)" is labeled Food and "Ice bag" is labeled Drink). The prompt now defines categories by what an item *is*, and `score_all` also reports the food-vs-other split, which is the one funder rules actually use. That fix is untested until the next run.
 
 ## Architecture
 ```mermaid

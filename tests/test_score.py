@@ -46,3 +46,11 @@ def test_same_korean_text_in_different_unicode_forms_matches():
     t = R03.model_copy(update={"items": [R03.items[0].model_copy(update={"item": unicodedata.normalize("NFC", name)})]})
     d = R03.model_copy(update={"items": [R03.items[0].model_copy(update={"item": unicodedata.normalize("NFD", name) + "  "})]})
     assert score({"R03": d}, {"R03": t}).misses == []
+
+
+def test_food_vs_drink_mixup_does_not_count_against_funder_split():
+    t = R03.model_copy(update={"items": [R03.items[0].model_copy(update={"category": "Food"})]})
+    drink = t.model_copy(update={"items": [t.items[0].model_copy(update={"category": "Drink"})]})
+    other = t.model_copy(update={"items": [t.items[0].model_copy(update={"category": "Other"})]})
+    assert score({"R03": drink}, {"R03": t}).food_side_accuracy == 1.0
+    assert score({"R03": other}, {"R03": t}).food_side_accuracy == 0.0
