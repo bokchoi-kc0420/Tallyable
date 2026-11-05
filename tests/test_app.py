@@ -189,7 +189,7 @@ def test_approve_moves_to_next_receipt_and_reopen_undoes():
 def test_needs_attention_filter_lists_only_flagged_receipts():
     at = drafted_app()
     at.sidebar.selectbox[0].set_value("Needs attention").run()
-    shown = {o.split(" ")[0] for o in at.sidebar.radio(key="review-pick").options}
+    shown = {o.split(" ")[1] for o in at.sidebar.radio(key="review-pick").options}
     assert {"R02", "R06", "R13"} <= shown   # math errors (stub misreads and planted)
     assert "R01" not in shown
 
@@ -223,3 +223,22 @@ def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     next(b for b in at.button if b.label == "Draft rows").click().run()
     assert not at.exception
     assert {r.payer for r in at.session_state["receipts"].values()} == {"Member C"}
+
+
+def test_each_step_says_what_comes_next():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    next(b for b in at.button if b.label == "Go to Review →").click().run()
+    assert at.sidebar.radio(key="step").value == "2. Review"
+    assert not any(b.label == "Go to Summary →" for b in at.button)
+    for rid in list(at.session_state["receipts"]):  # reject everything: quickest way to finish review
+        at.sidebar.radio(key="review-pick").set_value(rid).run()
+        next(b for b in at.button if b.label == "Reject").click().run()
+    next(b for b in at.button if b.label == "Go to Summary →").click().run()
+    assert at.sidebar.radio(key="step").value == "3. Summary"
+    assert any("Review" in m.value and "✓" in m.value for m in at.markdown)  # step bar marks review done
+    next(b for b in at.button if b.label.startswith("Push to")).click().run()
+    assert not at.exception
+    next(b for b in at.button if b.label == "Go to Close out →").click().run()
+    assert at.sidebar.radio(key="step").value == "4. Close out"

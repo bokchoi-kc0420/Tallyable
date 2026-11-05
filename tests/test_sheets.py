@@ -19,8 +19,9 @@ INCOME = {"Zelle": Decimal("300.00"), "Venmo": Decimal("250.00"), "Cash": Decima
 class FakeWorksheet:
     """Mimics the gspread calls the sink uses, including get_all_records numericising."""
 
-    def __init__(self):
+    def __init__(self, title="", sheet_id=0):
         self.cells: list[list] = []
+        self.title, self.id = title, sheet_id
 
     def append_rows(self, rows, value_input_option=None):
         self.cells.extend([list(r) for r in rows])
@@ -45,6 +46,13 @@ class FakeWorksheet:
 class FakeBook:
     def __init__(self):
         self.tabs: dict[str, FakeWorksheet] = {}
+        self.requests: list[dict] = []
+
+    def worksheets(self):
+        return list(self.tabs.values())
+
+    def batch_update(self, body):
+        self.requests.extend(body["requests"])
 
     def worksheet(self, title):
         if title not in self.tabs:
@@ -52,7 +60,7 @@ class FakeBook:
         return self.tabs[title]
 
     def add_worksheet(self, title, rows, cols):
-        self.tabs[title] = FakeWorksheet()
+        self.tabs[title] = FakeWorksheet(title, len(self.tabs) + 1)
         return self.tabs[title]
 
 
@@ -185,3 +193,41 @@ def test_each_quarter_gets_its_own_balance_sheet(approved):
     assert fall[1][0].startswith("Fall Mentor Mixer") and len(fall[1]) == 3
     assert win[1][0].startswith("New Year Social") and len(win[1]) == 3
     assert len(book.tabs[BALANCE].cells[1]) == 7   # the all-events tab still has both, side by side
+
+
+def test_push_formats_the_sheet_for_reading(approved):
+    from treasurer import sheet_format as fmt
+    book = FakeBook()
+    GoogleSheetsSink(book).post(approved, EVENT, INCOME)
+    reqs = book.requests
+    painted = [r["repeatCell"] for r in reqs if "repeatCell" in r]
+    # money cells get a currency format, headers get the dark band, totals are bold
+    assert any(p["cell"]["userEnteredFormat"] == fmt.MONEY for p in painted)
+    assert any(p["cell"]["userEnteredFormat"].get("backgroundColor") == fmt.HEADER_BG for p in painted)
+    assert any(p["cell"]["userEnteredFormat"].get("backgroundColor") == fmt.TOTAL_BG for p in painted)
+    # report tabs come first, data tabs last
+    order = {r["updateSheetProperties"]["properties"]["sheetId"]: r["updateSheetProperties"]["properties"]["index"]
+             for r in reqs if "index" in r.get("updateSheetProperties", {}).get("properties", {})}
+    title = {ws.id: t for t, ws in book.tabs.items()}
+    tabs = [title[sid] for sid, _ in sorted(order.items(), key=lambda x: x[1])]
+    assert tabs[0].startswith("Expense Report") and tabs[-3:] == sorted(["Events", "Reimbursements", "Transactions"])
+
+
+def test_formatting_failure_never_fails_the_push(approved):
+    book = FakeBook()
+
+    def refuse(body):
+        raise RuntimeError("table headers can't be formatted")
+    book.batch_update = refuse
+    assert GoogleSheetsSink(book).post(approved, EVENT, INCOME)  # receipts still written
+
+
+def test_view_formatting_rules():
+    from treasurer import sheet_format as fmt
+    grid = [["note"], ["Mixer (2026-11-14)", "", ""], ["LOCATION", "ITEMS (#)", "AMOUNT"], ["ASSETS", "", ""],
+            ["Zelle", "", 10.0], ["TOTAL ASSETS", "", 10.0]]
+    reqs = fmt.view_requests(7, grid)
+    freeze = [r for r in reqs if "gridProperties" in r.get("updateSheetProperties", {}).get("properties", {})]
+    assert freeze[0]["updateSheetProperties"]["properties"]["gridProperties"]["frozenRowCount"] == 3
+    money = [r["repeatCell"]["range"] for r in reqs if r.get("repeatCell", {}).get("cell", {}).get("userEnteredFormat") == fmt.MONEY]
+    assert money == [{"sheetId": 7, "startRowIndex": 4, "endRowIndex": 6, "startColumnIndex": 2, "endColumnIndex": 3}]

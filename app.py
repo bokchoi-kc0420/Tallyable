@@ -1,6 +1,6 @@
 """Streamlit app: Upload -> Review -> Summary. Run with `streamlit run app.py`.
 
-Core workflow only, no styling. Reads receipts with Claude when ANTHROPIC_API_KEY
+Theme lives in .streamlit/config.toml. Reads receipts with Claude when ANTHROPIC_API_KEY
 is in .env, otherwise with the stub (fake answer key plus planted misreads).
 """
 from __future__ import annotations
@@ -35,7 +35,7 @@ DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", 
 ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
         Status.POSTED: "📤 posted"}
 
-st.set_page_config(page_title="Tallyable", layout="wide")
+st.set_page_config(page_title="Tallyable", page_icon="🧾", layout="wide")
 ss = st.session_state
 
 
@@ -152,6 +152,43 @@ def md(text: str) -> str:
     return text.replace("$", "\\$")
 
 
+STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
+
+
+def go(step: str) -> None:
+    """Button callback: switch the sidebar step (runs before the sidebar is drawn)."""
+    ss.step = step
+
+
+def step_bar(current: str) -> None:
+    """Where you are in the close-out: done steps green, this one blue, the rest gray."""
+    rs = list(ss.receipts.values())
+    reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
+    posted = bool(rs) and all(r.status in (Status.POSTED, Status.REJECTED) for r in rs) \
+        and any(r.status is Status.POSTED for r in rs)
+    done = {"1. Upload": bool(rs), "2. Review": bool(rs) and reviewed == len(rs), "3. Summary": posted,
+            "4. Close out": False}
+    detail = {"2. Review": f" · {reviewed}/{len(rs)}" if rs else ""}
+    parts = []
+    for name in STEPS:
+        text = name + detail.get(name, "")
+        if name == current:
+            parts.append(f":blue-badge[**{text}**]")
+        elif done[name]:
+            parts.append(f":green-badge[✓ {text}]")
+        else:
+            parts.append(f":gray-badge[{text}]")
+    st.markdown(" → ".join(parts))
+
+
+def next_step(message: str, label: str, target: str, key: str) -> None:
+    """A box that says what to do next, with one button that goes there."""
+    with st.container(border=True):
+        c = st.columns([4, 1], vertical_alignment="center")
+        c[0].markdown(md(message))
+        c[1].button(label, type="primary", on_click=go, args=(target,), key=key, width="stretch")
+
+
 def event_id_for(name: str, d: date) -> str:
     slug = "".join(ch for ch in name.upper() if ch.isalnum())[:12] or "EVENT"
     return f"EVT-{d.isoformat()}-{slug}"
@@ -161,6 +198,8 @@ def start_new_event() -> None:
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
+    ss.pop("last_draft", None)
+    ss.pop("last_push", None)
     ss.started = time.time()
     session_store.clear(SESSION_FILE)
 
@@ -177,7 +216,9 @@ def save_session() -> None:
 
 
 ss.setdefault("event", dict(DEFAULT_EVENT))
-page = st.sidebar.radio("Step", ["1. Upload", "2. Review", "3. Summary", "4. Close out"])
+st.sidebar.markdown("## 🧾 Tallyable")
+st.sidebar.caption("Close out a club event: receipts in, checked books out.")
+page = st.sidebar.radio("Step", STEPS, key="step")
 with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
     name = st.text_input("Event name", ss.event["name"], disabled=locked)
@@ -200,6 +241,7 @@ st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 # ---------------- Screen 1: Upload ----------------
 if page == "1. Upload":
     st.header("Upload receipts")
+    step_bar(page)
     if not ss.receipts and SESSION_FILE.exists():
         saved = session_store.load(SESSION_FILE)
         if saved and saved["receipts"]:
@@ -257,8 +299,10 @@ if page == "1. Upload":
         bar.progress(1.0, text=f"Read {len(sources)} receipts.")
         ss.demo = []
         ss.drafted_at = ss.drafted_at or time.time()
-        cost = f" · about ${ex.cost():.3f} in API calls" if reader == "claude" else ""
-        st.success(md(f"Drafted. Go to Review.{cost}"))
+        cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
+        ss.last_draft = f"**Drafted {len(ss.receipts)} receipts{cost}.** Next, check each one against its photo."
+    if ss.get("last_draft") and ss.receipts:
+        next_step(ss.last_draft, "Go to Review →", "2. Review", "to-review")
 
     if sources:
         st.subheader("Who paid")
@@ -279,6 +323,7 @@ if page == "1. Upload":
 # ---------------- Screen 2: Review ----------------
 elif page == "2. Review":
     st.header("Review")
+    step_bar(page)
     if not ss.receipts:
         st.info("Nothing to review yet. Upload receipts first.")
         st.stop()
@@ -286,6 +331,11 @@ elif page == "2. Review":
     flags = run_checks(list(ss.receipts.values()))
     reviewed = sum(1 for x in ss.receipts.values() if x.status is not Status.DRAFTED)
     st.progress(reviewed / len(ss.receipts), text=f"{reviewed} of {len(ss.receipts)} reviewed")
+    if reviewed == len(ss.receipts):
+        ok = sum(1 for x in ss.receipts.values() if x.status in (Status.APPROVED, Status.POSTED))
+        next_step(f"**All {reviewed} receipts reviewed:** {ok} approved, {reviewed - ok} rejected. "
+                  "Next, add the event's income and push the approved rows to the books.",
+                  "Go to Summary →", "3. Summary", "to-summary")
 
     def attention(x_rid: str) -> bool:
         return any(f.severity is not Severity.INFO for f in flags[x_rid]) or bool(ss.notes.get(x_rid))
@@ -297,13 +347,14 @@ elif page == "2. Review":
     if not ids:
         st.success("Nothing left in this view.")
         st.stop()
-    labels = {x: f"{x} · {ss.receipts[x].place} · {ICON[ss.receipts[x].status]}" + (" ⚠️" if attention(x) else "")
+    labels = {x: f"{ICON[ss.receipts[x].status].split()[0]} {x} · {ss.receipts[x].place}" + (" ⚠️" if attention(x) else "")
               for x in ids}
     if ss.get("next_pick") in ids:  # set by "Approve" so the next receipt opens by itself
         ss["review-pick"] = ss.pop("next_pick")
     elif ss.get("review-pick") not in ids:
         ss["review-pick"] = ids[0]
-    rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick")
+    rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
+                           help="⏳ to review · ✅ approved · ❌ rejected · 📤 posted · ⚠️ has a flag")
     r = ss.receipts[rid]
 
 
@@ -377,21 +428,23 @@ elif page == "2. Review":
 # ---------------- Screen 3: Summary ----------------
 elif page == "3. Summary":
     st.header("Summary and push")
+    step_bar(page)
     receipts = list(ss.receipts.values())
     if not receipts:
         st.info("Nothing to sum up yet. Upload and review receipts first.")
         st.stop()
     st.subheader("Income")
+    st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
     c = st.columns(4)
     income = {k: dec(c[n].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
               enumerate(["Zelle", "Venmo", "Cash", "National KSEA funding"])}
     ss.income = {k: str(v) for k, v in income.items()}
     t = event_totals(receipts, income)
     m = st.columns(4)
-    m[0].metric("Income", f"${t['income']}")
-    m[1].metric("Expenses (approved)", f"${t['expenses']}")
-    m[2].metric("Net", f"${t['net']}")
-    m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more")
+    m[0].metric("Income", f"${t['income']}", border=True)
+    m[1].metric("Expenses (approved)", f"${t['expenses']}", border=True)
+    m[2].metric("Net", f"${t['net']}", border=True)
+    m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more", border=True)
 
     rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer or "(none)", "status": r.status.value,
              "posts": str(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
@@ -406,7 +459,8 @@ elif page == "3. Summary":
         st.error(err)
     if sink.label != "Google Sheets":
         st.caption("Google Sheets is not set up (see docs/google_sheets_setup.md), so Push writes a local CSV.")
-    pushed = st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts)
+    pushed = st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts,
+                       icon=":material/upload:")
     try:
         written = sink.post(receipts, EVENT, income) if pushed else None
     except Exception as e:  # network drop, sheet unshared mid-push, quota
@@ -427,7 +481,14 @@ elif page == "3. Summary":
                 "minutes_draft_to_push": minutes(ss.drafted_at, now),
                 "minutes_review_to_push": minutes(ss.review_started, now),
             })
-        st.success(f"Posted {len(written)} receipts to {sink.label}" if written else "Nothing new to post.")
+        ss.last_push = (f"**Posted {len(written)} receipts to {sink.label}.**" if written
+                        else "**Already up to date:** every approved receipt is in the books.")
+        st.rerun()  # redraw the table and step bar with the posted status
+    if ss.get("last_push") and not any(r.status is Status.APPROVED for r in ss.receipts.values()):
+        url = getattr(sink, "url", None)
+        link = f" [Open the sheet]({url})." if url else ""
+        next_step(ss.last_push + link + " Next, see who's owed money and check the funder's rules.",
+                  "Go to Close out →", "4. Close out", "to-closeout")
 
     if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
         st.subheader("Download the books")
@@ -452,6 +513,7 @@ elif page == "3. Summary":
 # ---------------- Screen 4: Close out ----------------
 else:
     st.header("Close out the event")
+    step_bar(page)
     done = [r for r in ss.receipts.values() if r.status in (Status.APPROVED, Status.POSTED)]
     if not done:
         st.info("Approve some receipts first.")
@@ -504,7 +566,7 @@ else:
     event = co.Event(EVENT_ID, EVENT.name, EVENT.date, attendees=attendees)
     flags = co.check_funder_rules(event, done, pack, requested, applied_on)
     most, steps = co.max_request(event, done, pack)
-    st.metric("Most you can request", f"${most}")
+    st.metric("Most you can request", f"${most}", border=True)
     with st.expander("How that was worked out"):
         for s in steps:
             st.write(md(s))
@@ -518,7 +580,11 @@ else:
     for note in pack.notes:
         st.caption(note)
 
-    st.download_button("Download funder report (CSV)", file_name=f"{EVENT_ID}_{pack.name.split()[-1]}_report.csv",
+    st.divider()
+    st.markdown("**Last step:** download the funder report and attach it to your reimbursement request. "
+                "When everyone is paid back, start the next event from the sidebar.")
+    st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
+                       file_name=f"{EVENT_ID}_{pack.name.split()[-1]}_report.csv",
                        data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
                        mime="text/csv")
 

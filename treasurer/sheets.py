@@ -25,6 +25,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+from . import sheet_format as fmt
 from .models import Receipt, Status
 from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
@@ -243,6 +244,10 @@ class GoogleSheetsSink:
     def label(self) -> str:
         return "Google Sheets"
 
+    @property
+    def url(self) -> str | None:
+        return getattr(self.book, "url", None)
+
     def _tab(self, title: str, header: list[str] | None = None):
         import gspread
         try:
@@ -275,6 +280,10 @@ class GoogleSheetsSink:
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())))
         self._rewrite(LEDGER, render_ledger(events, tx, self.reimbursements()))
+        self._tidy_format(tx_ws, TX_FIELDS, len(tx) + 1)
+        self._tidy_format(self._tab(EVENTS, EVENT_FIELDS), EVENT_FIELDS, len(events) + 1)
+        self._tidy_format(self._tab(REIMB, REIMB_FIELDS), REIMB_FIELDS, len(self.reimbursements()) + 1)
+        self._apply_format()
         return [r.receipt_id for r in todo]
 
     def reimbursements(self) -> list[dict]:
@@ -287,6 +296,8 @@ class GoogleSheetsSink:
             [[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS]], value_input_option="RAW")
         self._rewrite(LEDGER, render_ledger(self._records(EVENTS, EVENT_FIELDS),
                                             self._records(TX, TX_FIELDS), self.reimbursements()))
+        self._tidy_format(self._tab(REIMB, REIMB_FIELDS), REIMB_FIELDS, len(self.reimbursements()) + 1)
+        self._apply_format()
 
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
         ws = self._tab(EVENTS, EVENT_FIELDS)
@@ -304,6 +315,30 @@ class GoogleSheetsSink:
         ws.clear()
         if grid:
             ws.update(values=grid, range_name="A1", value_input_option="RAW")
+        self._pending.setdefault("views", []).extend(fmt.view_requests(ws.id, grid))
+
+    def _tidy_format(self, ws, header: list[str], rows: int) -> None:
+        self._pending.setdefault("tidy", []).extend(fmt.tidy_requests(ws.id, header, rows))
+
+    @property
+    def _pending(self) -> dict[str, list[dict]]:
+        if not hasattr(self, "_fmt"):
+            self._fmt: dict[str, list[dict]] = {}
+        return self._fmt
+
+    def _apply_format(self) -> None:
+        """Send the formatting in two batches, so a tab the treasurer turned into a
+        Sheets table (which can refuse header formatting) doesn't stop the views
+        from being formatted. Formatting is cosmetic: a failure never fails a push."""
+        tabs = [(ws.id, ws.title) for ws in self.book.worksheets()]
+        batches = [self._pending.pop("views", []) + fmt.order_requests(tabs, {TX, EVENTS, REIMB}),
+                   self._pending.pop("tidy", [])]
+        for requests in batches:
+            if requests:
+                try:
+                    self.book.batch_update({"requests": requests})
+                except Exception:  # cosmetic only
+                    pass
 
 
 MONEY_FIELDS = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}

@@ -3,3 +3,34 @@ gatherUsageStats = false
 
 [client]
 toolbarMode = "minimal"
+
+# Tallyable look: teal accent, Inter font, soft corners. Light and dark both set,
+# so it follows the viewer's system setting.
+[theme]
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+baseRadius = "0.6rem"
+buttonRadius = "0.5rem"
+showWidgetBorder = true
+
+[theme.light]
+primaryColor = "#0F766E"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F3F6F5"
+textColor = "#1F2933"
+borderColor = "#DCE3E1"
+dataframeHeaderBackgroundColor = "#E6F0EE"
+
+[theme.light.sidebar]
+backgroundColor = "#F3F6F5"
+
+[theme.dark]
+primaryColor = "#2DD4BF"
+backgroundColor = "#0E1513"
+secondaryBackgroundColor = "#17211F"
+textColor = "#E6ECEA"
+borderColor = "#2A3734"
+dataframeHeaderBackgroundColor = "#1C2826"
+
+[theme.dark.sidebar]
+backgroundColor = "#121B19"
