@@ -169,7 +169,7 @@ def test_refresh_can_resume_the_saved_session():
 
     fresh = AppTest.from_file(APP, default_timeout=30).run()  # a new browser tab
     assert fresh.session_state["receipts"] == {}
-    assert any("1 reviewed" in i.value for i in fresh.info)
+    assert any("1 reviewed" in i.value for i in fresh.markdown)
     next(b for b in fresh.button if b.label == "Resume where I left off").click().run()
     assert fresh.session_state["receipts"]["R01"].status.value == "approved"
     assert fresh.session_state["images"]["R01"][1] == "image/jpeg"
@@ -235,11 +235,11 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
 def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = AppTest.from_file(APP, default_timeout=30).run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert any("14 receipts loaded" in i.value and "14 still have no payer" in i.value for i in at.info)
+    assert any("14 receipts loaded" in i.value and "14 still have no payer" in i.value for i in at.markdown)
     at.selectbox(key="payer-all").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
-    assert any("Every receipt has a payer" in i.value for i in at.info)
+    assert any("Every receipt has a payer" in i.value for i in at.markdown)
     next(b for b in at.button if b.label == "Draft rows").click().run()
     assert not at.exception
     assert {r.payer for r in at.session_state["receipts"].values()} == {"Member C"}
@@ -314,3 +314,12 @@ def test_summary_warns_about_junk_and_negative_income():
     warnings = " ".join(w.value for w in at.warning)
     assert "isn't an amount" in warnings and "Cash is negative" in warnings
     assert next(m for m in at.metric if m.label == "Income").value == "$1180.50"
+
+
+def test_empty_review_guide_button_goes_to_upload():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.sidebar.radio[0].set_value("2. Review").run()
+    assert any("Nothing to review yet" in m.value for m in at.markdown)
+    at.button(key="go-review-empty").click().run()
+    assert at.sidebar.radio[0].value == "1. Upload"
+    assert not at.exception

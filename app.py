@@ -152,6 +152,25 @@ st.markdown("""<style>
 .st-key-income-box { background: var(--tly-card); }
 .tly-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-right: 4px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Guide boxes: mascot speech bubble (Kevin's pick 1) */
+.tly-guide-mascot { display: block; }
+[class*="st-key-bubble-"] { position: relative; background: #FFFFFF; border: 2px solid #1C5C36;
+  border-radius: 16px; padding: 12px 16px; gap: .4rem; flex: 1 1 0; min-width: 0; }
+[class*="st-key-bubble-"]::before { content: ""; position: absolute; left: -10px; top: 24px; width: 16px; height: 16px;
+  background: #FFFFFF; border-left: 2px solid #1C5C36; border-bottom: 2px solid #1C5C36; transform: rotate(45deg); }
+[class*="st-key-bubble-tip-"] { padding: 8px 14px; }
+[class*="st-key-bubble-tip-"]::before { top: 50%; margin-top: -8px; }
+[class*="st-key-guide-"] > .stElementContainer:first-child { flex: 0 0 auto !important; width: auto !important; }
+[class*="st-key-bubble-"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+[class*="st-key-bubble-"] [data-testid="stMarkdownContainer"] p { font-family: Inter, sans-serif; font-size: .95rem;
+  line-height: 1.45; color: #3F4A42; margin: 0 !important; }
+[class*="st-key-bubble-"] [data-testid="stMarkdownContainer"] p strong { color: #1F2A22; }
+[class*="st-key-bubble-"] [data-testid="stMarkdownContainer"] p.tly-bubble-title {
+  font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.15rem;
+  color: #1F2A22; line-height: 1.25; }
+[class*="st-key-guide-"] { margin: .25rem 0 .5rem; }
+[class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: #FFFFFF !important; font-weight: 600; }
 </style>""", unsafe_allow_html=True)
 
 
@@ -392,6 +411,24 @@ def mascot_uri() -> str:
     return "data:image/png;base64," + base64.b64encode((ART / "mascot-small.png").read_bytes()).decode()
 
 
+def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None = None):
+    """Mascot speech bubble for empty states and tips. Returns the bubble so callers can add buttons."""
+    row = st.container(key=f"guide-{key}", horizontal=True, vertical_alignment="center", gap="small")
+    with row:
+        size = 44 if tip else 86
+        st.html(f'<img class="tly-guide-mascot" src="{mascot_uri()}" width="{size}" alt="">')
+        bubble = st.container(key=f"bubble-{'tip' if tip else 'big'}-{key}")
+        with bubble:
+            text = (f"**{title}** " if title and tip else "") + body
+            if title and not tip:
+                st.markdown(f'<p class="tly-bubble-title">{html.escape(title)}</p>', unsafe_allow_html=True)
+            st.markdown(text)
+            if to:
+                st.button(f"Go to {to.split('. ', 1)[1]}", key=f"go-{key}", type="primary",
+                          icon=":material/arrow_forward:", icon_position="right", on_click=go, args=(to,))
+    return bubble
+
+
 def step_bar(current: str) -> None:
     """Mascot walker: a track with a dot per step. Finished dots get a check, and the mascot
     stands where you are, inching along Review as receipts get checked."""
@@ -526,8 +563,10 @@ if page == "1. Upload":
         if saved and saved["receipts"]:
             n = len(saved["receipts"])
             done = sum(1 for r in saved["receipts"].values() if r.status is not Status.DRAFTED)
-            st.info(f"You have a saved session for {saved['event']['name']}: {n} receipts, {done} reviewed.")
-            if st.button("Resume where I left off"):
+            with guide("Welcome back!", f"You have a saved session for {saved['event']['name']}: "
+                       f"{n} receipts, {done} reviewed.", key="resume", tip=True):
+                resume = st.button("Resume where I left off")
+            if resume:
                 for k, v in saved.items():
                     ss[k] = v
                 st.rerun()
@@ -535,8 +574,8 @@ if page == "1. Upload":
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
     else:
-        st.info("Demo mode: receipts are read by a stand-in that only knows the fake event (with a few "
-                "planted misreads to catch). Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.")
+        guide("Demo mode:", "I can only read the fake event's receipts (with a few planted misreads to catch). "
+              "Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.", key="demo", tip=True)
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "mascot-empty.png"), width=190)
@@ -549,8 +588,9 @@ if page == "1. Upload":
 
     if sources:
         untagged = sum(1 for name, _ in sources if not ss.get(f"payer-{name}"))
-        st.info(md(f"**{len(sources)} receipts loaded.** Pick who paid for each (below), then click **Draft rows**. "
-                   + (f"{untagged} still have no payer; those get flagged in Review." if untagged else "Every receipt has a payer.")))
+        guide(f"{len(sources)} receipts loaded.", md("Pick who paid for each (below), then click **Draft rows**. "
+              + (f"{untagged} still have no payer; those get flagged in Review." if untagged else "Every receipt has a payer.")),
+              key="loaded", tip=True)
         c = st.columns([3, 1, 2], vertical_alignment="bottom")
         everyone = c[0].selectbox("Set every payer to", PAYERS[1:], key="payer-all")
         if c[1].button("Apply to all"):
@@ -615,7 +655,8 @@ elif page == "2. Review":
     st.header("Review")
     step_bar(page)
     if not ss.receipts:
-        st.info("Nothing to review yet. Upload receipts first.")
+        guide("Nothing to review yet!", "Drop your receipts on the Upload step and I'll read them for you.",
+              key="review-empty", to="1. Upload")
         st.stop()
     ss.review_started = ss.review_started or time.time()
     flags = run_checks(list(ss.receipts.values()))
@@ -721,7 +762,8 @@ elif page == "3. Summary":
     step_bar(page)
     receipts = list(ss.receipts.values())
     if not receipts:
-        st.info("Nothing to sum up yet. Upload and review receipts first.")
+        guide("Nothing to sum up yet!", "Upload and check your receipts first, then I'll add them up here.",
+              key="summary-empty", to="1. Upload")
         st.stop()
     st.subheader("Income")
     st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
@@ -832,7 +874,8 @@ else:
     step_bar(page)
     done = [r for r in ss.receipts.values() if r.status in (Status.APPROVED, Status.POSTED)]
     if not done:
-        st.info("Approve some receipts first.")
+        guide("Nothing to close out yet!", "Approve some receipts on Review, then I'll show who's owed.",
+              key="close-empty", to="2. Review")
         st.stop()
     waiting = [r.receipt_id for r in ss.receipts.values() if r.status is Status.DRAFTED]
     if waiting:
