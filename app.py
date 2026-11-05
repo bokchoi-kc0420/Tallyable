@@ -121,7 +121,8 @@ st.markdown("""<style>
 .st-key-edit-event [data-testid="stExpander"] summary:hover { background: #D3E6CD; }
 .st-key-step { margin-top: .5rem; }
 .st-key-event-group { background: var(--tly-card); border: 2px solid var(--tly-line) !important; border-radius: 18px !important;
-  padding: 12px !important; }
+  padding: 12px 12px 16px !important; }
+.st-key-edit-event { margin-top: -12px; }
 .st-key-step [data-testid="stWidgetLabel"] { display: none; }
 .st-key-step [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
 .st-key-step [role="radiogroup"]::before, .st-key-step [role="radiogroup"]::after { content: ""; position: absolute;
