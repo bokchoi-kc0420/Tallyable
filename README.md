@@ -35,7 +35,7 @@ Measured on the fake event: 15 receipts with 6 planted errors and an answer key 
 | --- | --- |
 | Planted errors caught by the checks | 6 of 6, with 0 false flags on the 9 clean receipts |
 | Field accuracy of AI drafts (Sonnet 5.5) | **99.5%**: every field 100% except category (96.9%, 1 of 32 lines). 0 invented lines. Run of 2026-11-05, after one prompt fix |
-| Field accuracy on the held-out set (Sonnet 5.5) | _TBD: `score_all --set holdout`, 12 receipts the prompt never saw_ |
+| Field accuracy on the held-out set (Sonnet 5.5) | **100.0%** on 12 receipts (36 lines) the prompt never saw, including food-vs-other. 0 invented lines. $0.071, 28 seconds. Run of 2026-11-05 |
 | Field accuracy (Haiku 5.5) | _TBD_ |
 | API cost for the whole event | **$0.079** for 14 receipts, 33 seconds (Sonnet 5.5) |
 | Time to close out by hand (Excel) | _TBD_ |
@@ -43,7 +43,9 @@ Measured on the fake event: 15 receipts with 6 planted errors and an answer key 
 | Edits needed per receipt | _TBD: from `output/run_log.csv`_ |
 | Posted total vs expected | $571.75 = $571.75 (simulated correct review) |
 
-**What the misses were:** the first run (99.0%) missed 2 category calls, which are judgments, not transcriptions ("Sauce cups (20)" is labeled Food and "Ice bag" is labeled Drink). The prompt now defines categories by what an item *is*, without naming either item. The rerun fixed "Ice bag" but still calls "Sauce cups" Other, which crosses the food-vs-other line funder rules use (96.9% on that split). The prompt is frozen for this set from here: tuning further would just teach it the test. Because the fix was written after seeing the misses, the honest number is the held-out set in [fake_event_holdout/](fake_event_holdout/): new stores, new items, many borderline on category ("Ice cream cups", "Water jug, empty"), labeled before any model run.
+**What the misses were:** the first run (99.0%) missed 2 category calls, which are judgments, not transcriptions ("Sauce cups (20)" is labeled Food and "Ice bag" is labeled Drink). The prompt now defines categories by what an item *is*, without naming either item. The rerun fixed "Ice bag" but still calls "Sauce cups" Other, which crosses the food-vs-other line funder rules use (96.9% on that split). The prompt is frozen for this set from here: tuning further would just teach it the test. Because the fix was written after seeing the misses, the honest number is the held-out set in [fake_event_holdout/](fake_event_holdout/): new stores, new items, many borderline on category ("Ice cream cups", "Water jug, empty"), labeled before any model run. It scored 100.0%.
+
+**The caveat:** both sets are clean images drawn by a script: flat paper, one font, a slight tilt and blur. Real phone photos are crumpled, shadowed, cut off, and from many printers, so expect lower numbers on those. 36 lines is also a small sample: 100% here means "no misses found", not "never wrong". That is why a person still approves every row.
 
 ## Architecture
 ```mermaid
