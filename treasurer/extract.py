@@ -42,7 +42,7 @@ class StubExtractor:
     def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str) -> Receipt:
         key = Path(filename).stem.upper()
         if key not in self._truth:
-            raise ExtractionError(f"Could not read {filename}")
+            raise ExtractionError(f"Demo mode only reads the fake event's receipts, so it can't read {filename}.")
         r = self._truth[key]
         items = [i.model_copy() for i in r.items]
         update: dict = {"receipt_id": receipt_id, "event_id": event_id, "payer": None,

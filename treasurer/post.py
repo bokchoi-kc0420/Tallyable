@@ -37,18 +37,20 @@ class LocalCsvSink:
     def __init__(self, path: Path):
         self.path = path
 
-    def posted_ids(self) -> set[str]:
+    def posted_ids(self) -> set[tuple[str, str]]:
+        """(event_id, receipt_id) pairs already written. Keyed by event too, because every
+        event starts its receipt ids over at R01."""
         if not self.path.exists():
             return set()
         with open(self.path, newline="") as fh:
-            return {row["receipt_id"] for row in csv.DictReader(fh)}
+            return {(row["event_id"], row["receipt_id"]) for row in csv.DictReader(fh)}
 
     label = "local CSV"
 
     def post(self, receipts: list[Receipt], event=None, income=None) -> list[str]:
         """Write approved, not-yet-posted receipts. Returns the ids written."""
         done = self.posted_ids()
-        todo = [r for r in receipts if r.status is Status.APPROVED and r.receipt_id not in done]
+        todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
         new_file = not self.path.exists()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "a", newline="") as fh:

@@ -55,6 +55,14 @@ def test_push_is_idempotent(tmp_path, truth):
     assert len(lines) == 1 + sum(len(r.items) for r in approved)
 
 
+def test_next_event_with_same_receipt_ids_still_posts(tmp_path, truth):
+    sink = LocalCsvSink(tmp_path / "tx.csv")
+    first = [r.model_copy(update={"status": Status.APPROVED}) for r in list(truth.values())[:2]]
+    second = [r.model_copy(update={"status": Status.APPROVED, "event_id": "EVT-NEXT"}) for r in first]
+    assert sink.post(first) == ["R01", "R02"]
+    assert sink.post(second) == ["R01", "R02"]  # new event, ids start over: not "already posted"
+
+
 def test_only_approved_receipts_count(truth):
     rs = [r.model_copy(update={"status": Status.APPROVED if r.receipt_id == "R01" else Status.DRAFTED})
           for r in truth.values()]

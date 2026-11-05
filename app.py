@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import html
 import os
 import time
 from datetime import date
@@ -38,8 +39,47 @@ DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", 
 ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
         Status.POSTED: "📤 posted"}
 
-st.set_page_config(page_title="Tallyable", page_icon="🧾", layout="wide")
+ART = ROOT / "assets"
+st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 ss = st.session_state
+
+# Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
+# on buttons and cards, a numbered step bar, and the mascot. Motion is off for reduced-motion users.
+st.markdown("""<style>
+.stButton button, .stDownloadButton button, .stFormSubmitButton button, .stLinkButton a {
+  transition: transform .16s cubic-bezier(.2,.8,.2,1), box-shadow .16s, filter .16s; }
+.stButton button:hover:not(:disabled), .stDownloadButton button:hover:not(:disabled),
+.stFormSubmitButton button:hover:not(:disabled), .stLinkButton a:hover {
+  transform: translateY(-2px); box-shadow: 0 4px 0 rgba(20,70,42,.35); }
+.stButton button:active:not(:disabled), .stDownloadButton button:active:not(:disabled),
+.stFormSubmitButton button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+[data-testid="stVerticalBlockBorderWrapper"], [data-testid="stMetric"] { transition: transform .2s, box-shadow .2s; }
+[data-testid="stMetric"]:hover { transform: translateY(-2px); box-shadow: 0 4px 0 rgba(20,70,42,.18); }
+[data-testid="stFileUploaderDropzone"] { border: 2px dashed #9DB8A4; transition: background-color .2s, border-color .2s; }
+[data-testid="stFileUploaderDropzone"]:hover { border-color: #1C5C36; background-color: rgba(247,190,63,.12); }
+[data-testid="stSidebar"] label[data-baseweb="radio"] { border-radius: 999px; padding: 2px 8px; transition: background-color .15s; }
+[data-testid="stSidebar"] label[data-baseweb="radio"]:hover { background-color: rgba(247,190,63,.22); }
+.tly-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: .2rem 0 1rem; font-size: .9rem; }
+.tly-step { display: inline-flex; align-items: center; gap: 6px; color: #6B6A60; font-weight: 500; }
+.tly-step b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid #C9C2A6; font-size: .78rem; }
+.tly-step.done { color: #1C5C36; } .tly-step.done b { background: #DDEBD9; border-color: #1C5C36; }
+.tly-step.now { color: #1F2A22; font-weight: 700; } .tly-step.now b { background: #1C5C36; border-color: #1C5C36; color: #fff; }
+.tly-rule { width: 28px; border-top: 2px dotted #C9C2A6; margin: 0 4px; }
+.tly-cheer { text-align: center; font-family: Fredoka, sans-serif; font-size: 1.5rem; font-weight: 600;
+  color: #1C5C36; margin: .4rem 0 .6rem; }
+.tly-hint { text-align: center; font-weight: 600; margin: .25rem 0 .5rem; }
+.tly-owed { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tly-avatar { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+  background: #FCE7A8; font-family: Fredoka, sans-serif; font-weight: 600; color: #1F2A22; }
+.tly-bar { height: 12px; border-radius: 999px; background: #E3D9B6; overflow: hidden; }
+.tly-bar > div { height: 100%; border-radius: 999px; background: #1C5C36; }
+@media (prefers-color-scheme: dark) {
+  .tly-step { color: #A9A796; } .tly-step.now { color: #EDEBDD; } .tly-step.done { color: #7FD19B; }
+  .tly-step.done b { background: #234A31; border-color: #7FD19B; } .tly-step b { border-color: #5A5F52; }
+  .tly-cheer { color: #7FD19B; } .tly-bar { background: #2F3A31; } .tly-bar > div { background: #7FD19B; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>""", unsafe_allow_html=True)
 
 
 def load_cloud_secrets() -> dict | None:
@@ -86,10 +126,13 @@ SAVED_KEYS = ("event", "receipts", "images", "notes", "edits", "income", "drafte
 
 
 def dec(text: str, default: str = "0") -> Decimal:
+    """Read a typed amount. Accepts "$1,234.50"; anything unreadable (or NaN) becomes the default."""
+    cleaned = str(text).replace("$", "").replace(",", "").strip()
     try:
-        return Decimal(str(text).strip() or default)
+        value = Decimal(cleaned or default)
     except InvalidOperation:
         return Decimal(default)
+    return value if value.is_finite() else Decimal(default)
 
 
 def next_id(filename: str | None = None) -> str:
@@ -129,18 +172,26 @@ def manual_form(key: str, image_file: str | None = None, data: tuple[bytes, str]
         tip = c[2].text_input("Tip", "0.00")
         total = c[3].text_input("Total", "0.00")
         st.caption("One line here; add more lines on the Review screen.")
-        if st.form_submit_button("Add") and place and item:
-            rid = next_id(image_file)
-            ss.receipts[rid] = Receipt(receipt_id=rid, event_id=EVENT_ID, place=place, date=d,
+        if not st.form_submit_button("Add"):
+            return
+        if not place.strip() or not item.strip():
+            st.error("Fill in Place and Item, then click Add.")
+            return
+        rid = next_id(image_file)
+        try:
+            ss.receipts[rid] = Receipt(receipt_id=rid, event_id=EVENT_ID, place=place.strip(), date=d,
                                        payer=payer or None, tax=dec(tax), tip=dec(tip), total=dec(total),
                                        image_file=image_file,
-                                       items=[LineItem(category=cat, item=item, unit=int(unit), price=dec(price))])
-            if data:
-                ss.images[rid] = data
-            if image_file:
-                ss.failed.pop(image_file, None)
-            st.success(f"Added {rid}. Check it on Review.")
-            st.rerun()
+                                       items=[LineItem(category=cat, item=item.strip(), unit=int(unit), price=dec(price))])
+        except ValueError as e:
+            st.error(f"Not added: {e}")
+            return
+        if data:
+            ss.images[rid] = data
+        if image_file:
+            ss.failed.pop(image_file, None)
+        st.toast(f"Added {rid}. Check it on Review.", icon=":material/check:")
+        st.rerun()
 
 
 def saved_reimbursements(sink) -> list[dict]:
@@ -149,6 +200,11 @@ def saved_reimbursements(sink) -> list[dict]:
     except Exception as e:
         st.error(f"Could not read paybacks from {sink.label}: {e}")
         return []
+
+
+def usd(amount: Decimal) -> str:
+    """$12.50, or -$12.50 for a loss (not $-12.50)."""
+    return f"-${-amount}" if amount < 0 else f"${amount}"
 
 
 def md(text: str) -> str:
@@ -175,14 +231,12 @@ def step_bar(current: str) -> None:
     detail = {"2. Review": f" · {reviewed}/{len(rs)}" if rs else ""}
     parts = []
     for name in STEPS:
-        text = name + detail.get(name, "")
-        if name == current:
-            parts.append(f":blue-badge[**{text}**]")
-        elif done[name]:
-            parts.append(f":green-badge[✓ {text}]")
-        else:
-            parts.append(f":gray-badge[{text}]")
-    st.markdown(" → ".join(parts))
+        num, label = name.split(". ", 1)
+        state = "now" if name == current else "done" if done[name] else ""
+        mark = "✓" if state == "done" else num
+        parts.append(f'<span class="tly-step {state}"><b>{mark}</b>{label}{detail.get(name, "")}</span>')
+    st.markdown('<div class="tly-steps">' + '<span class="tly-rule"></span>'.join(parts) + "</div>",
+                unsafe_allow_html=True)
 
 
 def next_step(message: str, label: str, target: str, key: str) -> None:
@@ -240,7 +294,7 @@ def open_past(path: Path) -> None:
 
 
 ss.setdefault("event", dict(DEFAULT_EVENT))
-st.sidebar.markdown("## 🧾 Tallyable")
+st.logo(str(ART / "logo.png"), size="large")
 st.sidebar.caption("Close out a club event: receipts in, checked books out.")
 page = st.sidebar.radio("Step", STEPS, key="step")
 with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
@@ -295,7 +349,11 @@ if page == "1. Upload":
     else:
         st.info("Demo mode: receipts are read by a stand-in that only knows the fake event (with a few "
                 "planted misreads to catch). Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.")
-    files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True)
+    if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
+        c = st.columns([2, 1, 2])
+        c[1].image(str(ART / "mascot-empty.png"), width="stretch")
+        st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
+    files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
     if st.button("Use the fake event's 14 receipts instead"):
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
@@ -484,11 +542,17 @@ elif page == "3. Summary":
     income = {k: dec(c[n % len(c)].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
               enumerate(SOURCES)}
     ss.income = {k: str(v) for k, v in income.items()}
+    for k in SOURCES:
+        typed = str(ss.get(f"income-{k}", "")).strip()
+        if typed and dec(typed, "-1") != dec(typed, "1"):  # unreadable: dec fell back to its default
+            st.warning(md(f"{k}: '{typed}' isn't an amount, so it counts as $0. Type a number like 120.00."))
+        elif income[k] < 0:
+            st.warning(md(f"{k} is negative ({usd(income[k])}). Refunds you paid out belong on a receipt, not in income."))
     t = event_totals(receipts, income)
     m = st.columns(4)
     m[0].metric("Income", f"${t['income']}", border=True)
     m[1].metric("Expenses (approved)", f"${t['expenses']}", border=True)
-    m[2].metric("Net", f"${t['net']}", border=True)
+    m[2].metric("Net", usd(t["net"]), border=True)
     m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more", border=True)
 
     rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer or "(none)", "status": r.status.value,
@@ -513,8 +577,11 @@ elif page == "3. Summary":
                  "receipts already written are skipped.")
         written = None
     if written is not None:
-        for rid in written:
-            ss.receipts[rid] = ss.receipts[rid].model_copy(update={"status": Status.POSTED})
+        # Every approved receipt is in the books now: just written, or already there from an
+        # earlier push (a resumed session, or a second browser tab).
+        for rid, rec in list(ss.receipts.items()):
+            if rec.status is Status.APPROVED:
+                ss.receipts[rid] = rec.model_copy(update={"status": Status.POSTED})
         if written:
             now, flags = time.time(), run_checks(receipts)
             ex, reader = make_extractor()
@@ -572,18 +639,63 @@ else:
     waiting = [r.receipt_id for r in ss.receipts.values() if r.status is Status.DRAFTED]
     if waiting:
         st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
+    else:
+        c = st.columns([2, 1, 2])
+        c[1].image(str(ART / "mascot-cheer.png"), width="stretch")
+        rejected = len(ss.receipts) - len(done)
+        cheer = f"All {len(done)} receipts approved!" if not rejected else f"All reviewed! {len(done)} approved, {rejected} rejected."
+        st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)
 
-    st.subheader("Who is owed")
     sink, err = get_sink()
     if err:
         st.error(err)
     reimbursed = totals_by_payer(saved_reimbursements(sink), EVENT_ID)
     lines = co.payer_summary(done, reimbursed)
-    st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
-                                "owed": str(x.owed)} for x in lines]), width="stretch", hide_index=True)
     owing = [x for x in lines if x.owed > 0]
+    left, right = st.columns([5, 3], gap="medium")
+    with left.container(border=True):
+        st.subheader("Who's owed")
+        cap = st.columns([3, 2], vertical_alignment="bottom")
+        cap[0].caption(f"Mark paid saves the payback to {sink.label}. It shows in the ledger.")
+        quick = cap[1].selectbox("Paid back with", METHODS, key="quick-method") if owing else METHODS[0]
+        counts: dict[str, int] = {}
+        for r in done:
+            counts[(r.payer or "").strip() or "(no payer)"] = counts.get((r.payer or "").strip() or "(no payer)", 0) + 1
+        for x in lines:
+            row = st.columns([0.5, 2, 1.1, 1.5], vertical_alignment="center")
+            initials = "".join(w[0] for w in x.payer.split()[:2] if w[0].isalnum()).upper() or "?"
+            row[0].markdown(f'<span class="tly-avatar">{html.escape(initials)}</span>', unsafe_allow_html=True)
+            n = counts.get(x.payer, 0)
+            row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted ${x.fronted}]"))
+            row[2].markdown(f'<span class="tly-owed">{md("$" + str(x.owed))}</span>', unsafe_allow_html=True)
+            if x.owed <= 0:
+                row[3].markdown(":green-badge[✓ Paid]")
+            elif x.payer == "(no payer)":
+                row[3].caption("Set a payer in Review")
+            elif row[3].button("Mark paid", key=f"paid-{x.payer}", icon=":material/check:", width="stretch",
+                               help=f"Records {md('$' + str(x.owed))} paid back to {x.payer} today."):
+                try:
+                    sink.record_reimbursement(Reimbursement(EVENT_ID, x.payer, date.today(), x.owed, quick, ""))
+                except Exception as e:
+                    st.error(f"Payback not saved: {e}. Try again.")
+                else:
+                    st.rerun()
+    with right.container(border=True):
+        st.subheader("Money in vs out")
+        t = event_totals(done, {k: dec(v) for k, v in ss.income.items()})
+        st.markdown(md(f"In **${t['income']}** · Out **${t['expenses']}** · Net **{usd(t['net'])}**"))
+        if t["income"] > 0:
+            pct = min(100, int(t["expenses"] / t["income"] * 100))
+            st.markdown(f'<div class="tly-bar" role="img" aria-label="Money out is {pct}% of money in">'
+                        f'<div style="width:{pct}%"></div></div>', unsafe_allow_html=True)
+            st.caption(f"Money out is {pct}% of money in." + (" Spent more than came in." if t["net"] < 0 else ""))
+        else:
+            st.caption("No income entered yet. Add it on the Summary step.")
+    with st.expander("Payback details"):
+        st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
+                                    "owed": str(x.owed)} for x in lines]), width="stretch", hide_index=True)
     if owing:
-        with st.form("payback"):
+        with st.expander("Pay back part of it, or by another method"), st.form("payback"):
             st.caption(f"Mark a payback. It is saved to {sink.label} and shows in the ledger.")
             c = st.columns(4)
             who = c[0].selectbox("Payer", [x.payer for x in owing])

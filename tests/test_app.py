@@ -65,6 +65,27 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     assert any(b.label.startswith("Download funder report") for b in at.get("download_button"))
 
 
+def test_one_click_mark_paid_uses_chosen_method():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button[0].click().run()
+    for sb in at.selectbox:
+        if sb.key and sb.key.startswith("payer-R"):
+            sb.set_value("Member C")
+    at.run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    r = at.session_state["receipts"]["R01"]
+    at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED})
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.selectbox(key="quick-method").set_value("Venmo").run()
+    at.button(key="paid-Member C").click().run()
+    assert not at.exception
+    owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
+    assert owed["owed"][0] == "0.00"
+    rows = list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
+    assert rows[-1]["method"] == "Venmo" and rows[-1]["payer"] == "Member C"
+    assert not [b for b in at.button if b.key == "paid-Member C"]  # now shows Paid instead
+
+
 def test_mark_paid_back_updates_owed():
     at = AppTest.from_file(APP, default_timeout=30).run()
     at.button[0].click().run()
@@ -267,3 +288,31 @@ def test_a_finished_event_can_be_reopened_later():
     assert len(at.session_state["receipts"]) == 14
     assert at.session_state["receipts"]["R01"].status.value == "approved"
     assert at.sidebar.radio(key="step").value == "4. Close out"
+
+
+def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    add = next(b for b in at.button if b.label == "Add")
+    add.click().run()
+    assert any("Fill in Place and Item" in e.value for e in at.error) and not at.session_state["receipts"]
+    next(t for t in at.text_input if t.label == "Place").set_value("Campus Market")
+    next(t for t in at.text_input if t.label == "Item").set_value("Ice")
+    next(t for t in at.text_input if t.label == "Price per unit").set_value("$3.50")
+    next(t for t in at.text_input if t.label == "Total").set_value("$3.50")
+    next(b for b in at.button if b.label == "Add").click().run()
+    assert not at.exception
+    r = next(iter(at.session_state["receipts"].values()))
+    assert str(r.items[0].price) == "3.50" and str(r.total) == "3.50"
+
+
+def test_summary_warns_about_junk_and_negative_income():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button[0].click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.sidebar.radio[0].set_value("3. Summary").run()
+    at.text_input(key="income-Zelle").set_value("abc").run()
+    at.text_input(key="income-Cash").set_value("-20").run()
+    at.text_input(key="income-Venmo").set_value("$1,200.50").run()
+    warnings = " ".join(w.value for w in at.warning)
+    assert "isn't an amount" in warnings and "Cash is negative" in warnings
+    assert next(m for m in at.metric if m.label == "Income").value == "$1180.50"
