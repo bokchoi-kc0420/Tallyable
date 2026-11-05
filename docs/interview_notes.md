@@ -3,7 +3,7 @@
 Fill in the blanks after your first measured run. Say it in your own words. These are prompts, not a script.
 
 ## 30-second version
-"I'm the treasurer of a student club. After every event, I had to turn a pile of receipt photos into an expense report, a balance sheet, and a ledger, then work out who was owed money and whether we met the funder's rules. I built Tallyable to do that close-out. AI reads the receipts, plain code checks the math, and I approve every row before anything reaches the books. On a test event with 6 planted errors, it caught all 6. Close-out went from ___ minutes by hand to ___ minutes."
+"I'm the treasurer of a student club. After every event, I had to turn a pile of receipt photos into an expense report, a balance sheet, and a ledger, then work out who was owed money and whether we met the funder's rules. I built Tallyable to do that close-out. AI reads the receipts, plain code checks the math, and I approve every row before anything reaches the books. On a test event with 6 planted errors, it caught all 6. Close-out went from about 10 minutes by hand to under 3."
 
 ## The story (situation, task, action, result)
 - **Situation:** Receipts arrive as group-chat photos. The books live in Google Sheets. Errors are easy to make: totals that don't add up, missing tip lines, duplicates, untagged payers. The funder (UC Davis CFC) caps food at $12 per person and wants a report within 21 days.
@@ -12,7 +12,7 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
   - Built a fake event with an answer key before writing any AI code, so every claim is measurable.
   - Kept the AI to one job, reading receipts. Everything else is deterministic code.
   - Required a human approval for every row, with a written note to override a blocking flag.
-- **Result:** 99.5% field accuracy on Sonnet 5.5 (one miss, a category call) at about $0.08 per event. Held-out set: 100% on 12 unseen receipts. 6 of 6 planted errors caught, 0 false flags. ___ minutes vs ___ by hand.
+- **Result:** 99.5% field accuracy on Sonnet 5.5 (one miss, a category call) at about $0.08 per event. Held-out set: 100% on 12 unseen receipts. 6 of 6 planted errors caught, 0 false flags. 2:53 in the tool vs. my usual 10 to 11 minutes by hand, about 3.5x faster.
 
 ## Decisions you can defend
 | Decision | Why | What you gave up |
@@ -40,6 +40,6 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
 ## Numbers to have ready
 - Field accuracy: 99.5% on Sonnet 5.5 (every field 100% except category, 96.9%; first run was 99.0%). Held-out set: 100.0% (12 unseen receipts, 36 lines, $0.071, 28s). Caveat: clean generated images, not phone photos. Haiku 5.5: ___
 - Cost per event: $0.079 for 14 receipts, 33 seconds
-- Minutes by hand: ___. Minutes in the tool: ___
+- Time: 2:53 in the tool (timed, 14 receipts, upload to Close out). By hand: about 10 to 11 minutes, my usual time when I double-check everything, not timed on this event. That works out to about 3.5x faster, roughly 70% less time. If asked, say the by-hand number is an estimate, and that the next step is timing a by-hand run on the same receipts.
 - Edits per receipt: ___
 - Tests: 100, 93% coverage, running on every push in GitHub Actions

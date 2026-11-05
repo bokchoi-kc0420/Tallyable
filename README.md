@@ -38,8 +38,8 @@ Measured on the fake event: 15 receipts with 6 planted errors and an answer key 
 | Field accuracy on the held-out set (Sonnet 5.5) | **100.0%** on 12 receipts (36 lines) the prompt never saw, including food-vs-other. 0 invented lines. $0.071, 28 seconds. Run of 2026-11-05 |
 | Field accuracy (Haiku 5.5) | _TBD_ |
 | API cost for the whole event | **$0.079** for 14 receipts, 33 seconds (Sonnet 5.5) |
-| Time to close out by hand (Excel) | _TBD_ |
-| Time to close out in Tallyable | _TBD: from `output/run_log.csv`_ |
+| Time to close out by hand (Excel) | About 10 to 11 minutes, double-checking everything. This is the treasurer's usual time, not a stopwatch run on this event |
+| Time to close out in Tallyable | **2:53**, timed, from upload through review to Close out (14 receipts, Sonnet 5.5). About 3.5x faster, roughly 70% less time. The upload screen has been made clearer since that run |
 | Edits needed per receipt | _TBD: from `output/run_log.csv`_ |
 | Posted total vs expected | $571.75 = $571.75 (simulated correct review) |
 
