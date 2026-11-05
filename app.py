@@ -108,17 +108,18 @@ st.markdown("""<style>
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: event card, then the stepper. */
 .tly-event { display: grid; grid-template-columns: 62px 1fr; margin: 4px 0 0; border: 2px solid var(--tly-forest);
-  border-bottom: 0; border-radius: 14px 14px 0 0; overflow: hidden; background: var(--tly-card); }
+  border-radius: 14px; overflow: hidden; background: var(--tly-card); }
 .tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 10px 0;
   background: var(--tly-forest); color: #fff; font-family: Fredoka, sans-serif; border-right: 2px dashed #FAF7E7; }
 .tly-event .stub span { font-size: .72rem; letter-spacing: .1em; } .tly-event .stub b { font-size: 1.7rem; margin: 2px 0; }
 .tly-event .info { padding: 10px 12px; display: grid; gap: 2px; align-content: center; }
 .tly-event .info b { font-family: Fredoka, sans-serif; font-size: 1.08rem; line-height: 1.2; color: #1F2A22; }
 .tly-event .info small { color: var(--tly-soft); }
-.st-key-edit-event [data-testid="stExpander"] details { border: 2px solid var(--tly-forest); border-radius: 0 0 14px 14px;
+.st-key-edit-event [data-testid="stExpander"] details { border: 2px solid var(--tly-forest); border-radius: 14px;
   background: #E6F0E2; }
 .st-key-edit-event [data-testid="stExpander"] summary { color: var(--tly-forest); font-weight: 700; }
 .st-key-edit-event [data-testid="stExpander"] summary:hover { background: #D3E6CD; }
+.st-key-step { margin-top: .5rem; }
 .st-key-step [data-testid="stWidgetLabel"] { display: none; }
 .st-key-step [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
 .st-key-step [role="radiogroup"]::before, .st-key-step [role="radiogroup"]::after { content: ""; position: absolute;
@@ -495,6 +496,7 @@ if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="
     start_new_event()
     st.rerun()
 event_card = st.sidebar.empty()  # filled below, once the event fields are read
+steps_slot = st.sidebar.container()  # the stepper sits under the ticket; Edit event goes below it
 with st.sidebar.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:",
                                                          expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
@@ -519,7 +521,7 @@ event_card.markdown(f'<div class="tly-event"><div class="stub"><span>{EVENT.date
                     f'</span><b>{EVENT.date.day}</b><span>{EVENT.date.year}</span></div><div class="info">'
                     f'<b>{html.escape(EVENT.name)}</b><small>{n_rec} receipt{"s" if n_rec != 1 else ""}</small></div></div>',
                     unsafe_allow_html=True)
-page = st.sidebar.radio("Steps", STEPS, key="step", format_func=lambda n: n.split(". ", 1)[1])
+page = steps_slot.radio("Steps", STEPS, key="step", format_func=lambda n: n.split(". ", 1)[1])
 sidebar_stepper(page)
 past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
 if past:
