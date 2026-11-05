@@ -107,6 +107,8 @@ st.markdown("""<style>
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: event card, then the stepper. */
+[data-testid="stSidebar"] [data-testid="stPopover"] button {
+  border: 2px dashed var(--tly-forest); color: var(--tly-forest); font-weight: 600; }
 .tly-event { display: grid; gap: 2px; padding: 12px 14px; margin: 4px 0 6px; border-radius: 16px;
   background: var(--tly-sun-soft); border: 2px solid var(--tly-sun); }
 .tly-event span { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #6B5513; font-weight: 600; }
@@ -465,6 +467,11 @@ def open_past(path: Path) -> None:
 ss.setdefault("event", dict(DEFAULT_EVENT))
 st.logo(str(ART / "logo.png"), size="large")
 st.sidebar.caption("Close out a club event: receipts in, checked books out.")
+with st.sidebar.popover("New event", icon=":material/add:", width="stretch"):
+    st.caption("Your current event stays saved under Past events. Members and income sources carry over.")
+    if st.button("Start a new event", type="primary", width="stretch"):
+        start_new_event()
+        st.rerun()
 event_card = st.sidebar.empty()  # filled below, once the event fields are read
 with st.sidebar.expander("Edit event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
@@ -479,9 +486,6 @@ with st.sidebar.expander("Edit event", expanded=not ss.receipts and ss.event == 
                     event_id=event_id_for(name, d) if changed else ss.event["event_id"])
     if locked:
         st.caption("Name and date are locked once receipts are drafted.")
-        if st.checkbox("I'm done with this event") and st.button("Start a new event"):
-            start_new_event()
-            st.rerun()
 EVENT_ID = ss.event["event_id"]
 EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"])
 PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]

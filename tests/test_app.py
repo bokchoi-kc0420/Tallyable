@@ -152,7 +152,6 @@ def test_event_setup_and_start_new_event():
     at.run()
     assert next(t for t in at.sidebar.text_input if t.label == "Event name").disabled
     assert all(r.event_id.startswith("EVT-2026-11-14-WINTER") for r in at.session_state["receipts"].values())
-    at.sidebar.checkbox[0].check().run()
     next(b for b in at.sidebar.button if b.label == "Start a new event").click().run()
     assert at.session_state["receipts"] == {}
 
@@ -277,7 +276,6 @@ def test_drafting_the_same_photos_twice_reads_them_once():
 def test_a_finished_event_can_be_reopened_later():
     at = drafted_app()
     next(b for b in at.button if b.label == "Approve").click().run()
-    at.sidebar.checkbox[0].check().run()
     next(b for b in at.sidebar.button if b.label == "Start a new event").click().run()
     assert at.session_state["receipts"] == {}
     assert at.session_state["event"]["name"] == "New event"
