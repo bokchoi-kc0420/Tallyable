@@ -5,16 +5,15 @@ gatherUsageStats = false
 toolbarMode = "minimal"
 
 # Tallyable look (prototype 1): cream paper, forest green, sunny yellow, chunky rounded headings.
-# Light and dark both set, so it follows the viewer's system setting.
+# Locked to light (Kevin, 2026-11-05): the app always opens light, whatever the system setting.
 [theme]
+base = "light"
 font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
 headingFont = "Fredoka:https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap, sans-serif"
 headingFontWeights = [700, 600, 600, 600, 600, 600]
 baseRadius = "0.9rem"
 buttonRadius = "full"
 showWidgetBorder = true
-
-[theme.light]
 primaryColor = "#1C5C36"
 backgroundColor = "#FFFCF1"
 secondaryBackgroundColor = "#F2ECD3"
@@ -23,17 +22,5 @@ borderColor = "#E3D9B6"
 linkColor = "#1C5C36"
 dataframeHeaderBackgroundColor = "#F2ECD3"
 
-[theme.light.sidebar]
+[theme.sidebar]
 backgroundColor = "#FAF7E7"
-
-[theme.dark]
-primaryColor = "#7FD19B"
-backgroundColor = "#141A15"
-secondaryBackgroundColor = "#1E2620"
-textColor = "#EDEBDD"
-borderColor = "#2F3A31"
-linkColor = "#7FD19B"
-dataframeHeaderBackgroundColor = "#1E2620"
-
-[theme.dark.sidebar]
-backgroundColor = "#181F19"

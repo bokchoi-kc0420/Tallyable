@@ -94,16 +94,6 @@ st.markdown("""<style>
   background: #FCE7A8; font-family: Fredoka, sans-serif; font-weight: 600; color: #1F2A22; }
 .tly-bar { height: 12px; border-radius: 999px; background: #E3D9B6; overflow: hidden; }
 .tly-bar > div { height: 100%; border-radius: 999px; background: #1C5C36; }
-@media (prefers-color-scheme: dark) {
-  .tly-step { color: #A9A796; } .tly-step.now { color: #EDEBDD; } .tly-step.done { color: #7FD19B; }
-  .tly-step.done b { background: #234A31; border-color: #7FD19B; } .tly-step b { border-color: #5A5F52; }
-  .tly-walk .track { background: #2F3A31; } .tly-walk .dot { background: #1E2620; border-color: #5A5F52; }
-  .tly-walk .dot.done, .tly-walk .dot.now { border-color: #7FD19B; } .tly-walk .dot.done { background: #2F6B45; }
-  .tly-walk .stops .done { color: #7FD19B; } .tly-walk .stops .now { color: #EDEBDD; }
-  .tly-walk .track { background: #2F3A31; } .tly-walk .dot { background: #1E2620; border-color: #5A5F52; }
-  .tly-walk .dot.done, .tly-walk .dot.now { border-color: #7FD19B; } .tly-walk .dot.done { background: #2F6B45; }
-  .tly-walk .stops .done { color: #7FD19B; } .tly-walk .stops .now { color: #EDEBDD; }
-  .tly-cheer { color: #7FD19B; } .tly-bar { background: #2F3A31; } .tly-bar > div { background: #7FD19B; } }
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: event card, then the stepper. */
@@ -161,20 +151,6 @@ st.markdown("""<style>
 .st-key-sum-metrics [data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"] { background: var(--tly-card); }
 .st-key-income-box { background: var(--tly-card); }
 .tly-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-right: 4px; }
-@media (prefers-color-scheme: dark) {
-  :root { --tly-forest: #7FD19B; --tly-done: #234A31; --tly-card: #1E2620; --tly-soft: #A9A796; --tly-line: #2F3A31; }
-  .tly-event .info b { color: #EDEBDD; } .tly-event .stub { color: #141A15; border-right-color: #181F19; }
-  .st-key-edit-event [data-testid="stExpander"] details { background: #1F3326; }
-  /* The logo has a cream background (used as is), so in dark mode it sits on a cream sticker pad. */
-  [data-testid="stSidebarLogo"], [data-testid="stHeaderLogo"] { background: #FAF7E7; border-radius: 10px;
-    padding: 4px 8px; box-sizing: content-box; box-shadow: 0 0 0 2px #2F6B45; }
-  [data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primary"] * { color: #10251A !important; }
-  .st-key-edit-event [data-testid="stExpander"] summary:hover { background: #2A4532; }
-  .st-key-sum-metrics [data-testid="stColumn"]:nth-child(1) [data-testid="stMetric"] {
-    background: #1F3326; border-color: #2F5A3C !important; }
-  .st-key-sum-metrics [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"] {
-    background: #3A3218; border-color: #6E5A1E !important; }
-  .tly-net.bad { background: #4A221D; color: #F3B4A9; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>""", unsafe_allow_html=True)
 
