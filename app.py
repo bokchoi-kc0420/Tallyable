@@ -60,8 +60,8 @@ st.markdown("""<style>
 [data-testid="stFileUploaderDropzone"]:hover { border-color: #1C5C36; background-color: rgba(247,190,63,.12); }
 [data-testid="stSidebar"] label[data-baseweb="radio"] { border-radius: 999px; padding: 2px 8px; transition: background-color .15s; }
 [data-testid="stSidebar"] label[data-baseweb="radio"]:hover { background-color: rgba(247,190,63,.22); }
-.tly-walk { position: relative; padding: 58px 14px 0; margin: 0 0 1.4rem; }
-.tly-walk img { position: absolute; bottom: 14px; height: 55px; width: auto; transform: translateX(-50%); z-index: 2;
+.tly-walk { position: relative; padding: 84px 14px 0; margin: 0 0 1.4rem; }
+.tly-walk img { position: absolute; bottom: 14px; height: 80px; width: auto; transform: translateX(-50%); z-index: 2;
   animation: tly-bob 2.4s ease-in-out infinite; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
 @keyframes tly-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
 .tly-walk .track { position: relative; height: 12px; border-radius: 999px; background: #EEE7CC; }
@@ -171,6 +171,48 @@ st.markdown("""<style>
   color: #1F2A22; line-height: 1.25; }
 [class*="st-key-guide-"] { margin: .25rem 0 .5rem; }
 [class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: #FFFFFF !important; font-weight: 600; }
+
+/* Fredoka for labels, buttons, tabs and names; Inter stays for sentences and typed values */
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: Fredoka, sans-serif !important;
+  font-weight: 500 !important; font-size: 1rem !important; color: #1F2A22; }
+.stButton button p, .stDownloadButton button p, .stFormSubmitButton button p {
+  font-family: Fredoka, sans-serif !important; font-weight: 600 !important; font-size: 1rem !important; }
+[data-testid="stExpander"] summary p { font-family: Fredoka, sans-serif !important; font-weight: 600 !important;
+  font-size: 1.02rem !important; }
+[data-testid="stMetricLabel"] p { font-family: Fredoka, sans-serif !important; font-weight: 500 !important;
+  font-size: 1rem !important; }
+[data-testid="stMetricValue"] div { font-family: Fredoka, sans-serif !important; font-weight: 600 !important; }
+[data-testid="stMarkdownContainer"] strong { font-family: Fredoka, sans-serif; font-weight: 600; }
+.tly-owed b, .tly-colhead { font-family: Fredoka, sans-serif; font-weight: 600; }
+.tly-colhead { margin: 0 0 .1rem; font-size: 1rem; color: #1F2A22; }
+.tly-table-wrap { border: 1px solid #E3D9B6; border-radius: 14px; overflow: auto; background: #FFFFFF; }
+.tly-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.tly-table th { font-family: Fredoka, sans-serif; font-weight: 600; text-align: left; background: #F2ECD3;
+  color: #1C5C36; padding: 10px 14px; font-size: 1rem; }
+.tly-table td { padding: 9px 14px; border-top: 1px solid #EFE7CB; }
+.tly-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tly-table tbody tr:hover td { background: #FBF7E6; }
+.tly-status { display: inline-block; font-family: Fredoka, sans-serif; font-weight: 600; font-size: .85rem;
+  border-radius: 999px; padding: 2px 10px; }
+.tly-status.ok { background: #DDEBD9; color: #1C5C36; } .tly-status.no { background: #F8DEDA; color: #A8322A; }
+.tly-status.wait { background: #FCE7A8; color: #7A5A00; } .tly-status.post { background: #1C5C36; color: #FFFFFF; }
+/* Past events: small tickets */
+.tly-event.small { margin-bottom: 0; } .tly-event.small .stub { width: 52px; padding: 6px 0; }
+.tly-event.small .stub b { font-size: 1.15rem; } .tly-event.small .info b { font-size: .95rem; }
+[class*="st-key-past-"] { gap: 0; margin-bottom: .5rem; }
+[class*="st-key-past-"] .stButton { align-self: flex-end; margin-top: 6px; }
+/* Loading card */
+.tly-loading { display: flex; gap: 16px; align-items: center; background: #FFFFFF; border: 2px solid #1C5C36;
+  border-radius: 18px; padding: 14px 18px; margin: .5rem 0; }
+.tly-loading img { height: 80px; animation: tly-think 1.1s ease-in-out infinite; transform-origin: 50% 90%; }
+.tly-loading > div { flex: 1; } .tly-loading b { font-family: Fredoka, sans-serif; font-size: 1.15rem; display: block; }
+.tly-loading small { color: #3F4A42; font-size: .9rem; }
+.tly-loading .bar { height: 10px; border-radius: 99px; background: #F2ECD3; margin-top: 8px; overflow: hidden; }
+.tly-loading .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #1C5C36, #3E8E5A);
+  transition: width .3s; }
+.tly-loading .bar.run i { width: 35%; animation: tly-run 1.2s ease-in-out infinite; }
+@keyframes tly-think { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg) translateY(-3px); } }
+@keyframes tly-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
 </style>""", unsafe_allow_html=True)
 
 
@@ -360,6 +402,82 @@ def go(step: str) -> None:
     ss.step = step
 
 
+INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
+                  "Grants and funding", "Donations", "Fundraiser", "Other"]
+
+
+def _set_sources(names: list[str]) -> None:
+    ss.event = {**ss.event, "sources": ", ".join(names)}
+
+
+def _sources() -> list[str]:
+    return [x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",") if x.strip()]
+
+
+def rename_source(old: str) -> None:
+    """Dropdown callback: swap a source for another one (or a new name typed in), keeping its amount."""
+    new = str(ss.get(f"src-{old}") or "").strip().replace(",", " ")
+    names = _sources()
+    if not new or new == old or new in names:
+        ss[f"src-{old}"] = old
+        return
+    names[names.index(old)] = new
+    _set_sources(names)
+    ss.income = {(new if k == old else k): v for k, v in ss.income.items()}
+    if f"income-{old}" in ss:
+        ss[f"income-{new}"] = ss[f"income-{old}"]
+
+
+def remove_source(name: str) -> None:
+    _set_sources([x for x in _sources() if x != name])
+    ss.income.pop(name, None)
+    ss.pop(f"income-{name}", None)
+
+
+def add_source() -> None:
+    names = _sources()
+    new = next((c for c in INCOME_CHOICES if c not in names), None)
+    n = 2
+    while new is None:
+        new = f"Other {n}" if f"Other {n}" not in names else None
+        n += 1
+    _set_sources([*names, new])
+
+
+STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved", "ok"),
+               Status.REJECTED: ("rejected", "no"), Status.POSTED: ("in the books", "post")}
+
+
+def html_table(rows: list[dict], numeric: tuple[str, ...] = ()) -> None:
+    """A small read-only table in the app's own fonts (st.dataframe draws on a canvas in the body font)."""
+    if not rows:
+        return
+    cols = list(rows[0])
+    head = "".join(f'<th class="{"num" if c in numeric else ""}">{html.escape(c)}</th>' for c in cols)
+    body = []
+    for r in rows:
+        cells = []
+        for c in cols:
+            v = r[c]
+            if isinstance(v, Status):
+                label, tone = STATUS_CHIP[v]
+                cells.append(f'<td><span class="tly-status {tone}">{label}</span></td>')
+            else:
+                cells.append(f'<td class="{"num" if c in numeric else ""}">{html.escape(str(v))}</td>')
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    st.markdown(f'<div class="tly-table-wrap"><table class="tly-table"><thead><tr>{head}</tr></thead>'
+                f'<tbody>{"".join(body)}</tbody></table></div>', unsafe_allow_html=True)
+
+
+def loading(slot, title: str, detail: str, frac: float | None) -> None:
+    """Tally's loading card, drawn into an st.empty() slot. frac None = a bar that just runs."""
+    bar = (f'<div class="bar"><i style="width:{max(frac, 0.04) * 100:.0f}%"></i></div>' if frac is not None
+           else '<div class="bar run"><i></i></div>')
+    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri("tally-review-small.png")}" alt="">'
+                  f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}</div></div>',
+                  unsafe_allow_html=True)
+
+
 def step_status() -> tuple[dict[str, bool], dict[str, str]]:
     """Which steps are finished, plus a short progress note (Review · 3/14)."""
     rs = list(ss.receipts.values())
@@ -530,10 +648,8 @@ with event_group.container(key="edit-event"), st.expander("Edit event", icon=":m
     d = st.date_input("Event date", ss.event["date"], disabled=locked)
     attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
     members = st.text_input("Members who might pay", ss.event["members"], help="Comma separated")
-    sources = st.text_input("Where money comes in", ss.event.get("sources", ", ".join(DEFAULT_SOURCES)),
-                            help="Comma separated, e.g. Venmo, Cash, Ticket sales, Sponsor, Student government grant")
     changed = name != ss.event["name"] or d != ss.event["date"]
-    ss.event.update(name=name, date=d, attendees=attendees, members=members, sources=sources,
+    ss.event.update(name=name, date=d, attendees=attendees, members=members,
                     event_id=event_id_for(name, d) if changed else ss.event["event_id"])
     if locked:
         st.caption("Name and date are locked once receipts are drafted.")
@@ -551,11 +667,17 @@ page = steps_slot.radio("Steps", STEPS, key="step", format_func=lambda n: n.spli
 sidebar_stepper(page)
 past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
 if past:
-    with st.sidebar.expander(f"Past events ({len(past)})"):
-        pick = st.selectbox("Event", past, format_func=lambda e: f"{e['date']} · {e['name']} ({e['receipts']} receipts)",
-                            key="past-pick")
-        st.button("Open this event", on_click=open_past, args=(pick["path"],), width="stretch",
-                  help="Your current event is saved first, so you can come back to it here.")
+    with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
+        for n, e in enumerate(past):
+            d = e["date"] if isinstance(e["date"], date) else date.fromisoformat(str(e["date"])[:10])
+            with st.container(key=f"past-{n}"):
+                st.markdown(f'<div class="tly-event small"><div class="stub"><span>{d.strftime("%b").upper()}</span>'
+                            f'<b>{d.day}</b><span>{d.year}</span></div><div class="info"><b>{html.escape(e["name"])}</b>'
+                            f'<small>{e["receipts"]} receipt{"s" if e["receipts"] != 1 else ""}</small></div></div>',
+                            unsafe_allow_html=True)
+                st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
+                          icon=":material/open_in_new:", type="tertiary",
+                          help="Your current event is saved first, so you can come back to it here.")
 if ss.get("past_error"):
     st.sidebar.error(ss.pop("past_error"))
 
@@ -607,11 +729,12 @@ if page == "1. Upload":
         draft_clicked = False
 
     if draft_clicked:
-        bar = st.progress(0.0, text=f"Starting to read {len(sources)} receipts...")
+        bar = st.empty()
+        loading(bar, "Tally is reading your receipts", f"Starting on {len(sources)} receipts...", 0.0)
         seen = {hashlib.sha256(b).hexdigest() for b, _ in ss.images.values()}
         skipped = []
         for n, (name, data) in enumerate(sources):
-            bar.progress(n / len(sources), text=f"Reading {name} ({n + 1} of {len(sources)})...")
+            loading(bar, "Tally is reading your receipts", f"{name} · {n + 1} of {len(sources)}", n / len(sources))
             try:
                 f = prepare(data, name)
                 if hashlib.sha256(f.data).hexdigest() in seen:  # already drafted: don't read (or pay) twice
@@ -629,7 +752,7 @@ if page == "1. Upload":
                 ss.failed[name] = (None, str(e))
             except ExtractionError as e:
                 ss.failed[name] = ((f.data, f.media_type), f"{e} You can type it in by hand below.")
-        bar.progress(1.0, text=f"Read {len(sources) - len(skipped)} receipts.")
+        bar.empty()
         ss.demo = []
         ss.drafted_at = ss.drafted_at or time.time()
         cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
@@ -772,11 +895,20 @@ elif page == "3. Summary":
         st.stop()
     st.subheader("Income")
     st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
-    st.caption("Change the list of sources in the sidebar, under Edit event.")
     with st.container(border=True, key="income-box"):
-        c = st.columns(min(len(SOURCES), 4))
-        income = {k: dec(c[n % len(c)].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
-                  enumerate(SOURCES)}
+        head = st.columns([3, 2, 0.5])
+        head[0].markdown('<p class="tly-colhead">Where it came from</p>', unsafe_allow_html=True)
+        head[1].markdown('<p class="tly-colhead">Amount ($)</p>', unsafe_allow_html=True)
+        income = {}
+        for k in SOURCES:
+            row = st.columns([3, 2, 0.5], vertical_alignment="center")
+            row[0].selectbox("Source", [k, *[c for c in INCOME_CHOICES if c not in SOURCES]], key=f"src-{k}",
+                             label_visibility="collapsed", accept_new_options=True, on_change=rename_source, args=(k,))
+            income[k] = dec(row[1].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}",
+                                              label_visibility="collapsed"))
+            row[2].button("", icon=":material/remove:", key=f"rm-{k}", help=f"Remove {k}",
+                          on_click=remove_source, args=(k,), disabled=len(SOURCES) == 1)
+        st.button("Add a source", icon=":material/add:", key="add-source", on_click=add_source)
     ss.income = {k: str(v) for k, v in income.items()}
     for k in SOURCES:
         typed = str(ss.get(f"income-{k}", "")).strip()
@@ -800,10 +932,10 @@ elif page == "3. Summary":
         st.markdown("**Money in vs out**")
         money_panel(receipts, income)
 
-    rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer or "(none)", "status": ICON[r.status],
-             "posts": str(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
-             "note": r.review_note or ""} for r in receipts]
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    rows = [{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)", "Status": r.status,
+             "Posts": usd(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
+             "Note": r.review_note or ""} for r in receipts]
+    html_table(rows, numeric=("Posts",))
 
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
     if waiting:
@@ -816,7 +948,12 @@ elif page == "3. Summary":
     pushed = st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting) or not receipts,
                        icon=":material/upload:")
     try:
-        written = sink.post(receipts, EVENT, income) if pushed else None
+        written = None
+        if pushed:
+            pushing = st.empty()
+            loading(pushing, f"Tally is writing to {sink.label}", f"{len(receipts)} receipts, plus the event's income", None)
+            written = sink.post(receipts, EVENT, income)
+            pushing.empty()
     except Exception as e:  # network drop, sheet unshared mid-push, quota
         st.error(f"The push stopped partway: {e}. Nothing is double-counted: click Push again and "
                  "receipts already written are skipped.")
@@ -930,8 +1067,8 @@ else:
         st.subheader("Money in vs out")
         money_panel(done, {k: dec(v) for k, v in ss.income.items()})
     with st.expander("Payback details"):
-        st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
-                                    "owed": str(x.owed)} for x in lines]), width="stretch", hide_index=True)
+        html_table([{"Payer": x.payer, "Fronted": usd(x.fronted), "Paid back": usd(x.reimbursed),
+                     "Owed": usd(x.owed)} for x in lines], numeric=("Fronted", "Paid back", "Owed"))
     if owing:
         with st.expander("Pay back part of it, or by another method"), st.form("payback"):
             st.caption(f"Mark a payback. It is saved to {sink.label} and shows in the ledger.")

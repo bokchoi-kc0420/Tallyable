@@ -70,7 +70,7 @@ export function Hero() {
         <Sparkle className="bottom-[6%] left-[30%]" delay={0.4} size={16} />
         <Sticker src="/art/boba.png" alt="Boba sticker" className="left-[6%] top-[2%] w-[22%]" delay={0.3} tilt={-8} />
         <Sticker src="/art/pizza.png" alt="Pizza sticker" className="right-[6%] top-[0%] w-[28%]" delay={0.9} />
-        <Sticker src="/art/mascot.png" alt="Tallyable's receipt mascot giving a thumbs up" className="left-[18%] top-[20%] w-[56%]" float={10} delay={0} tilt={-4} />
+        <Sticker src="/art/mascot.png" alt="Tallyable's receipt mascot giving a thumbs up" className="left-[12%] top-[14%] w-[68%]" float={10} delay={0} tilt={-4} />
         <Sticker src="/art/coins-a.png" alt="" className="bottom-[2%] left-[2%] w-[20%]" delay={1.2} />
         <Sticker src="/art/coins-b.png" alt="" className="bottom-[6%] right-[22%] w-[15%]" delay={0.6} tilt={-10} />
         <motion.button

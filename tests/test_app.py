@@ -10,6 +10,15 @@ from treasurer.models import Status
 APP = str(Path(__file__).parent.parent / "app.py")
 
 
+def owed_table(at) -> list[dict]:
+    """Rows of the Payback details table, read back from its HTML."""
+    import re
+    page = next(m.value for m in at.markdown if "<th" in m.value and ">Owed<" in m.value)
+    heads = re.findall(r"<th(?: [^>]*)?>(.*?)</th>", page)
+    rows = re.findall(r"<tr>(.*?)</tr>", page.split("<tbody>")[1])
+    return [dict(zip(heads, re.findall(r"<td(?: [^>]*)?>(.*?)</td>", r), strict=True)) for r in rows]
+
+
 def test_draft_approve_and_fix():
     at = AppTest.from_file(APP, default_timeout=30).run()
     at.button[0].click().run()  # use the fake event's receipts
@@ -60,8 +69,8 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
 
     at.sidebar.radio[0].set_value("4. Close out").run()
     assert not at.exception
-    owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
-    assert list(owed["payer"]) == ["Member A"] and owed["owed"][0] == "31.07"
+    owed = owed_table(at)
+    assert [r["Payer"] for r in owed] == ["Member A"] and owed[0]["Owed"] == "$31.07"
     assert any(b.label.startswith("Download funder report") for b in at.get("download_button"))
 
 
@@ -79,8 +88,7 @@ def test_one_click_mark_paid_uses_chosen_method():
     at.selectbox(key="quick-method").set_value("Venmo").run()
     at.button(key="paid-Member C").click().run()
     assert not at.exception
-    owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
-    assert owed["owed"][0] == "0.00"
+    assert owed_table(at)[0]["Owed"] == "$0.00"
     rows = list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
     assert rows[-1]["method"] == "Venmo" and rows[-1]["payer"] == "Member C"
     assert not [b for b in at.button if b.key == "paid-Member C"]  # now shows Paid instead
@@ -105,8 +113,7 @@ def test_mark_paid_back_updates_owed():
     form_amount.set_value("")
     next(b for b in at.button if b.label == "Mark paid back").click().run()
     assert not at.exception
-    owed = next(d.value for d in at.dataframe if "owed" in d.value.columns)
-    assert owed["owed"][0] == "0.00"
+    assert owed_table(at)[0]["Owed"] == "$0.00"
 
 
 def test_password_gate(monkeypatch):
@@ -280,8 +287,8 @@ def test_a_finished_event_can_be_reopened_later():
     assert at.session_state["receipts"] == {}
     assert at.session_state["event"]["name"] == "New event"
     assert at.session_state["event"]["members"].startswith("Member A")  # club settings carry over
-    assert "Fall Mentor Mixer" in at.sidebar.selectbox(key="past-pick").options[0]
-    next(b for b in at.sidebar.button if b.label == "Open this event").click().run()
+    assert any("Fall Mentor Mixer" in m.value for m in at.sidebar.markdown)
+    at.sidebar.button(key="open-past-0").click().run()
     assert not at.exception
     assert len(at.session_state["receipts"]) == 14
     assert at.session_state["receipts"]["R01"].status.value == "approved"
@@ -322,4 +329,20 @@ def test_empty_review_guide_button_goes_to_upload():
     assert any("Nothing to review yet" in m.value for m in at.markdown)
     at.button(key="go-review-empty").click().run()
     assert at.sidebar.radio[0].value == "1. Upload"
+    assert not at.exception
+
+
+def test_income_sources_can_be_added_renamed_and_removed():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.sidebar.radio[0].set_value("3. Summary").run()
+    at.text_input(key="income-Venmo").set_value("40").run()
+    at.button(key="add-source").click().run()
+    assert at.text_input(key="income-Card / Square")
+    at.selectbox(key="src-Venmo").set_value("Ticket sales").run()
+    assert at.text_input(key="income-Ticket sales").value == "40"
+    assert "Venmo" not in at.session_state["event"]["sources"]
+    at.button(key="rm-Cash").click().run()
+    assert "Cash" not in at.session_state["event"]["sources"]
     assert not at.exception
