@@ -85,6 +85,8 @@ flowchart LR
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
+On Windows you can instead double-click `start.bat` (free test mode) or `start-with-claude.bat`. Either one pulls the latest code and opens the app.
+
 Click "Use the fake event's 14 receipts instead", tag payers, then go through Draft, Review, Summary (push), and Close out.
 
 - **Read receipts with Claude:** copy `.env.example` to `.env` and add `ANTHROPIC_API_KEY`. Try one receipt with `python -m treasurer.try_one fake_event/receipts/R01.jpg`, or score them all with `python -m treasurer.score_all` (`--model claude-haiku-5-5`, `--budget 0.50`, `--set holdout` for the unseen receipts). Never commit `.env`.
