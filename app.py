@@ -120,6 +120,8 @@ st.markdown("""<style>
 .st-key-edit-event [data-testid="stExpander"] summary { color: var(--tly-forest); font-weight: 700; }
 .st-key-edit-event [data-testid="stExpander"] summary:hover { background: #D3E6CD; }
 .st-key-step { margin-top: .5rem; }
+.st-key-event-group { background: var(--tly-card); border: 2px solid var(--tly-line) !important; border-radius: 18px !important;
+  padding: 12px !important; }
 .st-key-step [data-testid="stWidgetLabel"] { display: none; }
 .st-key-step [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
 .st-key-step [role="radiogroup"]::before, .st-key-step [role="radiogroup"]::after { content: ""; position: absolute;
@@ -159,7 +161,7 @@ st.markdown("""<style>
 .st-key-income-box { background: var(--tly-card); }
 .tly-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-right: 4px; }
 @media (prefers-color-scheme: dark) {
-  :root { --tly-forest: #7FD19B; --tly-done: #234A31; --tly-card: #1E2620; --tly-soft: #A9A796; }
+  :root { --tly-forest: #7FD19B; --tly-done: #234A31; --tly-card: #1E2620; --tly-soft: #A9A796; --tly-line: #2F3A31; }
   .tly-event .info b { color: #EDEBDD; } .tly-event .stub { color: #141A15; border-right-color: #181F19; }
   .st-key-edit-event [data-testid="stExpander"] details { background: #1F3326; }
   .st-key-edit-event [data-testid="stExpander"] summary:hover { background: #2A4532; }
@@ -495,9 +497,10 @@ if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="
                      help="Starts a blank event. This one stays saved under Past events."):
     start_new_event()
     st.rerun()
-event_card = st.sidebar.empty()  # filled below, once the event fields are read
-steps_slot = st.sidebar.container()  # the stepper sits under the ticket; Edit event goes below it
-with st.sidebar.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:",
+event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
+event_card = event_group.empty()  # filled below, once the event fields are read
+steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
+with event_group.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:",
                                                          expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
     name = st.text_input("Event name", ss.event["name"], disabled=locked)
