@@ -30,8 +30,17 @@ from .models import Receipt, Status
 from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
 
-INCOME_SOURCES = ["Zelle", "Venmo", "Cash", "National KSEA funding"]
-EVENT_FIELDS = ["event_id", "name", "date", *INCOME_SOURCES, "attendees"]
+# Where an event's money comes from. Each club sets its own list in the app; these are
+# only the defaults. On the Events tab every column that isn't a base field is a source,
+# so a new source simply becomes a new column.
+DEFAULT_SOURCES = ["Zelle", "Venmo", "Cash", "Grants and funding"]
+BASE_EVENT_FIELDS = ["event_id", "name", "date", "attendees"]
+EVENT_FIELDS = ["event_id", "name", "date", *DEFAULT_SOURCES, "attendees"]  # header for a new sheet
+
+
+def income_sources(event: dict) -> list[str]:
+    """The income columns of an Events row, in sheet order."""
+    return [k for k in event if k not in BASE_EVENT_FIELDS]
 VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements tabs. Edits here are overwritten on the next push."
 
 TX, EVENTS, BALANCE, LEDGER, REIMB = "Transactions", "Events", "Balance Sheet", "Ledger", "Reimbursements"
@@ -90,8 +99,9 @@ def _receipt_lines(items: list[dict]) -> list[list]:
 
 def event_block(event: dict, receipts: OrderedDict[str, list[dict]]) -> list[list]:
     """One event's 3-column block of the balance sheet."""
-    assets = [[src, "", num(D(event.get(src, 0)))] for src in INCOME_SOURCES]
-    total_assets = sum((D(event.get(src, 0)) for src in INCOME_SOURCES), Decimal("0"))
+    sources = income_sources(event)
+    assets = [[src, "", num(D(event.get(src) or 0))] for src in sources]
+    total_assets = sum((D(event.get(src) or 0) for src in sources), Decimal("0"))
     liabilities = [line for items in receipts.values() for line in _receipt_lines(items)]
     total_liabilities = sum((D(items[0]["receipt_posted"]) for items in receipts.values()), Decimal("0"))
     return [
@@ -189,8 +199,8 @@ def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) ->
     names = {e["event_id"]: e["name"] for e in events}
     entries = []  # (date, order, description, income, expense)
     for e in events:
-        for src in INCOME_SOURCES:
-            amt = D(e.get(src, 0))
+        for src in income_sources(e):
+            amt = D(e.get(src) or 0)
             if amt:
                 entries.append((str(e["date"]), 0, f"{src}: {e['name']}", amt, Decimal("0")))
     for event_id, receipts in _group(tx).items():
@@ -281,7 +291,9 @@ class GoogleSheetsSink:
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())))
         self._rewrite(LEDGER, render_ledger(events, tx, self.reimbursements()))
         self._tidy_format(tx_ws, TX_FIELDS, len(tx) + 1)
-        self._tidy_format(self._tab(EVENTS, EVENT_FIELDS), EVENT_FIELDS, len(events) + 1)
+        ev_ws = self._tab(EVENTS, EVENT_FIELDS)
+        ev_header = [h for h in ev_ws.row_values(1) if h]
+        self._tidy_format(ev_ws, ev_header, len(events) + 1, money=set(ev_header) - set(BASE_EVENT_FIELDS))
         self._tidy_format(self._tab(REIMB, REIMB_FIELDS), REIMB_FIELDS, len(self.reimbursements()) + 1)
         self._apply_format()
         return [r.receipt_id for r in todo]
@@ -301,8 +313,14 @@ class GoogleSheetsSink:
 
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
         ws = self._tab(EVENTS, EVENT_FIELDS)
-        row = [event.event_id, event.name, event.date.isoformat(),
-               *[num(income.get(s, Decimal("0"))) for s in INCOME_SOURCES], event.attendees or ""]
+        header = [h for h in ws.row_values(1) if h] or list(EVENT_FIELDS)
+        new = [s for s in income if s not in header]
+        if new:  # a source this sheet hasn't seen: add it as a column
+            header += new
+            ws.update(values=[header], range_name="A1", value_input_option="RAW")
+        values = {"event_id": event.event_id, "name": event.name, "date": event.date.isoformat(),
+                  "attendees": event.attendees or "", **{s: num(v) for s, v in income.items()}}
+        row = [values.get(h, "" if h in BASE_EVENT_FIELDS else 0.0) for h in header]
         ids = [str(r["event_id"]) for r in ws.get_all_records()]
         if event.event_id in ids:
             n = ids.index(event.event_id) + 2  # +1 header, +1 one-based
@@ -317,8 +335,8 @@ class GoogleSheetsSink:
             ws.update(values=grid, range_name="A1", value_input_option="RAW")
         self._pending.setdefault("views", []).extend(fmt.view_requests(ws.id, grid))
 
-    def _tidy_format(self, ws, header: list[str], rows: int) -> None:
-        self._pending.setdefault("tidy", []).extend(fmt.tidy_requests(ws.id, header, rows))
+    def _tidy_format(self, ws, header: list[str], rows: int, money: set[str] = frozenset()) -> None:
+        self._pending.setdefault("tidy", []).extend(fmt.tidy_requests(ws.id, header, rows, money))
 
     @property
     def _pending(self) -> dict[str, list[dict]]:
@@ -361,15 +379,20 @@ def local_views(receipts: list[Receipt], event: EventInfo, income: dict[str, Dec
     approved receipts, exactly as the Sheets sink would draw them. For downloads when
     Sheets isn't set up, and for the online demo."""
     ev = {"event_id": event.event_id, "name": event.name, "date": event.date.isoformat(),
-          **{s: num(income.get(s, Decimal("0"))) for s in INCOME_SOURCES}, "attendees": event.attendees or ""}
-    tx = [{f: _cell(f, row[f]) for f in TX_FIELDS} for r in receipts
-          if r.status in (Status.APPROVED, Status.POSTED) for row in transaction_rows(r)]
+          "attendees": event.attendees or "", **{s: num(v) for s, v in income.items()}}
+    tx = local_transactions(receipts)
     mine = [x for x in reimb if str(x["event_id"]) == event.event_id]
     return {
         BALANCE: render_balance_sheet([ev], tx),
         LEDGER: render_ledger([ev], tx, mine),
         "Expense Report": render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())),
     }
+
+
+def local_transactions(receipts: list[Receipt]) -> list[dict]:
+    """Transactions-tab rows for the app's approved receipts."""
+    return [{f: _cell(f, row[f]) for f in TX_FIELDS} for r in receipts
+            if r.status in (Status.APPROVED, Status.POSTED) for row in transaction_rows(r)]
 
 
 def grid_to_csv(grid: list[list]) -> str:

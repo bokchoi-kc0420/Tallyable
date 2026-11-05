@@ -23,6 +23,9 @@ It's slow, it's easy to get wrong, and the errors end up in official books.
 3. **Review**: six rule checks flag problems. A blocking flag can only be overridden with a written note. Every receipt gets approved or rejected by a person.
 4. **Push** approved rows to Google Sheets. The tool keeps a tidy record and rebuilds the club's balance sheet and ledger layouts from it.
 5. **Close out**: see who's owed, mark paybacks, check funder rules, and download the funder report.
+6. **Come back later**: every event is saved. Reopen any of them under **Past events** in the sidebar.
+
+It works for any club. Members, income sources (Venmo, ticket sales, a sponsor, a grant...) and the event are set in the sidebar. No Google account? **Download the whole book** as one formatted Excel file, or import it into your own Google Sheet with File > Import. Nothing has to be shared with the app.
 
 | Summary and push | Close out |
 | --- | --- |
@@ -88,7 +91,7 @@ Click "Use the fake event's 14 receipts instead", tag payers, then go through Dr
 - **Google Sheets:** [docs/google_sheets_setup.md](docs/google_sheets_setup.md). Without it, Push writes a local CSV.
 - **Put it online:** [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first.
 - **HEIC photos:** `python -m pip install pillow-heif`.
-- **Tests:** `python -m pytest` (105 tests with 93% coverage, run on every push; they never call the API or touch a real sheet).
+- **Tests:** `python -m pytest` (109 tests with 93% coverage, run on every push; they never call the API or touch a real sheet).
 
 ## Rules
 | Flag | Rule | Blocks approval |
@@ -124,5 +127,6 @@ Interview prep: [docs/interview_notes.md](docs/interview_notes.md).
 ## Known limits
 - One receipt paid by two people can't be split. Record it as two receipts. An exact 50/50 split gets flagged as a possible duplicate and needs a note.
 - A store refund slip with a negative total can't be entered. Mark the item `returned` on the original receipt instead.
-- The app works on one event at a time. Set the name, date, attendees and members in the sidebar, and use "Start a new event" when you finish one. The Sheets layer keeps every event.
+- The app works on one event at a time. Set the name, date, attendees, members and income sources in the sidebar, and use "Start a new event" when you finish one. Finished events stay under Past events, and the Sheets layer keeps every event.
+- Writing straight into a Google Sheet needs the sheet shared with the app's service account. The Excel download is the no-sharing route.
 - Funder rules were copied from UC Davis CSI pages on 2026-11-04. Re-check them each quarter.

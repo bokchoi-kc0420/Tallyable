@@ -242,3 +242,28 @@ def test_each_step_says_what_comes_next():
     assert not at.exception
     next(b for b in at.button if b.label == "Go to Close out →").click().run()
     assert at.sidebar.radio(key="step").value == "4. Close out"
+
+
+def test_drafting_the_same_photos_twice_reads_them_once():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    for _ in range(2):
+        next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+        next(b for b in at.button if b.label == "Draft rows").click().run()
+    assert len(at.session_state["receipts"]) == 14
+    assert "Skipped 14 already drafted" in at.session_state["last_draft"]
+
+
+def test_a_finished_event_can_be_reopened_later():
+    at = drafted_app()
+    next(b for b in at.button if b.label == "Approve").click().run()
+    at.sidebar.checkbox[0].check().run()
+    next(b for b in at.sidebar.button if b.label == "Start a new event").click().run()
+    assert at.session_state["receipts"] == {}
+    assert at.session_state["event"]["name"] == "New event"
+    assert at.session_state["event"]["members"].startswith("Member A")  # club settings carry over
+    assert "Fall Mentor Mixer" in at.sidebar.selectbox(key="past-pick").options[0]
+    next(b for b in at.sidebar.button if b.label == "Open this event").click().run()
+    assert not at.exception
+    assert len(at.session_state["receipts"]) == 14
+    assert at.session_state["receipts"]["R01"].status.value == "approved"
+    assert at.sidebar.radio(key="step").value == "4. Close out"

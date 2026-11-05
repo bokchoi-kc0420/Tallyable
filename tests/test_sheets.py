@@ -13,7 +13,7 @@ from treasurer.sheets import BALANCE, EVENTS, LEDGER, TX, EventInfo, GoogleSheet
 KEY = Path(__file__).parent.parent / "fake_event" / "answer_key.csv"
 EVENT = EventInfo("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14))
 INCOME = {"Zelle": Decimal("300.00"), "Venmo": Decimal("250.00"), "Cash": Decimal("40.00"),
-          "National KSEA funding": Decimal("50.00")}
+          "Grants and funding": Decimal("50.00")}
 
 
 class FakeWorksheet:
@@ -35,6 +35,9 @@ class FakeWorksheet:
 
     def clear(self):
         self.cells = []
+
+    def row_values(self, n):
+        return list(self.cells[n - 1]) if len(self.cells) >= n else []
 
     def get_all_records(self):
         if not self.cells:
@@ -231,3 +234,34 @@ def test_view_formatting_rules():
     assert freeze[0]["updateSheetProperties"]["properties"]["gridProperties"]["frozenRowCount"] == 3
     money = [r["repeatCell"]["range"] for r in reqs if r.get("repeatCell", {}).get("cell", {}).get("userEnteredFormat") == fmt.MONEY]
     assert money == [{"sheetId": 7, "startRowIndex": 4, "endRowIndex": 6, "startColumnIndex": 2, "endColumnIndex": 3}]
+
+
+def test_any_club_can_name_its_own_income_sources(approved):
+    book = FakeBook()
+    sink = GoogleSheetsSink(book)
+    sink.post(approved, EVENT, {"Ticket sales": Decimal("120.00"), "Sponsor": Decimal("80.00")})
+    header = book.tabs["Events"].cells[0]
+    assert "Ticket sales" in header and "Sponsor" in header
+    flat = [c for row in book.tabs["Balance Sheet"].cells for c in row]
+    assert "Ticket sales" in flat and 200.0 in flat  # TOTAL ASSETS
+    ledger = [row[1] for row in book.tabs["Ledger"].cells[2:]]
+    assert any(d.startswith("Ticket sales:") for d in ledger)
+
+
+def test_whole_book_exports_to_one_formatted_excel_file(approved):
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from treasurer.post import TX_FIELDS
+    from treasurer.sheets import local_transactions, local_views
+    from treasurer.xlsx_export import MONEY, book_xlsx
+    data = book_xlsx(local_views(approved, EVENT, INCOME), local_transactions(approved), TX_FIELDS)
+    wb = load_workbook(BytesIO(data))
+    assert wb.sheetnames == ["Balance Sheet", "Ledger", "Expense Report", "Transactions"]
+    bs = wb["Balance Sheet"]
+    total = next(r for r in bs.iter_rows() if r[0].value == "TOTAL LIABILITIES")
+    assert total[0].font.bold and total[2].number_format == MONEY
+    assert bs.freeze_panes == "A4"  # note, event title and column headers stay visible
+    tx = wb["Transactions"]
+    assert tx.max_row == 1 + sum(len(r.items) for r in approved)

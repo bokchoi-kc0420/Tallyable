@@ -27,7 +27,7 @@ EVENT = {
     "date": "2026-11-14",
     "quarter": "Fall 2026",
     "attendees": 45,
-    "income": {"Zelle": "264.00", "Venmo": "180.00", "Cash": "96.00", "National KSEA funding": "200.00"},
+    "income": {"Zelle": "264.00", "Venmo": "180.00", "Cash": "96.00", "Grants and funding": "200.00"},
 }
 
 PAYERS = ["Member A", "Member B", "Member C", "Member D"]

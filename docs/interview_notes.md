@@ -42,4 +42,4 @@ Fill in the blanks after your first measured run. Say it in your own words. Thes
 - Cost per event: $0.079 for 14 receipts, 33 seconds
 - Time: 2:53 in the tool (timed, 14 receipts, upload to Close out). By hand: about 10 to 11 minutes, my usual time when I double-check everything, not timed on this event. That works out to about 3.5x faster, roughly 70% less time. If asked, say the by-hand number is an estimate, and that the next step is timing a by-hand run on the same receipts.
 - Edits per receipt: ___
-- Tests: 105, 93% coverage, running on every push in GitHub Actions
+- Tests: 109, 94% coverage, running on every push in GitHub Actions

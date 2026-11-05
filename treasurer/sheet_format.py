@@ -26,8 +26,7 @@ DATA_TAB = {"red": 0.6, "green": 0.62, "blue": 0.65}
 HEADER_LABELS = {"DATE", "Place"}  # first cell of a full-width header row (Ledger, Expense Report)
 SECTION = {"ASSETS": ASSET_BG, "LIABILITIES": LIAB_BG}
 TOTALS = {"TOTAL ASSETS", "TOTAL LIABILITIES", "TOTAL BALANCE", "TOTAL"}
-TIDY_MONEY = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted",
-              "Zelle", "Venmo", "Cash", "National KSEA funding"}
+TIDY_MONEY = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}
 
 
 def _range(sheet_id: int, r0: int, r1: int, c0: int, c1: int) -> dict:
@@ -119,13 +118,13 @@ def _money_runs(sheet_id: int, grid: list[list]) -> list[dict]:
     return reqs
 
 
-def tidy_requests(sheet_id: int, header: list[str], rows: int) -> list[dict]:
+def tidy_requests(sheet_id: int, header: list[str], rows: int, money: set[str] = frozenset()) -> list[dict]:
     """Formatting for a data tab the tool appends to (Transactions, Events, Reimbursements)."""
     reqs = [_paint(sheet_id, 0, 1, 0, len(header), {"backgroundColor": HEADER_BG,
                                                     "textFormat": {"bold": True, "foregroundColor": WHITE}}),
             _freeze(sheet_id, 1)]
     for c, name in enumerate(header):
-        if name in TIDY_MONEY:
+        if name in TIDY_MONEY or name in money:
             reqs.append(_paint(sheet_id, 1, max(rows, 2), c, c + 1, MONEY))
     reqs += _widths(sheet_id, [header, *[["x" * 12] * len(header)]])
     return reqs

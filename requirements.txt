@@ -6,3 +6,4 @@ pandas>=2.0
 anthropic>=2.4
 python-dotenv>=1.0
 gspread>=6.0
+openpyxl>=3.1

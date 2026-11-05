@@ -5,6 +5,7 @@ is in .env, otherwise with the stub (fake answer key plus planted misreads).
 """
 from __future__ import annotations
 
+import hashlib
 import hmac
 import os
 import time
@@ -21,17 +22,19 @@ from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.extract import ExtractionError
 from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
 from treasurer.models import LineItem, Receipt, Status
-from treasurer.post import LocalCsvSink, event_totals
+from treasurer.post import TX_FIELDS, LocalCsvSink, event_totals
 from treasurer.reader import make_extractor
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.runlog import log_run, minutes, read_runs
-from treasurer.sheets import EventInfo, GoogleSheetsSink, grid_to_csv, local_views
+from treasurer.sheets import DEFAULT_SOURCES, EventInfo, GoogleSheetsSink, grid_to_csv, local_transactions, local_views
+from treasurer.xlsx_export import book_xlsx
 
 ROOT = Path(__file__).parent
 OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
-                 "attendees": 45, "members": "Member A, Member B, Member C, Member D"}
+                 "attendees": 45, "members": "Member A, Member B, Member C, Member D",
+                 "sources": ", ".join(DEFAULT_SOURCES)}
 ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
         Status.POSTED: "📤 posted"}
 
@@ -78,6 +81,7 @@ ss.setdefault("review_started", None)
 ss.setdefault("income", {})
 RUN_LOG = OUT / "run_log.csv"
 SESSION_FILE = OUT / "session.json"
+PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 SAVED_KEYS = ("event", "receipts", "images", "notes", "edits", "income", "drafted_at", "review_started", "started")
 
 
@@ -195,6 +199,10 @@ def event_id_for(name: str, d: date) -> str:
 
 
 def start_new_event() -> None:
+    """Clear the screen for the next event. The finished one stays under Past events.
+    Club settings (members, income sources) carry over."""
+    ss.event = {**ss.event, "name": "New event", "date": date.today(),
+                "event_id": event_id_for("New event", date.today())}
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
@@ -212,7 +220,23 @@ def save_session() -> None:
     text = session_store.dump(state)
     if text != ss.get("_saved"):
         session_store.save(SESSION_FILE, state)
+        session_store.save(PAST / f"{ss.event['event_id']}.json", state)
         ss._saved = text
+
+
+def open_past(path: Path) -> None:
+    """Button callback: switch to a saved event. The current one is already saved."""
+    saved = session_store.load(path)
+    if not saved:
+        ss.past_error = f"Could not open {path.name}."
+        return
+    for k, v in saved.items():
+        ss[k] = v
+    ss.failed = {}
+    ss.pop("last_draft", None)
+    ss.pop("last_push", None)
+    ss.pop("_saved", None)
+    ss.step = "4. Close out"
 
 
 ss.setdefault("event", dict(DEFAULT_EVENT))
@@ -225,17 +249,30 @@ with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAU
     d = st.date_input("Event date", ss.event["date"], disabled=locked)
     attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
     members = st.text_input("Members who might pay", ss.event["members"], help="Comma separated")
+    sources = st.text_input("Where money comes in", ss.event.get("sources", ", ".join(DEFAULT_SOURCES)),
+                            help="Comma separated, e.g. Venmo, Cash, Ticket sales, Sponsor, Student government grant")
     changed = name != ss.event["name"] or d != ss.event["date"]
-    ss.event.update(name=name, date=d, attendees=attendees, members=members,
+    ss.event.update(name=name, date=d, attendees=attendees, members=members, sources=sources,
                     event_id=event_id_for(name, d) if changed else ss.event["event_id"])
     if locked:
         st.caption("Name and date are locked once receipts are drafted.")
         if st.checkbox("I'm done with this event") and st.button("Start a new event"):
             start_new_event()
             st.rerun()
+past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
+if past:
+    with st.sidebar.expander(f"Past events ({len(past)})"):
+        pick = st.selectbox("Event", past, format_func=lambda e: f"{e['date']} · {e['name']} ({e['receipts']} receipts)",
+                            key="past-pick")
+        st.button("Open this event", on_click=open_past, args=(pick["path"],), width="stretch",
+                  help="Your current event is saved first, so you can come back to it here.")
+if ss.get("past_error"):
+    st.sidebar.error(ss.pop("past_error"))
 EVENT_ID = ss.event["event_id"]
 EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"])
 PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
+SOURCES = list(dict.fromkeys(x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",")
+                             if x.strip())) or list(DEFAULT_SOURCES)
 st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 
 # ---------------- Screen 1: Upload ----------------
@@ -280,11 +317,16 @@ if page == "1. Upload":
 
     if draft_clicked:
         bar = st.progress(0.0, text=f"Starting to read {len(sources)} receipts...")
+        seen = {hashlib.sha256(b).hexdigest() for b, _ in ss.images.values()}
+        skipped = []
         for n, (name, data) in enumerate(sources):
             bar.progress(n / len(sources), text=f"Reading {name} ({n + 1} of {len(sources)})...")
-            rid = next_id(name)
             try:
                 f = prepare(data, name)
+                if hashlib.sha256(f.data).hexdigest() in seen:  # already drafted: don't read (or pay) twice
+                    skipped.append(name)
+                    continue
+                rid = next_id(name)
                 r = ex.extract(f.data, f.filename, EVENT_ID, rid)
                 ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
                 ss.images[rid] = (f.data, f.media_type)
@@ -296,11 +338,13 @@ if page == "1. Upload":
                 ss.failed[name] = (None, str(e))
             except ExtractionError as e:
                 ss.failed[name] = ((f.data, f.media_type), f"{e} You can type it in by hand below.")
-        bar.progress(1.0, text=f"Read {len(sources)} receipts.")
+        bar.progress(1.0, text=f"Read {len(sources) - len(skipped)} receipts.")
         ss.demo = []
         ss.drafted_at = ss.drafted_at or time.time()
         cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
         ss.last_draft = f"**Drafted {len(ss.receipts)} receipts{cost}.** Next, check each one against its photo."
+        if skipped:
+            ss.last_draft += f" Skipped {len(skipped)} already drafted: {', '.join(skipped)}."
     if ss.get("last_draft") and ss.receipts:
         next_step(ss.last_draft, "Go to Review →", "2. Review", "to-review")
 
@@ -435,9 +479,10 @@ elif page == "3. Summary":
         st.stop()
     st.subheader("Income")
     st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
-    c = st.columns(4)
-    income = {k: dec(c[n].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
-              enumerate(["Zelle", "Venmo", "Cash", "National KSEA funding"])}
+    st.caption("Change the list of sources in the sidebar, under Event.")
+    c = st.columns(min(len(SOURCES), 4))
+    income = {k: dec(c[n % len(c)].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
+              enumerate(SOURCES)}
     ss.income = {k: str(v) for k, v in income.items()}
     t = event_totals(receipts, income)
     m = st.columns(4)
@@ -492,12 +537,18 @@ elif page == "3. Summary":
 
     if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
         st.subheader("Download the books")
-        st.caption("The same layouts the Google Sheet gets, for approved receipts. Opens in Excel or Sheets.")
+        st.caption("Every report in one formatted Excel file, for approved receipts. Open it in Excel, or bring it "
+                   "into your own Google Sheet with File > Import. No sharing needed.")
         views = local_views(receipts, EVENT, income, saved_reimbursements(sink))
-        cols = st.columns(len(views))
-        for col, (title, grid) in zip(cols, views.items(), strict=True):
-            col.download_button(title, grid_to_csv(grid), file_name=f"{EVENT_ID}_{title.replace(' ', '_')}.csv",
-                                mime="text/csv", key=f"dl-{title}")
+        st.download_button("Download the whole book (Excel)", type="primary", icon=":material/download:",
+                           data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
+                           file_name=f"{EVENT_ID}_books.xlsx", key="dl-xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with st.expander("Or one report at a time (CSV)"):
+            cols = st.columns(len(views))
+            for col, (title, grid) in zip(cols, views.items(), strict=True):
+                col.download_button(title, grid_to_csv(grid), file_name=f"{EVENT_ID}_{title.replace(' ', '_')}.csv",
+                                    mime="text/csv", key=f"dl-{title}")
 
     st.subheader("Run stats")
     s = st.columns(3)
@@ -557,35 +608,43 @@ else:
         st.success("Everyone has been paid back.")
 
     st.subheader("Funder rules")
-    c = st.columns(4)
-    pack = {"CFC": co.CFC, "ORG": co.ORG}[c[0].selectbox("Funder", ["CFC", "ORG"])]
-    attendees = int(c[1].number_input("Attendees", min_value=1, value=ss.event["attendees"]))
-    req_text = c[2].text_input("Requested ($, optional)", "")
-    applied_on = c[3].date_input("Applying on", value=date.today())
-    requested = dec(req_text) if req_text.strip() else None
-    event = co.Event(EVENT_ID, EVENT.name, EVENT.date, attendees=attendees)
-    flags = co.check_funder_rules(event, done, pack, requested, applied_on)
-    most, steps = co.max_request(event, done, pack)
-    st.metric("Most you can request", f"${most}", border=True)
-    with st.expander("How that was worked out"):
-        for s in steps:
-            st.write(md(s))
-    due = co.report_due(event, pack)
-    if due:
-        st.caption(f"{pack.name}: report due {due.isoformat()}")
-    if not flags:
-        st.success(f"No {pack.name} rule flags.")
-    for f in flags:
-        {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
-    for note in pack.notes:
-        st.caption(note)
+    funder = st.selectbox("Funder", ["UC Davis CFC", "UC Davis ORG", "No funder"],
+                          help="Rules for the UC Davis club funding boards. Pick No funder if your club isn't applying.")
+    if funder == "No funder":
+        st.caption("No funder rules checked. Who is owed (above) and the books from Summary are all you need. "
+                   "This event stays saved: reopen it anytime under Past events.")
+    else:
+        c = st.columns(3)
+        pack = {"UC Davis CFC": co.CFC, "UC Davis ORG": co.ORG}[funder]
+        attendees = int(c[0].number_input("Attendees", min_value=1, value=ss.event["attendees"]))
+        req_text = c[1].text_input("Requested ($, optional)", "")
+        applied_on = c[2].date_input("Applying on", value=date.today())
+        requested = dec(req_text) if req_text.strip() else None
+        event = co.Event(EVENT_ID, EVENT.name, EVENT.date, attendees=attendees)
+        flags = co.check_funder_rules(event, done, pack, requested, applied_on)
+        most, steps = co.max_request(event, done, pack)
+        st.metric("Most you can request", f"${most}", border=True)
+        with st.expander("How that was worked out"):
+            for s in steps:
+                st.write(md(s))
+        due = co.report_due(event, pack)
+        if due:
+            st.caption(f"{pack.name}: report due {due.isoformat()}")
+        if not flags:
+            st.success(f"No {pack.name} rule flags.")
+        for f in flags:
+            {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
+        for note in pack.notes:
+            st.caption(note)
 
-    st.divider()
-    st.markdown("**Last step:** download the funder report and attach it to your reimbursement request. "
-                "When everyone is paid back, start the next event from the sidebar.")
-    st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
-                       file_name=f"{EVENT_ID}_{pack.name.split()[-1]}_report.csv",
-                       data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
-                       mime="text/csv")
+        st.divider()
+        st.markdown("**Last step:** download the funder report and attach it to your reimbursement request. "
+                    "When everyone is paid back, start the next event from the sidebar. This event stays saved: "
+                    "reopen it anytime under **Past events**.")
+        st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
+                           file_name=f"{EVENT_ID}_{pack.name.split()[-1]}_report.csv",
+                           data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
+                           mime="text/csv")
+
 
 save_session()
