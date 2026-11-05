@@ -110,7 +110,9 @@ Funder rules (`treasurer/closeout.py`, example packs): CFC food cap, max award, 
 ## Layout
 | Path | What |
 | --- | --- |
-| `app.py` | Streamlit: Upload, Review, Summary, Close out |
+| `app.py` | Streamlit entry: password gate, sidebar, then the current step's screen |
+| `ui/upload.py`, `review.py`, `summary.py`, `close_out.py` | One file per step |
+| `ui/sidebar.py`, `common.py`, `style.css` | Sidebar and saving, shared pieces (Tally's bubble, walker bar, tables), the look |
 | `treasurer/models.py` | `Receipt` with many `LineItem`s; returned-item and posted amounts |
 | `treasurer/images.py` | Upload prep: rotation, resizing, blur and size warnings, HEIC, PDF |
 | `treasurer/extract.py`, `claude_extract.py`, `reader.py` | Extractor interface, stub, Claude, and the switch between them |
