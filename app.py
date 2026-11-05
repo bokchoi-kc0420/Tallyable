@@ -61,7 +61,7 @@ st.markdown("""<style>
 [data-testid="stSidebar"] label[data-baseweb="radio"] { border-radius: 999px; padding: 2px 8px; transition: background-color .15s; }
 [data-testid="stSidebar"] label[data-baseweb="radio"]:hover { background-color: rgba(247,190,63,.22); }
 .tly-walk { position: relative; padding: 58px 14px 0; margin: 0 0 1.4rem; }
-.tly-walk img { position: absolute; bottom: 14px; width: 56px; transform: translateX(-50%); z-index: 2;
+.tly-walk img { position: absolute; bottom: 14px; height: 55px; width: auto; transform: translateX(-50%); z-index: 2;
   animation: tly-bob 2.4s ease-in-out infinite; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
 @keyframes tly-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
 .tly-walk .track { position: relative; height: 12px; border-radius: 999px; background: #EEE7CC; }
@@ -407,8 +407,13 @@ def sidebar_stepper(current: str) -> None:
 
 
 @st.cache_data
-def mascot_uri() -> str:
-    return "data:image/png;base64," + base64.b64encode((ART / "mascot-small.png").read_bytes()).decode()
+def mascot_uri(file: str = "mascot-small.png") -> str:
+    return "data:image/png;base64," + base64.b64encode((ART / file).read_bytes()).decode()
+
+
+# Tally's pose on the walker bar for each step (Kevin's picks). Close out keeps the original.
+TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small.png",
+         "3. Summary": "tally-summary-small.png", "4. Close out": "mascot-small.png"}
 
 
 def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None = None):
@@ -450,7 +455,7 @@ def step_bar(current: str) -> None:
         labels.append(f'<span class="{state} {align}" style="left:{left}%">{"✓ " if state == "done" else ""}{label}</span>')
     st.markdown(f'<div class="tly-walk" role="img" aria-label="Step {i + 1} of {len(STEPS)}: {current.split(". ", 1)[1]}">'
                 f'<div class="track"><div class="fill" style="width:{pct}%"></div>{"".join(dots)}'
-                f'<img src="{mascot_uri()}" alt="" style="left:{pct}%"></div>'
+                f'<img src="{mascot_uri(TALLY[current])}" alt="" style="left:{pct}%"></div>'
                 f'<div class="stops">{"".join(labels)}</div></div>', unsafe_allow_html=True)
 
 
