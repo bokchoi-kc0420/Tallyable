@@ -9,6 +9,7 @@ import base64
 import hashlib
 import hmac
 import html
+import io
 import os
 import time
 from datetime import date
@@ -213,6 +214,46 @@ st.markdown("""<style>
 .tly-loading .bar.run i { width: 35%; animation: tly-run 1.2s ease-in-out infinite; }
 @keyframes tly-think { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg) translateY(-3px); } }
 @keyframes tly-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+/* Who paid grid with photos */
+[class*="st-key-who-"] { padding: 10px; gap: .5rem; }
+[class*="st-key-who-"] img { border-radius: 10px; max-height: 150px; object-fit: cover; }
+.tly-nothumb { height: 110px; border-radius: 10px; background: #F2ECD3; display: grid; place-items: center;
+  font-family: Fredoka, sans-serif; font-weight: 600; color: #1C5C36; }
+/* Check results as cards */
+[class*="st-key-flag-"] { border-radius: 14px; padding: 12px 16px 12px 14px; border-left: 6px solid; margin-bottom: .25rem; }
+[class*="st-key-flag-"] p { margin: 0; color: #1F2A22; }
+[class*="st-key-flag-"] strong { font-size: 1.05rem; }
+[class*="st-key-flag-"] span[role="img"] { font-size: 1.3rem !important; vertical-align: -4px; margin-right: 4px; }
+.st-key-flag-block, [class*="st-key-flag-block-"] { background: #FBE4E0; border-color: #C44536; }
+[class*="st-key-flag-block-"] span[role="img"] { color: #A8322A; }
+[class*="st-key-flag-warn-"] { background: #FDF1CC; border-color: #E0A526; }
+[class*="st-key-flag-warn-"] span[role="img"] { color: #8A6100; }
+[class*="st-key-flag-info-"] { background: #E6EFE3; border-color: #1C5C36; }
+[class*="st-key-flag-info-"] span[role="img"] { color: #1C5C36; }
+.tly-flaghint { font-size: .85rem; color: #5B5E55; }
+.tly-decided { border-radius: 12px; padding: 10px 14px; font-size: .95rem; }
+.tly-decided b { font-family: Fredoka, sans-serif; font-weight: 600; }
+.tly-decided.ok { background: #DDEBD9; color: #1C5C36; } .tly-decided.no { background: #F8DEDA; color: #A8322A; }
+.tly-decided.post { background: #1C5C36; color: #FFFFFF; }
+
+/* Income rows: a colored icon per source (same greens as the money bars) */
+[class*="st-key-srcicon-"] { width: 42px !important; min-height: 42px !important; height: 42px !important;
+  border-radius: 50%; display: flex !important; align-items: center; justify-content: center; }
+[class*="st-key-srcicon-"] span[role="img"] { color: #FFFFFF; font-size: 1.35rem !important; }
+[class*="st-key-srcicon-"] p { margin: 0 !important; line-height: 1; }
+[class*="st-key-srcicon-"] > div { width: auto !important; }
+[class*="st-key-srcicon-"] [data-testid="stMarkdownContainer"] { margin: 0 !important; }
+[class*="st-key-srcicon-0-"] { background: #1C5C36; } [class*="st-key-srcicon-1-"] { background: #3F8A5A; }
+[class*="st-key-srcicon-2-"] { background: #6FAE82; } [class*="st-key-srcicon-3-"] { background: #E0A526; }
+.tly-intotal { text-align: right; margin: 0; font-size: 1rem; color: #3F4A42; }
+.tly-intotal b { font-family: Fredoka, sans-serif; font-size: 1.35rem; color: #1C5C36; margin-left: 6px; }
+
+/* Bigger logo in the sidebar; it links back to the landing page */
+[data-testid="stSidebarHeader"] { height: auto; padding-top: 1rem; }
+[data-testid="stSidebarHeader"] img[data-testid="stSidebarLogo"], [data-testid="stSidebarLogo"] {
+  height: 3.4rem !important; max-width: 15rem; width: auto; }
+[data-testid="stSidebarHeader"] a:hover img { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
 </style>""", unsafe_allow_html=True)
 
 
@@ -406,6 +447,17 @@ INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Du
                   "Grants and funding", "Donations", "Fundraiser", "Other"]
 
 
+SOURCE_ICONS = {"zelle": "phone_iphone", "venmo": "phone_iphone", "cash app": "phone_iphone", "cash": "payments",
+                "card": "credit_card", "square": "credit_card", "ticket": "confirmation_number", "dues": "badge",
+                "sponsor": "handshake", "grant": "account_balance", "fund": "account_balance",
+                "donation": "volunteer_activism", "fundraiser": "storefront", "bake": "storefront"}
+
+
+def source_icon(name: str) -> str:
+    low = name.lower()
+    return f":material/{next((v for k, v in SOURCE_ICONS.items() if k in low), 'savings')}:"
+
+
 def _set_sources(names: list[str]) -> None:
     ss.event = {**ss.event, "sources": ", ".join(names)}
 
@@ -467,6 +519,42 @@ def html_table(rows: list[dict], numeric: tuple[str, ...] = ()) -> None:
         body.append("<tr>" + "".join(cells) + "</tr>")
     st.markdown(f'<div class="tly-table-wrap"><table class="tly-table"><thead><tr>{head}</tr></thead>'
                 f'<tbody>{"".join(body)}</tbody></table></div>', unsafe_allow_html=True)
+
+
+@st.cache_data(max_entries=200, show_spinner=False)
+def thumbnail(data: bytes, name: str) -> bytes | None:
+    """A small JPEG of an upload for the Who paid grid; None for PDFs or files that won't open."""
+    try:
+        f = prepare(data, name)
+        if not f.media_type.startswith("image/"):
+            return None
+        from PIL import Image
+        im = Image.open(io.BytesIO(f.data)).convert("RGB")
+        im.thumbnail((360, 260))
+        out = io.BytesIO()
+        im.save(out, "JPEG", quality=80)
+        return out.getvalue()
+    except Exception:  # a bad file shows its error later, when it is read
+        return None
+
+
+FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
+             "missing_payer": (":material/person_alert:", "Who paid for this?"),
+             "missing_receipt": (":material/hide_image:", "No photo attached"),
+             "unusual_tax": (":material/percent:", "Tax looks high"),
+             "returned_item": (":material/undo:", "Returned item"),
+             "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
+FLAG_TONE = {Severity.BLOCK: ("block", "Fix this or add a note to approve"), Severity.WARN: ("warn", "Worth a second look"),
+             Severity.INFO: ("info", "Just so you know")}
+
+
+def flag_card(f, key: str) -> None:
+    """A check result as a card: icon, plain title, what to do, and the detail."""
+    icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
+    tone, hint = FLAG_TONE[f.severity]
+    with st.container(key=f"flag-{tone}-{key}"):
+        st.markdown(f"{icon} **{title}** · <span class='tly-flaghint'>{hint}</span>  \n{md(f.message)}",
+                    unsafe_allow_html=True)
 
 
 def loading(slot, title: str, detail: str, frac: float | None) -> None:
@@ -632,7 +720,8 @@ def open_past(path: Path) -> None:
 
 
 ss.setdefault("event", dict(DEFAULT_EVENT))
-st.logo(str(ART / "logo.png"), size="large")
+HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the landing page start.bat serves
+st.logo(str(ART / "logo.png"), size="large", link=HOME_URL)
 st.sidebar.caption("Close out a club event: receipts in, checked books out.")
 if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                      help="Starts a blank event. This one stays saved under Past events."):
@@ -648,13 +737,21 @@ with event_group.container(key="edit-event"), st.expander("Edit event", icon=":m
     d = st.date_input("Event date", ss.event["date"], disabled=locked)
     attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
     members = st.text_input("Members who might pay", ss.event["members"], help="Comma separated")
+    cal = st.radio("School calendar", ["Semesters", "Quarters"], horizontal=True,
+                   index=0 if ss.event.get("calendar", "semester") == "semester" else 1,
+                   help="Your books get one balance sheet per term.")
+    target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
+                                 help="The margin your club aims for. The Summary shows if an event hit it."))
     changed = name != ss.event["name"] or d != ss.event["date"]
+    ss.event.update(calendar="semester" if cal == "Semesters" else "quarter", target=target)
     ss.event.update(name=name, date=d, attendees=attendees, members=members,
                     event_id=event_id_for(name, d) if changed else ss.event["event_id"])
     if locked:
         st.caption("Name and date are locked once receipts are drafted.")
 EVENT_ID = ss.event["event_id"]
-EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"])
+EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"],
+                  calendar=ss.event.get("calendar", "semester"))
+TARGET = int(ss.event.get("target", 10))
 PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
 SOURCES = list(dict.fromkeys(x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",")
                              if x.strip())) or list(DEFAULT_SOURCES)
@@ -764,9 +861,16 @@ if page == "1. Upload":
 
     if sources:
         st.subheader("Who paid")
+        st.caption("Each receipt's photo is shown, so you can tell them apart without opening them.")
         grid = st.columns(4)
-        for n, (name, _) in enumerate(sources):
-            grid[n % 4].selectbox(name, PAYERS, key=f"payer-{name}")
+        for n, (name, data) in enumerate(sources):
+            with grid[n % 4].container(border=True, key=f"who-{n}"):
+                pic = thumbnail(data, name)
+                if pic:
+                    st.image(pic, width="stretch")
+                else:
+                    st.markdown('<div class="tly-nothumb">PDF</div>', unsafe_allow_html=True)
+                st.selectbox(name, PAYERS, key=f"payer-{name}")
 
     for name, (data, reason) in list(ss.failed.items()):
         st.error(md(f"{name}: {reason}"))
@@ -790,6 +894,18 @@ elif page == "2. Review":
     flags = run_checks(list(ss.receipts.values()))
     reviewed = sum(1 for x in ss.receipts.values() if x.status is not Status.DRAFTED)
     st.progress(reviewed / len(ss.receipts), text=f"{reviewed} of {len(ss.receipts)} reviewed")
+    clean = [x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED and not flags[x] and not ss.notes.get(x)]
+    if clean:
+        c = st.columns([3, 1.4], vertical_alignment="center")
+        c[0].caption(f"{len(clean)} receipt{'s have' if len(clean) != 1 else ' has'} no flags at all. You can approve "
+                     "them in one click. Flagged ones still need you, one by one. Glance at the photos first: "
+                     "the checks catch math and missing info, not a wrong item.")
+        if c[1].button(f"Approve the {len(clean)} with no flags", icon=":material/done_all:", key="approve-clean",
+                       width="stretch"):
+            for x in clean:
+                ss.receipts[x] = ss.receipts[x].model_copy(update={"status": Status.APPROVED})
+            ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
+            st.rerun()
     if reviewed == len(ss.receipts):
         ok = sum(1 for x in ss.receipts.values() if x.status in (Status.APPROVED, Status.POSTED))
         next_step(f"**All {reviewed} receipts reviewed:** {ok} approved, {reviewed - ok} rejected. "
@@ -834,8 +950,13 @@ elif page == "2. Review":
     with right:
         for note in ss.notes.get(rid, []):
             st.warning(md(note))
-        for f in flags[rid]:
-            {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
+        if r.status is not Status.DRAFTED:
+            label, tone = STATUS_CHIP[r.status]
+            st.markdown(f'<div class="tly-decided {tone}">This receipt is <b>{label}</b>.'
+                        f'{" Click Reopen to change it." if r.status is not Status.POSTED else ""}</div>',
+                        unsafe_allow_html=True)
+        for n, f in enumerate(flags[rid]):
+            flag_card(f, f"{rid}-{n}")
         c1, c2, c3 = st.columns(3)
         place = c1.text_input("Place", r.place, key=f"place-{rid}")
         d = c2.date_input("Date", r.date, key=f"date-{rid}")
@@ -871,11 +992,12 @@ elif page == "2. Review":
         locked = r.status is Status.POSTED
         if locked:
             st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
-        if b1.button("Approve", type="primary", disabled=locked or not can_approve(flags[rid], note)):
+        decided = r.status is not Status.DRAFTED
+        if b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags[rid], note)):
             ss.receipts[rid] = r.model_copy(update={"status": Status.APPROVED, "review_note": note or None})
             ss.next_pick = next_drafted(rid)
             st.rerun()
-        if b2.button("Reject", disabled=locked):
+        if b2.button("Reject", disabled=locked or decided):
             ss.receipts[rid] = r.model_copy(update={"status": Status.REJECTED, "review_note": note or None})
             ss.next_pick = next_drafted(rid)
             st.rerun()
@@ -896,19 +1018,25 @@ elif page == "3. Summary":
     st.subheader("Income")
     st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
     with st.container(border=True, key="income-box"):
-        head = st.columns([3, 2, 0.5])
-        head[0].markdown('<p class="tly-colhead">Where it came from</p>', unsafe_allow_html=True)
-        head[1].markdown('<p class="tly-colhead">Amount ($)</p>', unsafe_allow_html=True)
+        head = st.columns([0.45, 3, 2, 0.5])
+        head[1].markdown('<p class="tly-colhead">Where it came from</p>', unsafe_allow_html=True)
+        head[2].markdown('<p class="tly-colhead">Amount ($)</p>', unsafe_allow_html=True)
         income = {}
-        for k in SOURCES:
-            row = st.columns([3, 2, 0.5], vertical_alignment="center")
-            row[0].selectbox("Source", [k, *[c for c in INCOME_CHOICES if c not in SOURCES]], key=f"src-{k}",
+        for n, k in enumerate(SOURCES):
+            row = st.columns([0.45, 3, 2, 0.5], vertical_alignment="center")
+            with row[0].container(key=f"srcicon-{n % 4}-{n}"):
+                st.markdown(source_icon(k))
+            row[1].selectbox("Source", [k, *[c for c in INCOME_CHOICES if c not in SOURCES]], key=f"src-{k}",
                              label_visibility="collapsed", accept_new_options=True, on_change=rename_source, args=(k,))
-            income[k] = dec(row[1].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}",
-                                              label_visibility="collapsed"))
-            row[2].button("", icon=":material/remove:", key=f"rm-{k}", help=f"Remove {k}",
+            start = ss.income.get(k, "")
+            income[k] = dec(row[2].text_input(k, "" if dec(start) == 0 else start, key=f"income-{k}",
+                                              placeholder="0.00", label_visibility="collapsed"))
+            row[3].button("", icon=":material/remove:", key=f"rm-{k}", help=f"Remove {k}",
                           on_click=remove_source, args=(k,), disabled=len(SOURCES) == 1)
-        st.button("Add a source", icon=":material/add:", key="add-source", on_click=add_source)
+        foot = st.columns([3.45, 2.5], vertical_alignment="center")
+        foot[0].button("Add a source", icon=":material/add:", key="add-source", on_click=add_source)
+        foot[1].markdown(f'<p class="tly-intotal">Total in <b>{usd(sum(income.values(), Decimal("0")))}</b></p>',
+                         unsafe_allow_html=True)
     ss.income = {k: str(v) for k, v in income.items()}
     for k in SOURCES:
         typed = str(ss.get(f"income-{k}", "")).strip()
@@ -924,9 +1052,9 @@ elif page == "3. Summary":
         m[2].metric("Net", usd(t["net"]), border=True,
                     delta=("left over" if t["net"] >= 0 else "short") if t["income"] or t["expenses"] else None,
                     delta_color="normal" if t["net"] >= 0 else "inverse", delta_arrow="off")
-        hit = t["margin_pct"] >= 10
-        m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more", border=True,
-                    delta="on target" if hit else "under 10% target", delta_color="normal" if hit else "inverse",
+        hit = t["margin_pct"] >= TARGET
+        m[3].metric("Margin", f"{t['margin_pct']}%", help=f"Your target: {TARGET}% or more (change it under Edit event)",
+                    border=True, delta="on target" if hit else f"under {TARGET}% target", delta_color="normal" if hit else "inverse",
                     delta_arrow="off")
     with st.container(border=True):
         st.markdown("**Money in vs out**")
@@ -1034,7 +1162,7 @@ else:
         st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
     else:
         with st.container(key="mascot-cheer"):
-            st.image(str(ART / "mascot-cheer.png"), width=190)
+            st.image(str(ART / "tally-cheer.png"), width=170)
         rejected = len(ss.receipts) - len(done)
         cheer = f"All {len(done)} receipts approved!" if not rejected else f"All reviewed! {len(done)} approved, {rejected} rejected."
         st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)
@@ -1105,14 +1233,36 @@ else:
         st.success("Everyone has been paid back.")
 
     st.subheader("Funder rules")
-    funder = st.selectbox("Funder", ["UC Davis CFC", "UC Davis ORG", "No funder"],
-                          help="Rules for the UC Davis club funding boards. Pick No funder if your club isn't applying.")
+    examples = {"Example: UC Davis CFC": co.CFC, "Example: UC Davis ORG": co.ORG}
+    funder = st.selectbox("Funder", ["No funder", "My funder's rules", *examples], key="funder",
+                          help="Rules from whoever funds your event: student government, a department, a sponsor. "
+                               "The examples are one school's real rules, to show how it works.")
+    if funder == "My funder's rules":
+        saved = ss.event.get("funder", {})
+        with st.container(border=True, key="my-funder"):
+            st.caption("Fill in what your funder asks for. Leave a box empty if they don't have that rule.")
+            f1 = st.columns(3)
+            fname = f1[0].text_input("Funder name", saved.get("name", ""), placeholder="e.g. Student Government")
+            fmax = f1[1].text_input("Biggest grant ($)", saved.get("max", ""), placeholder="no limit")
+            ffood = f1[2].text_input("Food cap per person ($)", saved.get("food", ""), placeholder="no cap")
+            f2 = st.columns(3)
+            fshare = f2[0].text_input("Club must pay at least (%)", saved.get("share", ""), placeholder="0")
+            fdue = f2[1].text_input("Report due (days after event)", saved.get("due", ""), placeholder="no deadline")
+            fban = f2[2].multiselect("Can't be paid for", ["Food", "Drink", "Other"], saved.get("ban", []))
+        ss.event = {**ss.event, "funder": {"name": fname, "max": fmax, "food": ffood, "share": fshare, "due": fdue,
+                                           "ban": fban}}
+        due_days = int(dec(fdue)) if fdue.strip() and dec(fdue) > 0 else None
+        my_pack = co.RulePack(name=fname.strip() or "Your funder",
+                              max_award=dec(fmax) if fmax.strip() else None,
+                              food_cap_per_person_day=dec(ffood) if ffood.strip() else None,
+                              min_club_share=dec(fshare) / 100 if fshare.strip() else None,
+                              report_due_days_after_event=due_days, banned_categories=frozenset(fban))
     if funder == "No funder":
         st.caption("No funder rules checked. Who is owed (above) and the books from Summary are all you need. "
                    "This event stays saved: reopen it anytime under Past events.")
     else:
         c = st.columns(3)
-        pack = {"UC Davis CFC": co.CFC, "UC Davis ORG": co.ORG}[funder]
+        pack = my_pack if funder == "My funder's rules" else examples[funder]
         attendees = int(c[0].number_input("Attendees", min_value=1, value=ss.event["attendees"]))
         req_text = c[1].text_input("Requested ($, optional)", "")
         applied_on = c[2].date_input("Applying on", value=date.today())

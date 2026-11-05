@@ -142,7 +142,7 @@ export default function Home() {
       <footer className="border-t border-line py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-sm text-ink-soft sm:flex-row sm:px-6">
           <img src="/art/logo.png" alt="Tallyable" className="h-10 w-auto" />
-          <p>Built by a club treasurer at UC Davis. Demo data is fake.</p>
+          <p>Built by a college club treasurer. Demo data is fake.</p>
           <a href={REPO_URL} className="font-medium text-forest underline-offset-4 hover:underline">Source on GitHub</a>
         </div>
       </footer>

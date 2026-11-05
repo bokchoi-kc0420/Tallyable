@@ -52,6 +52,7 @@ class EventInfo:
     name: str
     date: date
     attendees: int | None = None
+    calendar: str = "semester"  # "semester" or "quarter": how balance-sheet tabs are split
 
 
 D = cell_decimal  # sheet cell -> Decimal (see models.cell_decimal)
@@ -163,20 +164,30 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
     return rows
 
 
-def academic_quarter(d: str | date) -> str:
-    """UC Davis runs on quarters: Fall (Sep-Dec), Winter (Jan-Mar), Spring (Apr-Jun),
-    Summer (Jul-Aug). The club starts a new balance sheet each quarter."""
+QUARTERS = {9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Winter", 2: "Winter", 3: "Winter",
+            4: "Spring", 5: "Spring", 6: "Spring", 7: "Summer", 8: "Summer"}
+SEMESTERS = {8: "Fall", 9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Spring", 2: "Spring", 3: "Spring",
+             4: "Spring", 5: "Spring", 6: "Summer", 7: "Summer"}
+CALENDARS = {"semester": SEMESTERS, "quarter": QUARTERS}
+
+
+def academic_term(d: str | date, calendar: str = "semester") -> str:
+    """The school term a date falls in. Semesters: Fall (Aug-Dec), Spring (Jan-May), Summer
+    (Jun-Jul). Quarters: Fall (Sep-Dec), Winter (Jan-Mar), Spring (Apr-Jun), Summer (Jul-Aug).
+    The club starts a new balance sheet each term."""
     d = date.fromisoformat(str(d)[:10])
-    name = {9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Winter", 2: "Winter", 3: "Winter",
-            4: "Spring", 5: "Spring", 6: "Spring", 7: "Summer", 8: "Summer"}[d.month]
-    return f"{name} {d.year}"
+    return f"{CALENDARS.get(calendar, SEMESTERS)[d.month]} {d.year}"
 
 
-def quarter_tabs(events: list[dict], tx: list[dict]) -> dict[str, list[list]]:
-    """One balance sheet per academic quarter, holding that quarter's events."""
+def academic_quarter(d: str | date) -> str:
+    return academic_term(d, "quarter")
+
+
+def term_tabs(events: list[dict], tx: list[dict], calendar: str = "semester") -> dict[str, list[list]]:
+    """One balance sheet per school term, holding that term's events."""
     by_q: dict[str, list[dict]] = OrderedDict()
     for e in sorted(events, key=lambda e: str(e["date"])):
-        by_q.setdefault(academic_quarter(e["date"]), []).append(e)
+        by_q.setdefault(academic_term(e["date"], calendar), []).append(e)
     out = {}
     for q, evs in by_q.items():
         ids = {str(e["event_id"]) for e in evs}
@@ -283,7 +294,7 @@ class GoogleSheetsSink:
         events = self._records(EVENTS, EVENT_FIELDS)
         tx = tx_ws.get_all_records()
         self._rewrite(BALANCE, render_balance_sheet(events, tx))
-        for title, grid in quarter_tabs(events, tx).items():
+        for title, grid in term_tabs(events, tx, event.calendar).items():
             self._rewrite(title, grid)
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())))

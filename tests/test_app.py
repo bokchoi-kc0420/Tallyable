@@ -34,10 +34,10 @@ def test_draft_approve_and_fix():
     next(b for b in at.button if b.label == "Approve").click().run()
     assert at.session_state["receipts"]["R01"].status.value == "approved"
 
-    at.sidebar.radio[1].set_value("R06").run()
-    assert any("off by" in e.value for e in at.error)
+    at.sidebar.radio(key="review-pick").set_value("R06").run()
+    assert any("off by" in m.value for m in at.markdown)
     at.text_input(key="total-R06").set_value("110.26").run()
-    assert not any("off by" in e.value for e in at.error)
+    assert not any("off by" in m.value for m in at.markdown)
 
 
 def test_push_logs_time_and_close_out_shows_owed_and_report():
@@ -71,6 +71,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     assert not at.exception
     owed = owed_table(at)
     assert [r["Payer"] for r in owed] == ["Member A"] and owed[0]["Owed"] == "$31.07"
+    at.selectbox(key="funder").set_value("Example: UC Davis CFC").run()
     assert any(b.label.startswith("Download funder report") for b in at.get("download_button"))
 
 
@@ -369,3 +370,36 @@ def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch,
     assert not at.exception
     assert any(e.label.startswith("Download a copy instead") for e in at.expander)
     assert [lb.label for lb in at.get("link_button")] == ["Open the sheet"]
+
+
+def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.sidebar.radio[0].set_value("2. Review").run()
+    at.button(key="approve-clean").click().run()
+    rs = at.session_state["receipts"]
+    approved = [x for x, r in rs.items() if r.status is Status.APPROVED]
+    assert approved and len(approved) < len(rs)  # flagged ones wait for a person
+    at.sidebar.radio(key="review-pick").set_value(approved[0]).run()
+    assert next(b for b in at.button if b.label == "Approve").disabled
+    assert any("approved" in m.value and "Reopen" in m.value for m in at.markdown)
+    assert not at.exception
+
+
+def test_my_funder_rules_and_school_calendar():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.sidebar.radio[0].set_value("2. Review").run()
+    at.button(key="approve-clean").click().run()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    assert at.selectbox(key="funder").value == "No funder"
+    at.selectbox(key="funder").set_value("My funder's rules").run()
+    next(t for t in at.text_input if t.label == "Funder name").set_value("Student Government").run()
+    assert not at.exception
+    assert any("Student Government" in m.value for m in [*at.markdown, *at.success, *at.caption, *at.error, *at.warning, *at.info])
+    assert at.session_state["event"]["funder"]["name"] == "Student Government"
+    assert at.session_state["event"]["calendar"] == "semester"

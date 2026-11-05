@@ -7,7 +7,7 @@ Tests: tests/test_closeout.py. Shown in the app's Close out step.
 Rules are taken from UC Davis CSI pages read on 2026-11-04:
 - Club Finance Council (CFC): https://csi.ucdavis.edu/manage-your-org/grants/cfc
 - Operation Reimbursement Grant (ORG): https://csi.ucdavis.edu/operation-reimbursement-grant
-Re-check them each quarter; funders change rules. They live in data (RulePack)
+Re-check them each term; funders change rules. They live in data (RulePack)
 so a national organization's pack is the same code with different numbers.
 """
 from __future__ import annotations

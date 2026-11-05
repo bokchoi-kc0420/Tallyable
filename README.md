@@ -13,7 +13,7 @@ After a club event, the treasurer is left holding a pile of receipt photos from 
 - Type every line into the expense report, the balance sheet, and the ledger.
 - Catch mistakes: a handwritten total that doesn't add up, a missing tip line, the same receipt sent twice, a purchase nobody tagged a payer on.
 - Work out who fronted money and who is still owed.
-- Check the funder's rules before asking for money. UC Davis CFC caps food at $12 a person, requires the club to pay at least 10%, and wants the report within 21 days.
+- Check the funder's rules before asking for money. For example, one student-government funder caps food at $12 a person, requires the club to pay at least 10%, and wants the report within 21 days. Clubs type in their own funder's numbers.
 
 It's slow, it's easy to get wrong, and the errors end up in official books.
 
@@ -76,7 +76,7 @@ flowchart LR
 - **The spreadsheet stays the system of record.** The club already lives in Google Sheets. Tallyable writes tidy tabs (one row per line item) and rebuilds the familiar sideways balance sheet and ledger from them, so the treasurer's layout survives and the data stays analyzable.
 - **Pushing twice never double-counts.** A receipt id that's already posted is skipped.
 - **A stub and an answer key from day one.** The whole app runs and is tested without an API key. A swappable `Extractor` interface means the real model drops in without changing the app, and the same answer key scores it.
-- **Funder rules are data.** CFC and ORG are `RulePack` values, not code paths. A new funder means new numbers, not a rewrite.
+- **Funder rules are data.** Each funder is a `RulePack` value, not a code path. Clubs fill in their own on the Close out screen; two real funders (UC Davis CFC and ORG) ship as examples.
 - **Paybacks don't change expenses.** Reimbursing a member settles money the club already owes. It shows in the ledger without moving the balance.
 - **Cost is a feature.** The default model is the mid-tier one. Big photos are shrunk before sending, every run prints a cost estimate, and scoring stops at a $1 budget.
 
@@ -105,7 +105,7 @@ Click "Use the fake event's 14 receipts instead", tag payers, then go through Dr
 | `unusual_tax` | tax over 12% of subtotal | No |
 | `returned_item` | listed, cost and its tax share excluded from totals | No |
 
-Funder rules (`treasurer/closeout.py`): CFC food cap, max award, 10% club share, report due date; ORG no food, decoration warning, 42-day purchase window, receipt required.
+Funder rules (`treasurer/closeout.py`, example packs): CFC food cap, max award, 10% club share, report due date; ORG no food, decoration warning, 42-day purchase window, receipt required.
 
 ## Layout
 | Path | What |
@@ -131,4 +131,4 @@ Interview prep: [docs/interview_notes.md](docs/interview_notes.md).
 - A store refund slip with a negative total can't be entered. Mark the item `returned` on the original receipt instead.
 - The app works on one event at a time. Set the name, date, attendees, members and income sources in the sidebar, and use "Start a new event" when you finish one. Finished events stay under Past events, and the Sheets layer keeps every event.
 - Writing straight into a Google Sheet needs the sheet shared with the app's service account. The Excel download is the no-sharing route.
-- Funder rules were copied from UC Davis CSI pages on 2026-11-04. Re-check them each quarter.
+- The example funder rules were copied from UC Davis CSI pages on 2026-11-04. Rules change; re-check them each term.

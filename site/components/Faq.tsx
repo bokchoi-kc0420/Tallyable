@@ -8,8 +8,8 @@ const QA = [
     a: "No. It only reads receipts and drafts rows. You approve every row before anything reaches your sheet, and plain code (not AI) checks the math, missing payers, duplicates and missing receipts.",
   },
   {
-    q: "My school isn't UC Davis. Does it still work?",
-    a: "Yes. Funder rules are optional, so pick No funder and you still get who's owed, the ledger and the balance sheet. You can name your own income sources too, like dues, ticket sales or a sponsor.",
+    q: "Does it work at my school?",
+    a: "Yes. Type in your funder's rules (food cap, club share, report deadline), or skip them and you still get who's owed, the ledger and the balance sheet. Semester and quarter schools both work. You can name your own income sources too, like dues, ticket sales or a sponsor.",
   },
   {
     q: "Where does my data live?",
