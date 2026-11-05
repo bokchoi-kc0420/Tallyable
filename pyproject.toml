@@ -16,3 +16,4 @@ select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "fake_event/generate_fake_event.py" = ["B007"]
+"fake_event_holdout/generate_holdout.py" = ["E402"]

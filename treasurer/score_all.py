@@ -3,6 +3,7 @@
     python -m treasurer.score_all
     python -m treasurer.score_all --model claude-haiku-5-5
     python -m treasurer.score_all --budget 0.50
+    python -m treasurer.score_all --set holdout   (unseen receipts: the honest score)
 
 Prints an estimate first, then field accuracy, every miss, tokens, cost and time.
 Stops early if the running cost passes --budget (default $1.00).
@@ -17,7 +18,7 @@ import time
 from .claude_extract import estimate
 from .extract import ExtractionError
 from .loader import load_answer_key
-from .reader import ANSWER_KEY, ROOT, make_extractor
+from .reader import ANSWER_KEY, HOLDOUT_KEY, ROOT, make_extractor
 from .score import score
 
 
@@ -25,7 +26,10 @@ def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--model", help="e.g. claude-haiku-5-5 (default: TALLYABLE_MODEL or claude-sonnet-5-5)")
     p.add_argument("--budget", type=float, default=1.00, help="stop once the run has cost this many dollars")
+    p.add_argument("--set", choices=["main", "holdout"], default="main",
+                   help="main: fake_event/ (the prompt was tuned on it). holdout: receipts the prompt never saw")
     args = p.parse_args(argv)
+    key = HOLDOUT_KEY if args.set == "holdout" else ANSWER_KEY
 
     ex, label = make_extractor()
     if label != "claude":
@@ -34,9 +38,9 @@ def main(argv: list[str]) -> int:
     if args.model:
         ex.model = args.model
 
-    truth = {r.receipt_id: r for r in load_answer_key(ANSWER_KEY) if r.image_file}
+    truth = {r.receipt_id: r for r in load_answer_key(key) if r.image_file}
     est = estimate(ex.model, len(truth))
-    print(f"{ex.model}: {len(truth)} receipts, estimated at most ${est:.2f}. Budget ${args.budget:.2f}.")
+    print(f"{ex.model} on the {args.set} set: {len(truth)} receipts, estimated at most ${est:.2f}. Budget ${args.budget:.2f}.")
     if est > args.budget:
         print("The estimate is over budget. Use a cheaper --model or raise --budget.")
         return 1
@@ -46,7 +50,7 @@ def main(argv: list[str]) -> int:
         if ex.cost() >= args.budget:
             print(f"Stopping: spent ${ex.cost():.3f}, budget ${args.budget:.2f}.")
             break
-        path = ANSWER_KEY.parent / t.image_file
+        path = key.parent / t.image_file
         print(f"reading {path.name} ...", end=" ", flush=True)
         try:
             drafts[rid] = ex.extract(path.read_bytes(), path.name, t.event_id, rid)
@@ -57,7 +61,7 @@ def main(argv: list[str]) -> int:
     secs = time.time() - start
 
     s = score(drafts, truth)
-    print(f"\nModel {ex.model} · {len(drafts)}/{len(truth)} receipts read · {secs:.0f}s · ~${ex.cost():.3f}")
+    print(f"\nModel {ex.model} · {args.set} set · {len(drafts)}/{len(truth)} receipts read · {secs:.0f}s · ~${ex.cost():.3f}")
     print(f"Overall field accuracy: {s.overall:.1%}")
     print(f"Invented lines: {s.extra_lines}")
     print(f"Food/drink vs other (what funder rules use): {s.food_side_accuracy:.1%}")
@@ -68,10 +72,11 @@ def main(argv: list[str]) -> int:
         for m in s.misses:
             print(f"  {m}")
 
-    out = ROOT / "output" / f"score_{ex.model}.json"
+    suffix = "_holdout" if args.set == "holdout" else ""
+    out = ROOT / "output" / f"score_{ex.model}{suffix}.json"
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps({
-        "model": ex.model, "seconds": round(secs, 1), "cost_usd": round(ex.cost(), 4),
+        "model": ex.model, "set": args.set, "seconds": round(secs, 1), "cost_usd": round(ex.cost(), 4),
         "overall": s.overall, "extra_lines": s.extra_lines, "food_side": s.food_side_accuracy,
         "by_field": s.by_field(), "misses": s.misses, "failed": failed,
         "usage": ex.usage,

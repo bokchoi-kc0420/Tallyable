@@ -34,15 +34,16 @@ Measured on the fake event: 15 receipts with 6 planted errors and an answer key 
 | Metric | Result |
 | --- | --- |
 | Planted errors caught by the checks | 6 of 6, with 0 false flags on the 9 clean receipts |
-| Field accuracy of AI drafts (Sonnet 5.5) | **99.0%**: every field 100% except category (93.8%, 2 lines). 0 invented lines. Run of 2026-11-04 |
+| Field accuracy of AI drafts (Sonnet 5.5) | **99.5%**: every field 100% except category (96.9%, 1 of 32 lines). 0 invented lines. Run of 2026-11-05, after one prompt fix |
+| Field accuracy on the held-out set (Sonnet 5.5) | _TBD: `score_all --set holdout`, 12 receipts the prompt never saw_ |
 | Field accuracy (Haiku 5.5) | _TBD_ |
-| API cost for the whole event | **$0.074** for 14 receipts, 28 seconds (Sonnet 5.5) |
+| API cost for the whole event | **$0.079** for 14 receipts, 33 seconds (Sonnet 5.5) |
 | Time to close out by hand (Excel) | _TBD_ |
 | Time to close out in Tallyable | _TBD: from `output/run_log.csv`_ |
 | Edits needed per receipt | _TBD: from `output/run_log.csv`_ |
 | Posted total vs expected | $571.75 = $571.75 (simulated correct review) |
 
-**What the misses were:** both were category calls, which are judgments, not transcriptions ("Sauce cups (20)" is labeled Food and "Ice bag" is labeled Drink). The prompt now defines categories by what an item *is*, and `score_all` also reports the food-vs-other split, which is the one funder rules actually use. That fix is untested until the next run.
+**What the misses were:** the first run (99.0%) missed 2 category calls, which are judgments, not transcriptions ("Sauce cups (20)" is labeled Food and "Ice bag" is labeled Drink). The prompt now defines categories by what an item *is*, without naming either item. The rerun fixed "Ice bag" but still calls "Sauce cups" Other, which crosses the food-vs-other line funder rules use (96.9% on that split). The prompt is frozen for this set from here: tuning further would just teach it the test. Because the fix was written after seeing the misses, the honest number is the held-out set in [fake_event_holdout/](fake_event_holdout/): new stores, new items, many borderline on category ("Ice cream cups", "Water jug, empty"), labeled before any model run.
 
 ## Architecture
 ```mermaid
@@ -81,11 +82,11 @@ python -m streamlit run app.py
 ```
 Click "Use the fake event's 14 receipts instead", tag payers, then go through Draft, Review, Summary (push), and Close out.
 
-- **Read receipts with Claude:** copy `.env.example` to `.env` and add `ANTHROPIC_API_KEY`. Try one receipt with `python -m treasurer.try_one fake_event/receipts/R01.jpg`, or score them all with `python -m treasurer.score_all` (`--model claude-haiku-5-5`, `--budget 0.50`). Never commit `.env`.
+- **Read receipts with Claude:** copy `.env.example` to `.env` and add `ANTHROPIC_API_KEY`. Try one receipt with `python -m treasurer.try_one fake_event/receipts/R01.jpg`, or score them all with `python -m treasurer.score_all` (`--model claude-haiku-5-5`, `--budget 0.50`, `--set holdout` for the unseen receipts). Never commit `.env`.
 - **Google Sheets:** [docs/google_sheets_setup.md](docs/google_sheets_setup.md). Without it, Push writes a local CSV.
 - **Put it online:** [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first.
 - **HEIC photos:** `python -m pip install pillow-heif`.
-- **Tests:** `python -m pytest` (97 tests with 93% coverage, run on every push; they never call the API or touch a real sheet).
+- **Tests:** `python -m pytest` (100 tests with 93% coverage, run on every push; they never call the API or touch a real sheet).
 
 ## Rules
 | Flag | Rule | Blocks approval |
@@ -113,6 +114,7 @@ Funder rules (`treasurer/closeout.py`): CFC food cap, max award, 10% club share,
 | `treasurer/score.py`, `score_all.py`, `try_one.py` | Accuracy against the answer key |
 | `treasurer/runlog.py` | Time and edit log per push |
 | `fake_event/` | 15 fake receipts, answer key, 6 planted errors |
+| `fake_event_holdout/` | 12 unseen receipts for an honest accuracy score; never tune the prompt on them |
 | `tests/` | pytest suite |
 
 Interview prep: [docs/interview_notes.md](docs/interview_notes.md).

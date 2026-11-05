@@ -16,6 +16,7 @@ from .extract import Extractor, StubExtractor
 
 ROOT = Path(__file__).resolve().parent.parent
 ANSWER_KEY = ROOT / "fake_event" / "answer_key.csv"
+HOLDOUT_KEY = ROOT / "fake_event_holdout" / "answer_key.csv"  # never tune the prompt on this set
 
 
 def make_extractor() -> tuple[Extractor, str]:
