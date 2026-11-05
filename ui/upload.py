@@ -134,8 +134,7 @@ def offer_resume() -> None:
         resume = st.button("Resume where I left off")
     if not resume:
         return
-    for k, v in saved.items():
-        ss[k] = v
+    ss.update(saved)
     st.rerun()
 
 

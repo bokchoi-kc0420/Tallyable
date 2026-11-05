@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+from collections import Counter
 from datetime import date
 
 import streamlit as st
@@ -32,15 +33,12 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str) -> None:
     cap = st.columns([3, 2], vertical_alignment="bottom")
     cap[0].caption(f"Mark paid saves the payback to {sink.label}. It shows in the ledger.")
     quick = cap[1].selectbox("Paid back with", METHODS, key="quick-method") if owing else METHODS[0]
-    counts: dict[str, int] = {}
-    for r in done:
-        who = (r.payer or "").strip() or "(no payer)"
-        counts[who] = counts.get(who, 0) + 1
+    counts = Counter((r.payer or "").strip() or "(no payer)" for r in done)
     for x in lines:
         row = st.columns([0.5, 2, 1.1, 1.5], vertical_alignment="center")
         initials = "".join(w[0] for w in x.payer.split()[:2] if w[0].isalnum()).upper() or "?"
         row[0].markdown(f'<span class="tly-avatar">{html.escape(initials)}</span>', unsafe_allow_html=True)
-        n = counts.get(x.payer, 0)
+        n = counts[x.payer]
         row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted ${x.fronted}]"))
         row[2].markdown(f'<span class="tly-owed">{md("$" + str(x.owed))}</span>', unsafe_allow_html=True)
         if x.owed <= 0:
@@ -146,7 +144,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
 def show(event: EventInfo) -> None:
     st.header("Close out the event")
     step_bar("4. Close out")
-    done = [r for r in ss.receipts.values() if r.status in (Status.APPROVED, Status.POSTED)]
+    done = [r for r in ss.receipts.values() if r.counts]
     if not done:
         guide("Nothing to close out yet!", "Approve some receipts on Review, then I'll show who's owed.",
               key="close-empty", to="2. Review")

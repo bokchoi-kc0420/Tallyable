@@ -74,6 +74,16 @@ def payers() -> list[str]:
     return ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
 
 
+def step_label(step: str) -> str:
+    """"2. Review" -> "Review"."""
+    return step.split(". ", 1)[1]
+
+
+def reviewed() -> int:
+    """How many receipts have been approved, rejected or posted."""
+    return sum(1 for r in ss.receipts.values() if r.status is not Status.DRAFTED)
+
+
 def go(step: str) -> None:
     """Button callback: switch the sidebar step (runs before the sidebar is drawn)."""
     ss.step = step
@@ -113,7 +123,7 @@ def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None 
                 st.markdown(f'<p class="tly-bubble-title">{html.escape(title)}</p>', unsafe_allow_html=True)
             st.markdown(text)
             if to:
-                st.button(f"Go to {to.split('. ', 1)[1]}", key=f"go-{key}", type="primary",
+                st.button(f"Go to {step_label(to)}", key=f"go-{key}", type="primary",
                           icon=":material/arrow_forward:", icon_position="right", on_click=go, args=(to,))
     return bubble
 
@@ -137,13 +147,12 @@ def next_step(message: str, label: str, target: str, key: str) -> None:
 
 def step_status() -> tuple[dict[str, bool], dict[str, str]]:
     """Which steps are finished, plus a short progress note (Review · 3/14)."""
-    rs = list(ss.receipts.values())
-    reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
+    rs, checked = list(ss.receipts.values()), reviewed()
     posted = bool(rs) and all(r.status in (Status.POSTED, Status.REJECTED) for r in rs) \
         and any(r.status is Status.POSTED for r in rs)
-    done = {"1. Upload": bool(rs), "2. Review": bool(rs) and reviewed == len(rs), "3. Summary": posted,
+    done = {"1. Upload": bool(rs), "2. Review": bool(rs) and checked == len(rs), "3. Summary": posted,
             "4. Close out": False}
-    return done, {"2. Review": f" · {reviewed}/{len(rs)}" if rs else ""}
+    return done, {"2. Review": f" · {checked}/{len(rs)}" if rs else ""}
 
 
 def step_bar(current: str) -> None:
@@ -152,20 +161,18 @@ def step_bar(current: str) -> None:
     done, detail = step_status()
     i = STEPS.index(current)
     pos = i / (len(STEPS) - 1)
-    rs = list(ss.receipts.values())
-    if current == "2. Review" and rs:
-        reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
-        pos += reviewed / len(rs) / (len(STEPS) - 1) * 0.9  # stop just short of the next dot
+    if current == "2. Review" and ss.receipts:
+        pos += reviewed() / len(ss.receipts) / (len(STEPS) - 1) * 0.9  # stop just short of the next dot
     pct = round(pos * 100, 2)
     dots, labels = [], []
     for n, name in enumerate(STEPS):
         left = round(n / (len(STEPS) - 1) * 100, 2)
         state = "done" if done[name] and name != current else "now" if name == current else ""
         dots.append(f'<span class="dot {state}" style="left:{left}%">{"✓" if state == "done" else ""}</span>')
-        label = name.split(". ", 1)[1] + detail.get(name, "")
+        label = step_label(name) + detail.get(name, "")
         align = "start" if n == 0 else "end" if n == len(STEPS) - 1 else "mid"
         labels.append(f'<span class="{state} {align}" style="left:{left}%">{"✓ " if state == "done" else ""}{label}</span>')
-    st.markdown(f'<div class="tly-walk" role="img" aria-label="Step {i + 1} of {len(STEPS)}: {current.split(". ", 1)[1]}">'
+    st.markdown(f'<div class="tly-walk" role="img" aria-label="Step {i + 1} of {len(STEPS)}: {step_label(current)}">'
                 f'<div class="track"><div class="fill" style="width:{pct}%"></div>{"".join(dots)}'
                 f'<img src="{mascot_uri(TALLY[current])}" alt="" style="left:{pct}%"></div>'
                 f'<div class="stops">{"".join(labels)}</div></div>', unsafe_allow_html=True)
@@ -205,7 +212,7 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
     else:
         pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> more out than in</span>'
     cats: dict[str, Decimal] = {}
-    for i in (i for r in receipts if r.status in (Status.APPROVED, Status.POSTED) for i in r.items if not i.returned):
+    for i in (i for r in receipts if r.counts for i in r.items if not i.returned):
         cats[i.category] = cats.get(i.category, Decimal("0")) + i.amount
     cats = {k: v for k, v in cats.items() if v > 0}
     rest = t["expenses"] - sum(cats.values(), Decimal("0"))

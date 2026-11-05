@@ -15,6 +15,9 @@ from pathlib import Path
 from .models import Receipt
 
 VERSION = 1
+# Saved as they are. The event, receipts and photos need converting, so dump/load handle them by name.
+PLAIN_KEYS = ("notes", "edits", "income", "drafted_at", "review_started", "started")
+SAVED_KEYS = ("event", "receipts", "images", *PLAIN_KEYS)
 
 
 def dump(state: dict) -> str:
@@ -25,12 +28,7 @@ def dump(state: dict) -> str:
         "event": ev,
         "receipts": {k: r.model_dump(mode="json") for k, r in state["receipts"].items()},
         "images": {k: [base64.b64encode(b).decode(), m] for k, (b, m) in state["images"].items()},
-        "notes": state["notes"],
-        "edits": state["edits"],
-        "income": state["income"],
-        "drafted_at": state["drafted_at"],
-        "review_started": state["review_started"],
-        "started": state["started"],
+        **{k: state[k] for k in PLAIN_KEYS},
     }, sort_keys=True)
 
 
@@ -54,8 +52,7 @@ def load(path: Path) -> dict | None:
             "event": ev,
             "receipts": {k: Receipt.model_validate(v) for k, v in raw["receipts"].items()},
             "images": {k: (base64.b64decode(b), m) for k, (b, m) in raw["images"].items()},
-            "notes": raw["notes"], "edits": raw["edits"], "income": raw["income"],
-            "drafted_at": raw["drafted_at"], "review_started": raw["review_started"], "started": raw["started"],
+            **{k: raw[k] for k in PLAIN_KEYS},
         }
     except (OSError, ValueError, KeyError, TypeError):
         return None

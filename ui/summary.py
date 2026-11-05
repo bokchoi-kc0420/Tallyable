@@ -1,6 +1,7 @@
 """Step 3: add the event's income, see the totals, and push approved receipts to the books."""
 from __future__ import annotations
 
+import itertools
 import time
 from decimal import Decimal
 
@@ -54,12 +55,8 @@ def remove_source(name: str) -> None:
 
 def add_source() -> None:
     names = sources()
-    new = next((c for c in INCOME_CHOICES if c not in names), None)
-    n = 2
-    while new is None:
-        new = f"Other {n}" if f"Other {n}" not in names else None
-        n += 1
-    set_sources([*names, new])
+    spares = itertools.chain(INCOME_CHOICES, (f"Other {n}" for n in itertools.count(2)))
+    set_sources([*names, next(c for c in spares if c not in names)])
 
 
 def income_box() -> dict[str, Decimal]:
@@ -184,7 +181,7 @@ def show(event: EventInfo) -> None:
         money_panel(receipts, income)
 
     html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)", "Status": r.status,
-                 "Posts": usd(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
+                 "Posts": usd(r.posted_amount) if r.counts else "",
                  "Note": r.review_note or ""} for r in receipts], numeric=("Posts",))
 
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
@@ -207,7 +204,7 @@ def show(event: EventInfo) -> None:
             c[2].button("Go to Close out →", type="primary", on_click=go, args=("4. Close out",), key="to-closeout",
                         width="stretch")
 
-    if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
+    if any(r.counts for r in receipts):
         downloads(sink, receipts, event, income)
 
     st.subheader("Run stats")

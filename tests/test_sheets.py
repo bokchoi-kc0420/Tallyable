@@ -178,11 +178,11 @@ def test_local_views_match_what_sheets_would_draw(approved):
 
 
 def test_academic_quarters():
-    from treasurer.sheets import academic_quarter
-    assert academic_quarter("2026-11-14") == "Fall 2026"
-    assert academic_quarter(date(2027, 1, 9)) == "Winter 2027"
-    assert academic_quarter("2027-04-01") == "Spring 2027"
-    assert academic_quarter("2027-07-04") == "Summer 2027"
+    from treasurer.sheets import academic_term
+    assert academic_term("2026-11-14", "quarter") == "Fall 2026"
+    assert academic_term(date(2027, 1, 9), "quarter") == "Winter 2027"
+    assert academic_term("2027-04-01", "quarter") == "Spring 2027"
+    assert academic_term("2027-07-04", "quarter") == "Summer 2027"
 
 
 def test_each_quarter_gets_its_own_balance_sheet(approved):

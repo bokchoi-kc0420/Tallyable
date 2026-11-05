@@ -11,14 +11,12 @@ from pathlib import Path
 import streamlit as st
 
 from treasurer import session_store
-from treasurer.models import Status
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
-from ui.common import ART, PAST, SESSION_FILE, STEPS, ss, step_status
+from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
 
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
                  "attendees": 45, "members": "Member A, Member B, Member C, Member D",
                  "sources": ", ".join(DEFAULT_SOURCES)}
-SAVED_KEYS = ("event", "receipts", "images", "notes", "edits", "income", "drafted_at", "review_started", "started")
 HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the landing page start.bat serves
 
 
@@ -45,7 +43,7 @@ def save_session() -> None:
     """Write the session to disk when it changed since the last save."""
     if not ss.receipts:
         return
-    state = {k: ss[k] for k in SAVED_KEYS}
+    state = {k: ss[k] for k in session_store.SAVED_KEYS}
     text = session_store.dump(state)
     if text == ss.get("_saved"):
         return
@@ -60,8 +58,7 @@ def open_past(path: Path) -> None:
     if not saved:
         ss.past_error = f"Could not open {path.name}."
         return
-    for k, v in saved.items():
-        ss[k] = v
+    ss.update(saved)
     ss.failed = {}
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
@@ -74,15 +71,14 @@ def stepper_css(current: str) -> None:
     keeps its state; this run's CSS adds each step's status line, the checks, and how far the
     green line has filled (down to this step, plus Review's progress)."""
     done, _ = step_status()
-    rs = list(ss.receipts.values())
-    reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
+    rs, checked = list(ss.receipts.values()), reviewed()
     sub = {"1. Upload": f"{len(rs)} receipt{'s' if len(rs) != 1 else ''} in" if rs else "Photos, screenshots, PDFs",
-           "2. Review": f"{reviewed} of {len(rs)} checked" if rs else "Check each one",
+           "2. Review": f"{checked} of {len(rs)} checked" if rs else "Check each one",
            "3. Summary": "In the books" if done["3. Summary"] else "Add income, push",
            "4. Close out": "Who's owed, report"}
     frac = STEPS.index(current) / (len(STEPS) - 1)
     if current == "2. Review" and rs:
-        frac += reviewed / len(rs) / (len(STEPS) - 1) * 0.8
+        frac += checked / len(rs) / (len(STEPS) - 1) * 0.8
     rules = [f'.st-key-step [role="radiogroup"] {{ --tly-fill: {frac * 100:.1f}%; }}']
     for n, name in enumerate(STEPS, start=1):
         row = f'.st-key-step [role="radiogroup"] > div:nth-child({n}) label'
@@ -94,7 +90,7 @@ def stepper_css(current: str) -> None:
         rules.append(f'{row}::before {{ content: "{n}"; border-color: var(--tly-forest); color: var(--tly-forest); '
                      "box-shadow: 0 0 0 4px rgba(247,190,63,.5); }" f" {row} p {{ font-weight: 700; }}")
         if name == "2. Review" and rs:
-            pct = reviewed / len(rs) * 100
+            pct = checked / len(rs) * 100
             rules.append(f'{row}::after {{ content: ""; position: absolute; left: 52px; right: 12px; bottom: 4px; '
                          f"height: 6px; border-radius: 9px; background: linear-gradient(90deg, var(--tly-sun) {pct:.0f}%, "
                          f"#E6DEC0 {pct:.0f}%); }}")
@@ -141,7 +137,7 @@ def show() -> tuple[str, EventInfo]:
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       calendar=ss.event.get("calendar", "semester"))
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts)), unsafe_allow_html=True)
-    page = steps_slot.radio("Steps", STEPS, key="step", format_func=lambda n: n.split(". ", 1)[1])
+    page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
     past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
     if past:

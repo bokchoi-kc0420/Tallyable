@@ -69,6 +69,11 @@ class Receipt(BaseModel):
         return self
 
     @property
+    def counts(self) -> bool:
+        """Approved or already posted: the receipt counts toward the event's totals."""
+        return self.status in (Status.APPROVED, Status.POSTED)
+
+    @property
     def subtotal(self) -> Decimal:
         return money(sum((i.amount for i in self.items), Decimal("0")))
 

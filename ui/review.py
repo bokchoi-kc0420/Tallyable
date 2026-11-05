@@ -9,7 +9,7 @@ import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
-from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, ss, step_bar
+from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, reviewed, ss, step_bar
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
@@ -28,6 +28,10 @@ def next_drafted(after: str) -> str | None:
     return next((x for x in rest if ss.receipts[x].status is Status.DRAFTED), None)
 
 
+def set_status(rid: str, status: Status, **changes) -> None:
+    ss.receipts[rid] = ss.receipts[rid].model_copy(update={"status": status, **changes})
+
+
 def approve_clean(flags: dict) -> None:
     """Offer one click for the receipts the checks found nothing wrong with."""
     clean = [x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED and not flags[x] and not ss.notes.get(x)]
@@ -41,7 +45,7 @@ def approve_clean(flags: dict) -> None:
                        width="stretch"):
         return
     for x in clean:
-        ss.receipts[x] = ss.receipts[x].model_copy(update={"status": Status.APPROVED})
+        set_status(x, Status.APPROVED)
     ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
     st.rerun()
 
@@ -111,16 +115,14 @@ def edit_form(rid: str, flags: list) -> None:
     if locked:
         st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
     decided = r.status is not Status.DRAFTED
-    if b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note)):
-        ss.receipts[rid] = r.model_copy(update={"status": Status.APPROVED, "review_note": note or None})
+    approve = b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note))
+    reject = b2.button("Reject", disabled=locked or decided)
+    if approve or reject:
+        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note or None)
         ss.next_pick = next_drafted(rid)
         st.rerun()
-    if b2.button("Reject", disabled=locked or decided):
-        ss.receipts[rid] = r.model_copy(update={"status": Status.REJECTED, "review_note": note or None})
-        ss.next_pick = next_drafted(rid)
-        st.rerun()
-    if b3.button("Reopen", disabled=locked or r.status is Status.DRAFTED, help="Undo an approve or reject"):
-        ss.receipts[rid] = r.model_copy(update={"status": Status.DRAFTED})
+    if b3.button("Reopen", disabled=locked or not decided, help="Undo an approve or reject"):
+        set_status(rid, Status.DRAFTED)
         st.rerun()
 
 
@@ -133,12 +135,12 @@ def show() -> None:
         return
     ss.review_started = ss.review_started or time.time()
     flags = run_checks(list(ss.receipts.values()))
-    reviewed = sum(1 for x in ss.receipts.values() if x.status is not Status.DRAFTED)
-    st.progress(reviewed / len(ss.receipts), text=f"{reviewed} of {len(ss.receipts)} reviewed")
+    checked = reviewed()
+    st.progress(checked / len(ss.receipts), text=f"{checked} of {len(ss.receipts)} reviewed")
     approve_clean(flags)
-    if reviewed == len(ss.receipts):
-        ok = sum(1 for x in ss.receipts.values() if x.status in (Status.APPROVED, Status.POSTED))
-        next_step(f"**All {reviewed} receipts reviewed:** {ok} approved, {reviewed - ok} rejected. "
+    if checked == len(ss.receipts):
+        ok = sum(1 for x in ss.receipts.values() if x.counts)
+        next_step(f"**All {checked} receipts reviewed:** {ok} approved, {checked - ok} rejected. "
                   "Next, add the event's income and push the approved rows to the books.",
                   "Go to Summary →", "3. Summary", "to-summary")
 
