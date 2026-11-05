@@ -48,10 +48,38 @@ def test_returned_share_rounds_to_cents():
 
 
 def test_refund_on_a_separate_slip_cannot_be_negative():
-    # A store refund slip shows a negative total. The model refuses it, so a refund
+    # A store refund slip adds up to less than $0. The model refuses it, so a refund
     # must be recorded as `returned` on the original receipt instead.
     with pytest.raises(ValidationError):
         receipt(items=[item("Refund", "-5.00")])
+
+
+# ---- online orders: fees and discounts ----
+
+def order():
+    """An order screenshot: two products, a delivery fee, a promo code."""
+    return receipt("O1", place="FreshCart", tax="0.80", items=[
+        item("Rice cakes", "6.00", unit=2, category="Food"), item("Delivery fee", "3.99"),
+        item("Promo WELCOME4", "-4.00")])
+
+
+def test_discount_line_keeps_the_math_check_honest():
+    r = order()
+    assert r.subtotal == Decimal("11.99")
+    assert r.total == Decimal("12.79")
+    assert "math_mismatch" not in codes(r)
+
+
+def test_discount_line_lowers_what_is_owed():
+    (line,) = payer_summary([order()])
+    assert line.owed == Decimal("12.79")
+
+
+def test_returned_item_on_a_discounted_order():
+    r = receipt("O2", tax="1.00", items=[item("A", "10.00", returned=True), item("B", "10.00"),
+                                         item("Coupon", "-5.00")])
+    assert r.returned_amount == Decimal("10.67")
+    assert r.posted_amount == r.total - Decimal("10.67")
 
 
 # ---- split payments ----

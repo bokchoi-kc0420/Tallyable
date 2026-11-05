@@ -34,7 +34,8 @@ def estimate(model: str, receipts: int) -> float:
     inp, out = PRICE_PER_MTOK.get(model, PRICE_PER_MTOK["claude-opus-5-5"])
     return receipts * (EST_TOKENS_PER_RECEIPT[0] * inp + EST_TOKENS_PER_RECEIPT[1] * out) / 1e6
 
-SYSTEM = """You transcribe store receipts for a student club treasurer.
+SYSTEM = """You transcribe proof of purchase for a student club treasurer: a paper receipt, a
+screenshot of an online or app order, a food-court or restaurant ticket, or a PDF invoice.
 
 Copy what is printed or handwritten. Do not calculate, correct, or reconcile anything.
 - If the items, tax and tip do not add up to the total, copy them anyway. A separate
@@ -44,7 +45,11 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
   to say where, and leave out what you cannot see. Do not guess.
 - `price` is the unit price before tax. `unit` is the quantity. If only a line total is
   printed, put it in price with unit 1.
-- `total` is the total as printed, even if it is handwritten or looks wrong.
+- `total` is the total as printed, even if it is handwritten or looks wrong. On an order
+  screenshot it is the order total actually charged.
+- Fees (delivery, service, bag, small-order) are their own lines, category Other.
+- A discount, coupon, promo or member saving is its own line with a NEGATIVE price,
+  category Other. Copy its wording as the item name.
 - Dates as YYYY-MM-DD. Money as plain decimals with two places, no currency symbol.
 - Receipts may be partly in Korean. Copy item names as printed; add an English gloss
   in parentheses only if you are sure of it.
@@ -63,7 +68,7 @@ class ExtractedItem(BaseModel):
     item: str
     category: Literal["Food", "Drink", "Other"]
     unit: int
-    price: str = Field(description="Unit price before tax, e.g. '4.99'")
+    price: str = Field(description="Unit price before tax, e.g. '4.99'; negative for a discount, e.g. '-4.00'")
     returned: bool = False
 
 
@@ -78,8 +83,11 @@ class ExtractedReceipt(BaseModel):
 
 
 def _money(text: str, field: str, filename: str) -> Decimal:
+    t = str(text).replace("$", "").replace(",", "").replace("\u2212", "-").strip()
+    if t.startswith("(") and t.endswith(")"):  # accounting style: (4.00) is -4.00
+        t = "-" + t[1:-1]
     try:
-        return Decimal(str(text).replace("$", "").replace(",", "").strip() or "0")
+        return Decimal(t or "0")
     except InvalidOperation as e:
         raise ExtractionError(f"Claude returned a bad {field} for {filename}: {text!r}") from e
 

@@ -50,3 +50,9 @@ def test_pdf_goes_as_a_document_block():
     client = FakeClient(reading())
     ClaudeExtractor(client=client).extract(b"%PDF-1.7", "R16.pdf", "EVT", "R16")
     assert client.calls[0]["messages"][0]["content"][0]["type"] == "document"
+
+
+def test_discount_prices_parse_as_negative():
+    from treasurer.claude_extract import _money
+    for text in ("-$4.00", "$-4.00", "−4.00", "($4.00)"):
+        assert _money(text, "price", "x.png") == Decimal("-4.00")

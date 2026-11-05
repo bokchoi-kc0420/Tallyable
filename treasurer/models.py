@@ -11,7 +11,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 CENT = Decimal("0.01")
 
@@ -35,7 +35,9 @@ class LineItem(BaseModel):
     category: Category
     item: str = Field(min_length=1)
     unit: int = Field(gt=0, description="Quantity bought")
-    price: Decimal = Field(ge=0, description="Price per unit, before tax")
+    # Negative for a discount, coupon or promo line (common on online-order screenshots),
+    # so the lines still add up to the printed total and the math check stays honest.
+    price: Decimal = Field(description="Price per unit, before tax. Negative for a discount line.")
     returned: bool = False
 
     @property
@@ -57,6 +59,14 @@ class Receipt(BaseModel):
     image_hash: str | None = None
     status: Status = Status.DRAFTED
     review_note: str | None = None
+
+    @model_validator(mode="after")
+    def _not_a_refund(self):
+        # Discount lines may be negative, but a whole receipt can't be: a refund is
+        # recorded as `returned` on the original receipt instead.
+        if sum((i.amount for i in self.items), Decimal("0")) < 0:
+            raise ValueError("Items add up to less than $0. Record a refund as a returned item.")
+        return self
 
     @property
     def subtotal(self) -> Decimal:
