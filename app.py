@@ -5,6 +5,7 @@ is in .env, otherwise with the stub (fake answer key plus planted misreads).
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import html
@@ -59,6 +60,25 @@ st.markdown("""<style>
 [data-testid="stFileUploaderDropzone"]:hover { border-color: #1C5C36; background-color: rgba(247,190,63,.12); }
 [data-testid="stSidebar"] label[data-baseweb="radio"] { border-radius: 999px; padding: 2px 8px; transition: background-color .15s; }
 [data-testid="stSidebar"] label[data-baseweb="radio"]:hover { background-color: rgba(247,190,63,.22); }
+.tly-walk { position: relative; padding: 58px 14px 0; margin: 0 0 1.4rem; }
+.tly-walk img { position: absolute; bottom: 14px; width: 56px; transform: translateX(-50%); z-index: 2;
+  animation: tly-bob 2.4s ease-in-out infinite; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
+@keyframes tly-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+.tly-walk .track { position: relative; height: 12px; border-radius: 999px; background: #EEE7CC; }
+.tly-walk .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: linear-gradient(90deg, #1C5C36, #3F8A5A); }
+.tly-walk .dot { position: absolute; top: 50%; width: 24px; height: 24px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: #fff; border: 3px solid #C9C2A6; display: grid; place-items: center; color: #fff; font-size: .75rem; font-weight: 800; }
+.tly-walk .dot.done { background: #1C5C36; border-color: #1C5C36; }
+.tly-walk .dot.now { border-color: #1C5C36; box-shadow: 0 0 0 4px rgba(247,190,63,.45); }
+.tly-walk .stops { position: relative; height: 1.6rem; margin-top: 10px; font-weight: 600; font-size: .92rem; }
+.tly-walk .stops span { position: absolute; white-space: nowrap; color: #8A877A; transform: translateX(-50%); }
+.tly-walk .stops span.start { transform: translateX(-14px); } .tly-walk .stops span.end { transform: translateX(calc(-100% + 14px)); }
+.st-key-mascot-empty [data-testid="stImage"], .st-key-mascot-cheer [data-testid="stImage"] { margin: 0 auto; }
+.st-key-mascot-empty, .st-key-mascot-cheer { align-items: center; }
+@media (max-width: 640px) { .tly-walk .stops span:not(.now) { display: none; }
+  .tly-walk .stops span.now { transform: translateX(-50%); } .tly-walk .stops span.now.start { transform: translateX(-14px); }
+  .tly-walk .stops span.now.end { transform: translateX(calc(-100% + 14px)); } }
+.tly-walk .stops .done { color: #1C5C36; } .tly-walk .stops .now { color: #1F2A22; font-weight: 700; }
 .tly-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: .2rem 0 1rem; font-size: .9rem; }
 .tly-step { display: inline-flex; align-items: center; gap: 6px; color: #6B6A60; font-weight: 500; }
 .tly-step b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
@@ -77,6 +97,12 @@ st.markdown("""<style>
 @media (prefers-color-scheme: dark) {
   .tly-step { color: #A9A796; } .tly-step.now { color: #EDEBDD; } .tly-step.done { color: #7FD19B; }
   .tly-step.done b { background: #234A31; border-color: #7FD19B; } .tly-step b { border-color: #5A5F52; }
+  .tly-walk .track { background: #2F3A31; } .tly-walk .dot { background: #1E2620; border-color: #5A5F52; }
+  .tly-walk .dot.done, .tly-walk .dot.now { border-color: #7FD19B; } .tly-walk .dot.done { background: #2F6B45; }
+  .tly-walk .stops .done { color: #7FD19B; } .tly-walk .stops .now { color: #EDEBDD; }
+  .tly-walk .track { background: #2F3A31; } .tly-walk .dot { background: #1E2620; border-color: #5A5F52; }
+  .tly-walk .dot.done, .tly-walk .dot.now { border-color: #7FD19B; } .tly-walk .dot.done { background: #2F6B45; }
+  .tly-walk .stops .done { color: #7FD19B; } .tly-walk .stops .now { color: #EDEBDD; }
   .tly-cheer { color: #7FD19B; } .tly-bar { background: #2F3A31; } .tly-bar > div { background: #7FD19B; } }
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
@@ -284,7 +310,7 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
         cats["Tax & tip"] = rest
     ins = {k: v for k, v in income.items() if v > 0}
     top = max(t["income"], t["expenses"], Decimal("0.01"))
-    in_shades, out_shades = ["#1C5C36", "#3F8A5A", "#7DB88F", "#B4D8BD"], ["#F7BE3F", "#E8923A", "#F2D88A", "#C9A24A"]
+    in_shades, out_shades = ["#1C5C36", "#3F8A5A", "#7DB88F", "#B4D8BD"], ["#A8322A", "#C44536", "#DE7A6E", "#EFAFA6"]
 
     def bar(cls: str, label: str, total: Decimal, parts: dict[str, Decimal], shades: list[str]) -> tuple[str, str]:
         whole = sum(parts.values(), Decimal("0")) or Decimal("1")
@@ -352,17 +378,34 @@ def sidebar_stepper(current: str) -> None:
     st.html("<style>" + "\n".join(rules) + "</style>")
 
 
+@st.cache_data
+def mascot_uri() -> str:
+    return "data:image/png;base64," + base64.b64encode((ART / "mascot-small.png").read_bytes()).decode()
+
+
 def step_bar(current: str) -> None:
-    """Where you are in the close-out: done steps green, this one filled, the rest gray."""
+    """Mascot walker: a track with a dot per step. Finished dots get a check, and the mascot
+    stands where you are, inching along Review as receipts get checked."""
     done, detail = step_status()
-    parts = []
-    for name in STEPS:
-        num, label = name.split(". ", 1)
-        state = "now" if name == current else "done" if done[name] else ""
-        mark = "✓" if state == "done" else num
-        parts.append(f'<span class="tly-step {state}"><b>{mark}</b>{label}{detail.get(name, "")}</span>')
-    st.markdown('<div class="tly-steps">' + '<span class="tly-rule"></span>'.join(parts) + "</div>",
-                unsafe_allow_html=True)
+    i = STEPS.index(current)
+    pos = i / (len(STEPS) - 1)
+    rs = list(ss.receipts.values())
+    if current == "2. Review" and rs:
+        reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
+        pos += reviewed / len(rs) / (len(STEPS) - 1) * 0.9  # stop just short of the next dot
+    pct = round(pos * 100, 2)
+    dots, labels = [], []
+    for n, name in enumerate(STEPS):
+        left = round(n / (len(STEPS) - 1) * 100, 2)
+        state = "done" if done[name] and name != current else "now" if name == current else ""
+        dots.append(f'<span class="dot {state}" style="left:{left}%">{"✓" if state == "done" else ""}</span>')
+        label = name.split(". ", 1)[1] + detail.get(name, "")
+        align = "start" if n == 0 else "end" if n == len(STEPS) - 1 else "mid"
+        labels.append(f'<span class="{state} {align}" style="left:{left}%">{"✓ " if state == "done" else ""}{label}</span>')
+    st.markdown(f'<div class="tly-walk" role="img" aria-label="Step {i + 1} of {len(STEPS)}: {current.split(". ", 1)[1]}">'
+                f'<div class="track"><div class="fill" style="width:{pct}%"></div>{"".join(dots)}'
+                f'<img src="{mascot_uri()}" alt="" style="left:{pct}%"></div>'
+                f'<div class="stops">{"".join(labels)}</div></div>', unsafe_allow_html=True)
 
 
 def next_step(message: str, label: str, target: str, key: str) -> None:
@@ -481,8 +524,8 @@ if page == "1. Upload":
         st.info("Demo mode: receipts are read by a stand-in that only knows the fake event (with a few "
                 "planted misreads to catch). Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.")
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
-        c = st.columns([2, 1, 2])
-        c[1].image(str(ART / "mascot-empty.png"), width="stretch")
+        with st.container(key="mascot-empty"):
+            st.image(str(ART / "mascot-empty.png"), width=190)
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
     files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
     if st.button("Use the fake event's 14 receipts instead"):
@@ -781,8 +824,8 @@ else:
     if waiting:
         st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
     else:
-        c = st.columns([2, 1, 2])
-        c[1].image(str(ART / "mascot-cheer.png"), width="stretch")
+        with st.container(key="mascot-cheer"):
+            st.image(str(ART / "mascot-cheer.png"), width=190)
         rejected = len(ss.receipts) - len(done)
         cheer = f"All {len(done)} receipts approved!" if not rejected else f"All reviewed! {len(done)} approved, {rejected} rejected."
         st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)
