@@ -107,26 +107,26 @@ st.markdown("""<style>
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: event card, then the stepper. */
-[data-testid="stSidebar"] [data-testid="stPopover"] button {
-  border: 2px dashed var(--tly-forest); color: var(--tly-forest); font-weight: 600; }
 .tly-event { display: grid; gap: 2px; padding: 12px 14px; margin: 4px 0 6px; border-radius: 16px;
   background: var(--tly-sun-soft); border: 2px solid var(--tly-sun); }
 .tly-event span { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #6B5513; font-weight: 600; }
 .tly-event b { font-family: Fredoka, sans-serif; font-size: 1.15rem; color: #1F2A22; line-height: 1.2; }
 .tly-event small { color: #5B4A17; }
 .st-key-step [data-testid="stWidgetLabel"] { display: none; }
-.st-key-step [role="radiogroup"] { gap: 6px; position: relative; }
-.st-key-step [role="radiogroup"]::before { content: ""; position: absolute; left: 25px; top: 18px; bottom: 18px;
-  border-left: 2px dotted #C9C2A6; }
-.st-key-step label { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; margin: 0;
-  padding: 7px 12px 7px 10px !important; border-radius: 999px; cursor: pointer; font-weight: 600;
-  transition: background-color .15s, transform .15s; }
-.st-key-step label:hover { background: rgba(247,190,63,.25); transform: translateX(3px); }
+.st-key-step [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
+.st-key-step [role="radiogroup"]::before, .st-key-step [role="radiogroup"]::after { content: ""; position: absolute;
+  left: 23px; top: 22px; width: 4px; border-radius: 4px; }
+.st-key-step [role="radiogroup"]::before { bottom: 30px; background: #E6DEC0; }
+.st-key-step [role="radiogroup"]::after { background: var(--tly-forest); height: var(--tly-fill, 0%); max-height: calc(100% - 52px); }
+.st-key-step label { position: relative; display: flex; align-items: flex-start; gap: 12px; width: 100%; margin: 0;
+  padding: 6px 10px 10px 10px !important; border-radius: 14px; cursor: pointer; transition: background-color .15s; }
+.st-key-step label:hover { background: rgba(247,190,63,.22); }
 .st-key-step label > div > div:first-child { display: none; }  /* the radio circle */
 .st-key-step label::before { position: relative; z-index: 1; display: inline-grid; place-items: center; flex: none;
-  width: 30px; height: 30px; border-radius: 50%; border: 2px solid #C9C2A6; background: var(--tly-card);
-  font-size: .85rem; font-weight: 700; color: var(--tly-soft); }
-.st-key-step label p { font-size: 1rem; }
+  width: 30px; height: 30px; border-radius: 50%; border: 3px solid #C9C2A6; background: var(--tly-card);
+  font-size: .8rem; font-weight: 700; color: var(--tly-soft); box-sizing: border-box; }
+.st-key-step label p { font-size: 1rem; font-weight: 600; line-height: 1.25; margin-top: 4px; white-space: pre-line; }
+.st-key-step label p::after { display: block; font-size: .8rem; font-weight: 400; color: var(--tly-soft); margin-top: 1px; }
 /* Money in vs out */
 .tly-money { display: grid; gap: 10px; }
 .tly-money .row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; }
@@ -361,22 +361,37 @@ def step_status() -> tuple[dict[str, bool], dict[str, str]]:
 
 
 def sidebar_stepper(current: str) -> None:
-    """Turn the sidebar's step radio into a stepper: the labels stay fixed (so the widget keeps its
-    state) and this run's CSS marks finished steps with a check and adds Review's count."""
-    done, detail = step_status()
-    rules = []
+    """Timeline stepper in the sidebar (prototype B). The radio's labels stay fixed so the widget
+    keeps its state; this run's CSS adds each step's status line, the checks, and how far the
+    green line has filled (down to this step, plus Review's progress)."""
+    done, _ = step_status()
+    rs = list(ss.receipts.values())
+    reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
+    sub = {"1. Upload": f"{len(rs)} receipt{'s' if len(rs) != 1 else ''} in" if rs else "Photos, screenshots, PDFs",
+           "2. Review": f"{reviewed} of {len(rs)} checked" if rs else "Check each one",
+           "3. Summary": "In the books" if done["3. Summary"] else "Add income, push",
+           "4. Close out": "Who's owed, report"}
+    i = STEPS.index(current)
+    frac = i / (len(STEPS) - 1)
+    if current == "2. Review" and rs:
+        frac += reviewed / len(rs) / (len(STEPS) - 1) * 0.8
+    rules = [f'.st-key-step [role="radiogroup"] {{ --tly-fill: {frac * 100:.1f}%; }}']
     for n, name in enumerate(STEPS, start=1):
         row = f'.st-key-step [role="radiogroup"] > div:nth-child({n}) label'
+        rules.append(f'{row} p::after {{ content: "{sub[name]}"; }}')
         if name == current:
-            rules.append(f'{row} {{ background: var(--tly-forest); color: #fff; }} {row}::before {{ content: "{n}"; '
-                         "background: #fff; color: var(--tly-forest); border-color: #fff; }")
+            rules.append(f'{row}::before {{ content: "{n}"; border-color: var(--tly-forest); color: var(--tly-forest); '
+                         "box-shadow: 0 0 0 4px rgba(247,190,63,.5); }" f" {row} p {{ font-weight: 700; }}")
+            if name == "2. Review" and rs:
+                pct = reviewed / len(rs) * 100
+                rules.append(f'{row}::after {{ content: ""; position: absolute; left: 52px; right: 12px; bottom: 4px; '
+                             f"height: 6px; border-radius: 9px; background: linear-gradient(90deg, var(--tly-sun) {pct:.0f}%, "
+                             f"#E6DEC0 {pct:.0f}%); }}")
         elif done[name]:
-            rules.append(f'{row}::before {{ content: "✓"; background: var(--tly-done); border-color: var(--tly-forest); '
-                         "color: var(--tly-forest); }")
+            rules.append(f'{row}::before {{ content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); '
+                         "color: #fff; }")
         else:
             rules.append(f'{row}::before {{ content: "{n}"; }}')
-        if detail.get(name):
-            rules.append(f'{row} p::after {{ content: "{detail[name]}"; opacity: .75; font-weight: 500; }}')
     st.html("<style>" + "\n".join(rules) + "</style>")
 
 
@@ -467,11 +482,10 @@ def open_past(path: Path) -> None:
 ss.setdefault("event", dict(DEFAULT_EVENT))
 st.logo(str(ART / "logo.png"), size="large")
 st.sidebar.caption("Close out a club event: receipts in, checked books out.")
-with st.sidebar.popover("New event", icon=":material/add:", width="stretch"):
-    st.caption("Your current event stays saved under Past events. Members and income sources carry over.")
-    if st.button("Start a new event", type="primary", width="stretch"):
-        start_new_event()
-        st.rerun()
+if st.sidebar.button("New event", icon=":material/add:", key="new-event", width="stretch",
+                     help="Starts a blank event. This one stays saved under Past events."):
+    start_new_event()
+    st.rerun()
 event_card = st.sidebar.empty()  # filled below, once the event fields are read
 with st.sidebar.expander("Edit event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
