@@ -78,6 +78,59 @@ st.markdown("""<style>
   .tly-step { color: #A9A796; } .tly-step.now { color: #EDEBDD; } .tly-step.done { color: #7FD19B; }
   .tly-step.done b { background: #234A31; border-color: #7FD19B; } .tly-step b { border-color: #5A5F52; }
   .tly-cheer { color: #7FD19B; } .tly-bar { background: #2F3A31; } .tly-bar > div { background: #7FD19B; } }
+:root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
+  --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
+/* Sidebar: event card, then the stepper. */
+.tly-event { display: grid; gap: 2px; padding: 12px 14px; margin: 4px 0 6px; border-radius: 16px;
+  background: var(--tly-sun-soft); border: 2px solid var(--tly-sun); }
+.tly-event span { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #6B5513; font-weight: 600; }
+.tly-event b { font-family: Fredoka, sans-serif; font-size: 1.15rem; color: #1F2A22; line-height: 1.2; }
+.tly-event small { color: #5B4A17; }
+.st-key-step [data-testid="stWidgetLabel"] { display: none; }
+.st-key-step [role="radiogroup"] { gap: 6px; position: relative; }
+.st-key-step [role="radiogroup"]::before { content: ""; position: absolute; left: 25px; top: 18px; bottom: 18px;
+  border-left: 2px dotted #C9C2A6; }
+.st-key-step label { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; margin: 0;
+  padding: 7px 12px 7px 10px !important; border-radius: 999px; cursor: pointer; font-weight: 600;
+  transition: background-color .15s, transform .15s; }
+.st-key-step label:hover { background: rgba(247,190,63,.25); transform: translateX(3px); }
+.st-key-step label > div > div:first-child { display: none; }  /* the radio circle */
+.st-key-step label::before { position: relative; z-index: 1; display: inline-grid; place-items: center; flex: none;
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid #C9C2A6; background: var(--tly-card);
+  font-size: .85rem; font-weight: 700; color: var(--tly-soft); }
+.st-key-step label p { font-size: 1rem; }
+/* Money in vs out */
+.tly-money { display: grid; gap: 10px; }
+.tly-money .row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; }
+.tly-money .lbl { font-size: .8rem; font-weight: 600; color: var(--tly-soft); }
+.tly-money .track { height: 22px; border-radius: 8px; background: rgba(227,217,182,.45); overflow: hidden; }
+.tly-money .fill { height: 100%; border-radius: 8px; }
+.tly-money .in .fill { background: var(--tly-forest); } .tly-money .out .fill { background: var(--tly-sun); }
+.tly-money .amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tly-net { justify-self: start; display: inline-flex; gap: 6px;
+  align-items: baseline; padding: 6px 12px; border-radius: 999px; font-weight: 600; }
+.tly-net.good { background: var(--tly-done); color: var(--tly-forest); }
+.tly-net.bad { background: #F6D5CF; color: #8E2A1E; }
+.tly-net b { font-family: Fredoka, sans-serif; font-size: 1.15rem; }
+/* Summary: tinted metric tiles */
+.st-key-sum-metrics [data-testid="stMetric"] { border-width: 2px !important; }
+.st-key-sum-metrics [data-testid="stColumn"]:nth-child(1) [data-testid="stMetric"] {
+    background: #E6F0E2; border-color: #B9D3B2 !important; }
+.st-key-sum-metrics [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"] {
+    background: #FDF0C8; border-color: #F2D88A !important; }
+.st-key-sum-metrics [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"] { background: var(--tly-card); }
+.st-key-sum-metrics [data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"] { background: var(--tly-card); }
+.st-key-income-box { background: var(--tly-card); }
+.tly-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-right: 4px; }
+@media (prefers-color-scheme: dark) {
+  :root { --tly-forest: #7FD19B; --tly-done: #234A31; --tly-card: #1E2620; --tly-soft: #A9A796; }
+  .tly-event { background: #3A3218; border-color: #8A6E1F; } .tly-event b { color: #F5EBC8; }
+  .tly-event span, .tly-event small { color: #D9C78E; }
+  .st-key-sum-metrics [data-testid="stColumn"]:nth-child(1) [data-testid="stMetric"] {
+    background: #1F3326; border-color: #2F5A3C !important; }
+  .st-key-sum-metrics [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"] {
+    background: #3A3218; border-color: #6E5A1E !important; }
+  .tly-net.bad { background: #4A221D; color: #F3B4A9; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>""", unsafe_allow_html=True)
 
@@ -207,6 +260,54 @@ def usd(amount: Decimal) -> str:
     return f"-${-amount}" if amount < 0 else f"${amount}"
 
 
+def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
+    """Money in vs out as two bars on one scale. In is split by source, out by category
+    (Food, Drink, Other, then Tax & tip), with a net pill on top."""
+    t = event_totals(receipts, income)
+    if t["income"] <= 0 and t["expenses"] <= 0:
+        st.caption("Nothing in or out yet.")
+        return
+    net = t["net"]
+    if net >= 0:
+        pill = f'<span class="tly-net good"><b>{usd(net)}</b> left over</span>'
+    else:
+        pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> more out than in</span>'
+    approved = [r for r in receipts if r.status in (Status.APPROVED, Status.POSTED)]
+    cats: dict[str, Decimal] = {}
+    for r in approved:
+        for i in r.items:
+            if not i.returned:
+                cats[i.category] = cats.get(i.category, Decimal("0")) + i.amount
+    cats = {k: v for k, v in cats.items() if v > 0}
+    rest = t["expenses"] - sum(cats.values(), Decimal("0"))
+    if rest > 0:
+        cats["Tax & tip"] = rest
+    ins = {k: v for k, v in income.items() if v > 0}
+    top = max(t["income"], t["expenses"], Decimal("0.01"))
+    in_shades, out_shades = ["#1C5C36", "#3F8A5A", "#7DB88F", "#B4D8BD"], ["#F7BE3F", "#E8923A", "#F2D88A", "#C9A24A"]
+
+    def bar(cls: str, label: str, total: Decimal, parts: dict[str, Decimal], shades: list[str]) -> tuple[str, str]:
+        whole = sum(parts.values(), Decimal("0")) or Decimal("1")
+        width = float(total / top * 100) if total > 0 else 0
+        segs = "".join(f'<div class="fill" title="{html.escape(k)}: {usd(v)}" style="width:{float(v / whole * 100):.2f}%;'
+                       f'background:{shades[n % len(shades)]};border-radius:0"></div>' for n, (k, v) in enumerate(parts.items()))
+        row = (f'<div class="row {cls}"><span class="lbl">{label}</span><div class="track">'
+               f'<div style="display:flex;height:100%;width:{width:.2f}%;border-radius:8px;overflow:hidden">{segs}</div></div>'
+               f'<span class="amt">{usd(total)}</span></div>')
+        legend = " ".join(f'<span class="tly-chip" style="background:{shades[n % len(shades)]}33">'
+                          f'<span style="color:{shades[n % len(shades)]}">●</span> {html.escape(k)} {usd(v)}</span>'
+                          for n, (k, v) in enumerate(parts.items()))
+        return row, legend
+
+    in_row, in_leg = bar("in", "In", t["income"], ins, in_shades)
+    out_row, out_leg = bar("out", "Out", t["expenses"], cats, out_shades)
+    st.markdown(f'<div class="tly-money">{pill}{in_row}{out_row}'
+                f'<div style="line-height:2">{in_leg}</div><div style="line-height:2">{out_leg}</div></div>',
+                unsafe_allow_html=True)
+    if t["income"] <= 0:
+        st.caption("No income entered yet. Add it on the Summary step.")
+
+
 def md(text: str) -> str:
     """Escape $ so Streamlit does not render dollar amounts as LaTeX."""
     return text.replace("$", "\\$")
@@ -220,15 +321,40 @@ def go(step: str) -> None:
     ss.step = step
 
 
-def step_bar(current: str) -> None:
-    """Where you are in the close-out: done steps green, this one blue, the rest gray."""
+def step_status() -> tuple[dict[str, bool], dict[str, str]]:
+    """Which steps are finished, plus a short progress note (Review · 3/14)."""
     rs = list(ss.receipts.values())
     reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
     posted = bool(rs) and all(r.status in (Status.POSTED, Status.REJECTED) for r in rs) \
         and any(r.status is Status.POSTED for r in rs)
     done = {"1. Upload": bool(rs), "2. Review": bool(rs) and reviewed == len(rs), "3. Summary": posted,
             "4. Close out": False}
-    detail = {"2. Review": f" · {reviewed}/{len(rs)}" if rs else ""}
+    return done, {"2. Review": f" · {reviewed}/{len(rs)}" if rs else ""}
+
+
+def sidebar_stepper(current: str) -> None:
+    """Turn the sidebar's step radio into a stepper: the labels stay fixed (so the widget keeps its
+    state) and this run's CSS marks finished steps with a check and adds Review's count."""
+    done, detail = step_status()
+    rules = []
+    for n, name in enumerate(STEPS, start=1):
+        row = f'.st-key-step [role="radiogroup"] > div:nth-child({n}) label'
+        if name == current:
+            rules.append(f'{row} {{ background: var(--tly-forest); color: #fff; }} {row}::before {{ content: "{n}"; '
+                         "background: #fff; color: var(--tly-forest); border-color: #fff; }")
+        elif done[name]:
+            rules.append(f'{row}::before {{ content: "✓"; background: var(--tly-done); border-color: var(--tly-forest); '
+                         "color: var(--tly-forest); }")
+        else:
+            rules.append(f'{row}::before {{ content: "{n}"; }}')
+        if detail.get(name):
+            rules.append(f'{row} p::after {{ content: "{detail[name]}"; opacity: .75; font-weight: 500; }}')
+    st.html("<style>" + "\n".join(rules) + "</style>")
+
+
+def step_bar(current: str) -> None:
+    """Where you are in the close-out: done steps green, this one filled, the rest gray."""
+    done, detail = step_status()
     parts = []
     for name in STEPS:
         num, label = name.split(". ", 1)
@@ -296,8 +422,8 @@ def open_past(path: Path) -> None:
 ss.setdefault("event", dict(DEFAULT_EVENT))
 st.logo(str(ART / "logo.png"), size="large")
 st.sidebar.caption("Close out a club event: receipts in, checked books out.")
-page = st.sidebar.radio("Step", STEPS, key="step")
-with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
+event_card = st.sidebar.empty()  # filled below, once the event fields are read
+with st.sidebar.expander("Edit event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
     name = st.text_input("Event name", ss.event["name"], disabled=locked)
     d = st.date_input("Event date", ss.event["date"], disabled=locked)
@@ -313,6 +439,17 @@ with st.sidebar.expander("Event", expanded=not ss.receipts and ss.event == DEFAU
         if st.checkbox("I'm done with this event") and st.button("Start a new event"):
             start_new_event()
             st.rerun()
+EVENT_ID = ss.event["event_id"]
+EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"])
+PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
+SOURCES = list(dict.fromkeys(x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",")
+                             if x.strip())) or list(DEFAULT_SOURCES)
+n_rec = len(ss.receipts)
+event_card.markdown(f'<div class="tly-event"><span>Working on</span><b>{html.escape(EVENT.name)}</b>'
+                    f'<small>{EVENT.date:%b} {EVENT.date.day}, {EVENT.date.year} · '
+                    f'{n_rec} receipt{"s" if n_rec != 1 else ""}</small></div>', unsafe_allow_html=True)
+page = st.sidebar.radio("Steps", STEPS, key="step", format_func=lambda n: n.split(". ", 1)[1])
+sidebar_stepper(page)
 past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
 if past:
     with st.sidebar.expander(f"Past events ({len(past)})"):
@@ -322,12 +459,6 @@ if past:
                   help="Your current event is saved first, so you can come back to it here.")
 if ss.get("past_error"):
     st.sidebar.error(ss.pop("past_error"))
-EVENT_ID = ss.event["event_id"]
-EVENT = EventInfo(EVENT_ID, ss.event["name"], ss.event["date"], ss.event["attendees"])
-PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
-SOURCES = list(dict.fromkeys(x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",")
-                             if x.strip())) or list(DEFAULT_SOURCES)
-st.sidebar.caption(f"Event: {EVENT.name} · {len(ss.receipts)} receipts")
 
 # ---------------- Screen 1: Upload ----------------
 if page == "1. Upload":
@@ -537,10 +668,11 @@ elif page == "3. Summary":
         st.stop()
     st.subheader("Income")
     st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
-    st.caption("Change the list of sources in the sidebar, under Event.")
-    c = st.columns(min(len(SOURCES), 4))
-    income = {k: dec(c[n % len(c)].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
-              enumerate(SOURCES)}
+    st.caption("Change the list of sources in the sidebar, under Edit event.")
+    with st.container(border=True, key="income-box"):
+        c = st.columns(min(len(SOURCES), 4))
+        income = {k: dec(c[n % len(c)].text_input(k, ss.income.get(k, "0.00"), key=f"income-{k}")) for n, k in
+                  enumerate(SOURCES)}
     ss.income = {k: str(v) for k, v in income.items()}
     for k in SOURCES:
         typed = str(ss.get(f"income-{k}", "")).strip()
@@ -549,13 +681,22 @@ elif page == "3. Summary":
         elif income[k] < 0:
             st.warning(md(f"{k} is negative ({usd(income[k])}). Refunds you paid out belong on a receipt, not in income."))
     t = event_totals(receipts, income)
-    m = st.columns(4)
-    m[0].metric("Income", f"${t['income']}", border=True)
-    m[1].metric("Expenses (approved)", f"${t['expenses']}", border=True)
-    m[2].metric("Net", usd(t["net"]), border=True)
-    m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more", border=True)
+    with st.container(key="sum-metrics"):
+        m = st.columns(4)
+        m[0].metric("Income", f"${t['income']}", border=True)
+        m[1].metric("Expenses (approved)", f"${t['expenses']}", border=True)
+        m[2].metric("Net", usd(t["net"]), border=True,
+                    delta=("left over" if t["net"] >= 0 else "short") if t["income"] or t["expenses"] else None,
+                    delta_color="normal" if t["net"] >= 0 else "inverse", delta_arrow="off")
+        hit = t["margin_pct"] >= 10
+        m[3].metric("Margin", f"{t['margin_pct']}%", help="Target: 10% or more", border=True,
+                    delta="on target" if hit else "under 10% target", delta_color="normal" if hit else "inverse",
+                    delta_arrow="off")
+    with st.container(border=True):
+        st.markdown("**Money in vs out**")
+        money_panel(receipts, income)
 
-    rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer or "(none)", "status": r.status.value,
+    rows = [{"receipt": r.receipt_id, "place": r.place, "payer": r.payer or "(none)", "status": ICON[r.status],
              "posts": str(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
              "note": r.review_note or ""} for r in receipts]
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
@@ -682,15 +823,7 @@ else:
                     st.rerun()
     with right.container(border=True):
         st.subheader("Money in vs out")
-        t = event_totals(done, {k: dec(v) for k, v in ss.income.items()})
-        st.markdown(md(f"In **${t['income']}** · Out **${t['expenses']}** · Net **{usd(t['net'])}**"))
-        if t["income"] > 0:
-            pct = min(100, int(t["expenses"] / t["income"] * 100))
-            st.markdown(f'<div class="tly-bar" role="img" aria-label="Money out is {pct}% of money in">'
-                        f'<div style="width:{pct}%"></div></div>', unsafe_allow_html=True)
-            st.caption(f"Money out is {pct}% of money in." + (" Spent more than came in." if t["net"] < 0 else ""))
-        else:
-            st.caption("No income entered yet. Add it on the Summary step.")
+        money_panel(done, {k: dec(v) for k, v in ss.income.items()})
     with st.expander("Payback details"):
         st.dataframe(pd.DataFrame([{"payer": x.payer, "fronted": str(x.fronted), "reimbursed": str(x.reimbursed),
                                     "owed": str(x.owed)} for x in lines]), width="stretch", hide_index=True)
