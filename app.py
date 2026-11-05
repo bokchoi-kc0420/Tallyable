@@ -107,11 +107,18 @@ st.markdown("""<style>
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: event card, then the stepper. */
-.tly-event { display: grid; gap: 2px; padding: 12px 14px; margin: 4px 0 6px; border-radius: 16px;
-  background: var(--tly-sun-soft); border: 2px solid var(--tly-sun); }
-.tly-event span { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #6B5513; font-weight: 600; }
-.tly-event b { font-family: Fredoka, sans-serif; font-size: 1.15rem; color: #1F2A22; line-height: 1.2; }
-.tly-event small { color: #5B4A17; }
+.tly-event { display: grid; grid-template-columns: 62px 1fr; margin: 4px 0 0; border: 2px solid var(--tly-forest);
+  border-bottom: 0; border-radius: 14px 14px 0 0; overflow: hidden; background: var(--tly-card); }
+.tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 10px 0;
+  background: var(--tly-forest); color: #fff; font-family: Fredoka, sans-serif; border-right: 2px dashed #FAF7E7; }
+.tly-event .stub span { font-size: .72rem; letter-spacing: .1em; } .tly-event .stub b { font-size: 1.7rem; margin: 2px 0; }
+.tly-event .info { padding: 10px 12px; display: grid; gap: 2px; align-content: center; }
+.tly-event .info b { font-family: Fredoka, sans-serif; font-size: 1.08rem; line-height: 1.2; color: #1F2A22; }
+.tly-event .info small { color: var(--tly-soft); }
+.st-key-edit-event [data-testid="stExpander"] details { border: 2px solid var(--tly-forest); border-radius: 0 0 14px 14px;
+  background: #E6F0E2; }
+.st-key-edit-event [data-testid="stExpander"] summary { color: var(--tly-forest); font-weight: 700; }
+.st-key-edit-event [data-testid="stExpander"] summary:hover { background: #D3E6CD; }
 .st-key-step [data-testid="stWidgetLabel"] { display: none; }
 .st-key-step [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
 .st-key-step [role="radiogroup"]::before, .st-key-step [role="radiogroup"]::after { content: ""; position: absolute;
@@ -152,8 +159,9 @@ st.markdown("""<style>
 .tly-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-right: 4px; }
 @media (prefers-color-scheme: dark) {
   :root { --tly-forest: #7FD19B; --tly-done: #234A31; --tly-card: #1E2620; --tly-soft: #A9A796; }
-  .tly-event { background: #3A3218; border-color: #8A6E1F; } .tly-event b { color: #F5EBC8; }
-  .tly-event span, .tly-event small { color: #D9C78E; }
+  .tly-event .info b { color: #EDEBDD; } .tly-event .stub { color: #141A15; border-right-color: #181F19; }
+  .st-key-edit-event [data-testid="stExpander"] details { background: #1F3326; }
+  .st-key-edit-event [data-testid="stExpander"] summary:hover { background: #2A4532; }
   .st-key-sum-metrics [data-testid="stColumn"]:nth-child(1) [data-testid="stMetric"] {
     background: #1F3326; border-color: #2F5A3C !important; }
   .st-key-sum-metrics [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"] {
@@ -482,12 +490,13 @@ def open_past(path: Path) -> None:
 ss.setdefault("event", dict(DEFAULT_EVENT))
 st.logo(str(ART / "logo.png"), size="large")
 st.sidebar.caption("Close out a club event: receipts in, checked books out.")
-if st.sidebar.button("New event", icon=":material/add:", key="new-event", width="stretch",
+if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                      help="Starts a blank event. This one stays saved under Past events."):
     start_new_event()
     st.rerun()
 event_card = st.sidebar.empty()  # filled below, once the event fields are read
-with st.sidebar.expander("Edit event", expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
+with st.sidebar.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:",
+                                                         expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
     locked = bool(ss.receipts)
     name = st.text_input("Event name", ss.event["name"], disabled=locked)
     d = st.date_input("Event date", ss.event["date"], disabled=locked)
@@ -506,9 +515,10 @@ PAYERS = ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
 SOURCES = list(dict.fromkeys(x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",")
                              if x.strip())) or list(DEFAULT_SOURCES)
 n_rec = len(ss.receipts)
-event_card.markdown(f'<div class="tly-event"><span>Working on</span><b>{html.escape(EVENT.name)}</b>'
-                    f'<small>{EVENT.date:%b} {EVENT.date.day}, {EVENT.date.year} · '
-                    f'{n_rec} receipt{"s" if n_rec != 1 else ""}</small></div>', unsafe_allow_html=True)
+event_card.markdown(f'<div class="tly-event"><div class="stub"><span>{EVENT.date.strftime("%b").upper()}'
+                    f'</span><b>{EVENT.date.day}</b><span>{EVENT.date.year}</span></div><div class="info">'
+                    f'<b>{html.escape(EVENT.name)}</b><small>{n_rec} receipt{"s" if n_rec != 1 else ""}</small></div></div>',
+                    unsafe_allow_html=True)
 page = st.sidebar.radio("Steps", STEPS, key="step", format_func=lambda n: n.split(". ", 1)[1])
 sidebar_stepper(page)
 past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
