@@ -179,9 +179,10 @@
 .tly-nothumb { height: 110px; border-radius: 10px; background: #F2ECD3; display: grid; place-items: center;
   font-family: Fredoka, sans-serif; font-weight: 600; color: #1C5C36; }
 /* Check results as cards */
-[class*="st-key-flag-"] { border-radius: 14px; padding: 12px 16px 14px 16px; border-left: 6px solid; margin-bottom: .25rem;
-}
-[class*="st-key-flag-"] p { margin: 0; color: #1F2A22; }
+[class*="st-key-flag-"] { border-radius: 14px; padding: 10px 16px; border-left: 6px solid; margin-bottom: .25rem; }
+/* Streamlit pulls markdown up by -1rem at the bottom, which pushed the message into the card's edge */
+[class*="st-key-flag-"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+[class*="st-key-flag-"] p { margin: 0; color: #1F2A22; line-height: 1.35; }
 [class*="st-key-flag-"] strong { font-size: 1rem; }
 [class*="st-key-flag-"] span[role="img"] { font-size: 1.15rem !important; vertical-align: -3px; margin-right: 6px; }
 [class*="st-key-flag-"] .tly-flagmsg { display: block; margin-top: 2px; font-size: .92rem; line-height: 1.45;
