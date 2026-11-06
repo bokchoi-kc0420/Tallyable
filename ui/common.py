@@ -65,8 +65,8 @@ def md(text: str) -> str:
 
 
 def usd(amount: Decimal) -> str:
-    """$12.50, or -$12.50 for a loss (not $-12.50)."""
-    return f"-${-amount}" if amount < 0 else f"${amount}"
+    """$1,212.50 with cents always shown, or -$12.50 for a loss (not $-12.50)."""
+    return f"-${-amount:,.2f}" if amount < 0 else f"${amount:,.2f}"
 
 
 def payers() -> list[str]:
@@ -230,15 +230,15 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
         row = (f'<div class="row {cls}"><span class="lbl">{label}</span><div class="track">'
                f'<div style="display:flex;height:100%;width:{width:.2f}%;border-radius:8px;overflow:hidden">{segs}</div></div>'
                f'<span class="amt">{usd(total)}</span></div>')
-        legend = " ".join(f'<span class="tly-chip" style="background:{shades[n % len(shades)]}33">'
-                          f'<span style="color:{shades[n % len(shades)]}">●</span> {html.escape(k)} {usd(v)}</span>'
-                          for n, (k, v) in enumerate(parts.items()))
+        legend = "".join(f'<span class="item"><i style="background:{shades[n % len(shades)]}"></i>'
+                         f'<span class="name">{html.escape(k)}</span><span class="val">{usd(v)}</span></span>'
+                         for n, (k, v) in enumerate(parts.items()))
         return row, legend
 
     in_row, in_leg = bar("in", "In", t["income"], ins, in_shades)
     out_row, out_leg = bar("out", "Out", t["expenses"], cats, out_shades)
     st.markdown(f'<div class="tly-money">{pill}{in_row}{out_row}'
-                f'<div style="line-height:2">{in_leg}</div><div style="line-height:2">{out_leg}</div></div>',
+                f'<div class="tly-legend">{in_leg}</div><div class="tly-legend">{out_leg}</div></div>',
                 unsafe_allow_html=True)
     if t["income"] <= 0:
         st.caption("No income entered yet. Add it on the Summary step.")

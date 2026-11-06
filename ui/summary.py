@@ -13,7 +13,8 @@ from treasurer.models import Receipt, Status
 from treasurer.post import TX_FIELDS, event_totals
 from treasurer.reader import make_extractor
 from treasurer.runlog import log_run, minutes, read_runs
-from treasurer.sheets import DEFAULT_SOURCES, EventInfo, grid_to_csv, local_transactions, local_views
+from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
+from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
 from ui.common import RUN_LOG, dec, get_sink, go, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
 
@@ -98,8 +99,8 @@ def metrics(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
     target = int(ss.event.get("target", 10))
     with st.container(key="sum-metrics"):
         m = st.columns(4)
-        m[0].metric("Income", f"${t['income']}", border=True)
-        m[1].metric("Expenses (approved)", f"${t['expenses']}", border=True)
+        m[0].metric("Income", usd(t["income"]), border=True)
+        m[1].metric("Expenses (approved)", usd(t["expenses"]), border=True)
         m[2].metric("Net", usd(t["net"]), border=True,
                     delta=("left over" if t["net"] >= 0 else "short") if t["income"] or t["expenses"] else None,
                     delta_color="normal" if t["net"] >= 0 else "inverse", delta_arrow="off")
@@ -159,8 +160,8 @@ def downloads(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     with st.expander("Or one report at a time (CSV)"):
         cols = st.columns(len(views))
-        for col, (title, grid) in zip(cols, views.items(), strict=True):
-            col.download_button(title, grid_to_csv(grid), file_name=f"{event.event_id}_{title.replace(' ', '_')}.csv",
+        for col, (title, view) in zip(cols, views.items(), strict=True):
+            col.download_button(title, grid_to_csv(view.grid), file_name=f"{event.event_id}_{title.replace(' ', '_')}.csv",
                                 mime="text/csv", key=f"dl-{title}")
 
 

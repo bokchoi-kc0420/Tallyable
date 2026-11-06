@@ -39,8 +39,8 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str) -> None:
         initials = "".join(w[0] for w in x.payer.split()[:2] if w[0].isalnum()).upper() or "?"
         row[0].markdown(f'<span class="tly-avatar">{html.escape(initials)}</span>', unsafe_allow_html=True)
         n = counts[x.payer]
-        row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted ${x.fronted}]"))
-        row[2].markdown(f'<span class="tly-owed">{md("$" + str(x.owed))}</span>', unsafe_allow_html=True)
+        row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted {usd(x.fronted)}]"))
+        row[2].markdown(f'<span class="tly-owed">{md(usd(x.owed))}</span>', unsafe_allow_html=True)
         if x.owed <= 0:
             row[3].markdown(":green-badge[✓ Paid]")
             continue
@@ -72,7 +72,7 @@ def payback_form(sink, owing: list, event_id: str) -> None:
             st.error(md(problem))
             return
         if save_payback(sink, Reimbursement(event_id, who, when, amt, method, note)):
-            st.success(md(f"Recorded ${amt} paid back to {who}."))
+            st.success(md(f"Recorded {usd(amt)} paid back to {who}."))
             st.rerun()
 
 
@@ -117,7 +117,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     event = co.Event(info.event_id, info.name, info.date, attendees=attendees)
     flags = co.check_funder_rules(event, done, pack, requested, applied_on)
     most, steps = co.max_request(event, done, pack)
-    st.metric("Most you can request", f"${most}", border=True)
+    st.metric("Most you can request", usd(most), border=True)
     with st.expander("How that was worked out"):
         for s in steps:
             st.write(md(s))

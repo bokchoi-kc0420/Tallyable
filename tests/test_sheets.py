@@ -80,8 +80,9 @@ def approved():
     return out
 
 
-def col(grid, label, offset=2):
-    """Amount next to a row label in the first event block."""
+def col(grid, label, offset=4):
+    """A total on a labelled row, in the first event block (label column, then LOCATION,
+    ITEMS, amount, total)."""
     for row in grid:
         if row and row[0] == label:
             return Decimal(str(row[offset]))
@@ -104,16 +105,16 @@ def test_balance_sheet_matches_expected_total(approved):
     book = FakeBook()
     GoogleSheetsSink(book).post(approved, EVENT, INCOME)
     grid = book.tabs[BALANCE].cells
-    assert grid[1][0] == "Fall Mentor Mixer (FAKE) (2026-11-14)"
+    assert grid[1][1:4] == ["LOCATION", "ITEMS (#)", "Fall Mentor Mixer (FAKE) (2026-11-14)"]
     assert col(grid, "TOTAL ASSETS") == Decimal("640.00")
     assert col(grid, "TOTAL LIABILITIES") == Decimal("571.75")  # the week-1 expected total
     assert col(grid, "TOTAL BALANCE") == Decimal("68.25")
     # The liability lines alone add up to the total, so returned items' cost and tax are excluded.
     start = next(i for i, r in enumerate(grid) if r[0] == "LIABILITIES") + 1
     end = next(i for i, r in enumerate(grid) if r[0] == "TOTAL LIABILITIES")
-    lines = sum(Decimal(str(r[2])) for r in grid[start:end] if r[2] != "")
+    lines = sum(Decimal(str(r[3])) for r in grid[start:end] if r[3] != "")
     assert lines.quantize(Decimal("0.01")) == Decimal("571.75")
-    assert any("(returned)" in str(r[1]) and r[2] == "" for r in grid[start:end])
+    assert any("(returned)" in str(r[2]) and r[3] == "" for r in grid[start:end])
 
 
 def test_second_event_goes_sideways_and_ledger_runs(approved):
@@ -124,7 +125,7 @@ def test_second_event_goes_sideways_and_ledger_runs(approved):
     other = approved[2].model_copy(update={"event_id": "EVT-FAKE-02", "date": date(2026, 12, 4)})
     sink.post([other], later, {"Cash": Decimal("20.00")})
     grid = book.tabs[BALANCE].cells
-    assert grid[1][4] == "Winter Social (FAKE) (2026-12-05)"  # block 2 starts after a blank column
+    assert grid[1][7] == "Winter Social (FAKE) (2026-12-05)"  # block 2 is the next 4 columns
 
     ledger = book.tabs[LEDGER].cells
     assert ledger[1][0] == "DATE"
@@ -158,27 +159,29 @@ def test_expense_report_tab_in_club_format(approved):
     ev = EventInfo(EVENT.event_id, EVENT.name, EVENT.date, attendees=45)
     GoogleSheetsSink(book).post(approved, ev, INCOME)
     grid = book.tabs["Expense Report: Fall Mentor Mixer (FAKE)"].cells
-    assert grid[3] == ["Participants", 45]
-    assert grid[5][0] == "Place" and grid[5][-1] == "Notes"
-    body = [r for r in grid[6:] if len(r) == 9 and r[0] != ""]
+    assert grid[1] == ["Expense Report"]
+    assert grid[3][:2] == ["Participants", 45]
+    assert grid[4][0] == "Place" and grid[4][-1] == "Notes"
+    body = [r for r in grid[5:] if len(r) == 9 and r[0] != ""]
     assert body[0][0] == "Bulk Warehouse" and body[0][8].startswith("Member A (R01)")
     assert Decimal(str(grid[-1][7])) == Decimal("571.75")
-    assert any("returned, cost excluded" in str(r[-1]) for r in grid if r)
+    assert any(str(r[2]).endswith("(returned)") for r in grid if len(r) > 2)
 
 
 def test_local_views_match_what_sheets_would_draw(approved):
-    from treasurer.sheets import grid_to_csv, local_views
+    from treasurer.sheets import local_views
+    from treasurer.views import grid_to_csv
     ev = EventInfo(EVENT.event_id, EVENT.name, EVENT.date, attendees=45)
     views = local_views(approved, ev, INCOME)
     book = FakeBook()
     GoogleSheetsSink(book).post(approved, ev, INCOME)
-    assert views[BALANCE] == book.tabs[BALANCE].cells
-    assert views[LEDGER] == book.tabs[LEDGER].cells
-    assert "571.75" in grid_to_csv(views["Expense Report"])
+    assert views[BALANCE].grid == book.tabs[BALANCE].cells
+    assert views[LEDGER].grid == book.tabs[LEDGER].cells
+    assert "571.75" in grid_to_csv(views["Expense Report"].grid)
 
 
 def test_academic_quarters():
-    from treasurer.sheets import academic_term
+    from treasurer.views import academic_term
     assert academic_term("2026-11-14", "quarter") == "Fall 2026"
     assert academic_term(date(2027, 1, 9), "quarter") == "Winter 2027"
     assert academic_term("2027-04-01", "quarter") == "Spring 2027"
@@ -193,21 +196,28 @@ def test_each_quarter_gets_its_own_balance_sheet(approved):
     other = approved[2].model_copy(update={"event_id": "EVT-FAKE-03", "date": date(2027, 1, 19)})
     sink.post([other], winter, {"Cash": Decimal("20.00")})
     fall, win = book.tabs["Balance Sheet: Fall 2026"].cells, book.tabs["Balance Sheet: Winter 2027"].cells
-    assert fall[1][0].startswith("Fall Mentor Mixer") and len(fall[1]) == 3
-    assert win[1][0].startswith("New Year Social") and len(win[1]) == 3
-    assert len(book.tabs[BALANCE].cells[1]) == 7   # the all-events tab still has both, side by side
+    assert fall[1][3].startswith("Fall Mentor Mixer") and len(fall[1]) == 5
+    assert win[1][3].startswith("New Year Social") and len(win[1]) == 5
+    assert len(book.tabs[BALANCE].cells[1]) == 9   # the all-events tab still has both, side by side
 
 
 def test_push_formats_the_sheet_for_reading(approved):
     from treasurer import sheet_format as fmt
+    from treasurer import views
     book = FakeBook()
-    GoogleSheetsSink(book).post(approved, EVENT, INCOME)
+    sink = GoogleSheetsSink(book)
+    sink.post(approved[:2], EVENT, INCOME)
+    sink.post([approved[2].model_copy(update={"event_id": "E2"})], EventInfo("E2", "Second", date(2026, 11, 20)), {})
     reqs = book.requests
     painted = [r["repeatCell"] for r in reqs if "repeatCell" in r]
-    # money cells get a currency format, headers get the dark band, totals are bold
+    # money in accounting dollars, and the club's colors: tan and gray balance-sheet headers,
+    # the ledger's dark band, the expense report's light blue
     assert any(p["cell"]["userEnteredFormat"] == fmt.MONEY for p in painted)
-    assert any(p["cell"]["userEnteredFormat"].get("backgroundColor") == fmt.HEADER_BG for p in painted)
-    assert any(p["cell"]["userEnteredFormat"].get("backgroundColor") == fmt.TOTAL_BG for p in painted)
+    fills = {tuple(p["cell"]["userEnteredFormat"]["backgroundColor"].values()) for p in painted
+             if "backgroundColor" in p["cell"]["userEnteredFormat"]}
+    for color in (views.TAN, views.GRAY, views.SLATE, views.BLUE):
+        assert tuple(fmt.rgb(color).values()) in fills
+    assert any("mergeCells" in r for r in reqs)  # an expense-report receipt spans its item rows
     # report tabs come first, data tabs last
     order = {r["updateSheetProperties"]["properties"]["sheetId"]: r["updateSheetProperties"]["properties"]["index"]
              for r in reqs if "index" in r.get("updateSheetProperties", {}).get("properties", {})}
@@ -227,13 +237,19 @@ def test_formatting_failure_never_fails_the_push(approved):
 
 def test_view_formatting_rules():
     from treasurer import sheet_format as fmt
-    grid = [["note"], ["Mixer (2026-11-14)", "", ""], ["LOCATION", "ITEMS (#)", "AMOUNT"], ["ASSETS", "", ""],
-            ["Zelle", "", 10.0], ["TOTAL ASSETS", "", 10.0]]
-    reqs = fmt.view_requests(7, grid)
+    from treasurer.views import View
+    view = View([["note"], ["DATE", "AMOUNT"], ["11/14/2026", 10.0]], freeze_rows=2)
+    view.look(1, 2, 0, 2, fill="3D4451", bold=True)
+    view.look(2, 3, 1, 2, money=True, color="D93025")
+    view.look(1, 3, 0, 2, border="grid")
+    reqs = fmt.view_requests(7, view)
     freeze = [r for r in reqs if "gridProperties" in r.get("updateSheetProperties", {}).get("properties", {})]
-    assert freeze[0]["updateSheetProperties"]["properties"]["gridProperties"]["frozenRowCount"] == 3
-    money = [r["repeatCell"]["range"] for r in reqs if r.get("repeatCell", {}).get("cell", {}).get("userEnteredFormat") == fmt.MONEY]
-    assert money == [{"sheetId": 7, "startRowIndex": 4, "endRowIndex": 6, "startColumnIndex": 2, "endColumnIndex": 3}]
+    assert freeze[0]["updateSheetProperties"]["properties"]["gridProperties"]["frozenRowCount"] == 2
+    red = next(r["repeatCell"] for r in reqs if r.get("repeatCell", {}).get("range", {}).get("startRowIndex") == 2)
+    assert red["cell"]["userEnteredFormat"]["numberFormat"] == fmt.MONEY["numberFormat"]
+    # only the fields a look sets are written, so red text keeps the row's stripe
+    assert red["fields"] == "userEnteredFormat.textFormat.foregroundColor,userEnteredFormat.numberFormat"
+    assert any("updateBorders" in r for r in reqs)
 
 
 def test_any_club_can_name_its_own_income_sources(approved):
@@ -261,14 +277,14 @@ def test_whole_book_exports_to_one_formatted_excel_file(approved):
     assert wb.sheetnames == ["Balance Sheet", "Ledger", "Expense Report", "Transactions"]
     bs = wb["Balance Sheet"]
     total = next(r for r in bs.iter_rows() if r[0].value == "TOTAL LIABILITIES")
-    assert total[0].font.bold and total[2].number_format == MONEY
-    assert bs.freeze_panes == "A4"  # note, event title and column headers stay visible
+    assert total[0].font.bold and total[4].number_format == MONEY
+    assert bs.freeze_panes == "B3"  # the note, the headers and the label column stay visible
     tx = wb["Transactions"]
     assert tx.max_row == 1 + sum(len(r.items) for r in approved)
 
 
 def test_formatted_currency_cells_read_back_as_numbers():
-    from treasurer.sheets import D
+    from treasurer.views import D
     assert D("$1,200.50") == Decimal("1200.50")
     assert D("-$5.00") == D("($5.00)") == Decimal("-5.00")
     assert D("") == Decimal("0")
@@ -278,7 +294,7 @@ def test_formatted_currency_cells_read_back_as_numbers():
 
 
 def test_semester_schools_get_semester_tabs():
-    from treasurer.sheets import academic_term
+    from treasurer.views import academic_term
     assert academic_term("2026-08-28") == "Fall 2026"
     assert academic_term("2027-03-01") == "Spring 2027"
     assert academic_term("2027-03-01", "quarter") == "Winter 2027"

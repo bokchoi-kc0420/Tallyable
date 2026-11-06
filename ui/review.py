@@ -1,6 +1,7 @@
 """Step 2: check each drafted receipt against its photo, then approve or reject it."""
 from __future__ import annotations
 
+import html
 import time
 from decimal import Decimal
 
@@ -9,7 +10,7 @@ import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
-from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, reviewed, ss, step_bar
+from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, reviewed, ss, step_bar, usd
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
@@ -76,8 +77,8 @@ def edit_form(rid: str, flags: list) -> None:
         icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
         tone, hint = FLAG_TONE[f.severity]
         with st.container(key=f"flag-{tone}-{rid}-{n}"):
-            st.markdown(f"{icon} **{title}** · <span class='tly-flaghint'>{hint}</span>  \n{md(f.message)}",
-                        unsafe_allow_html=True)
+            st.markdown(f"{icon} **{title}** <span class='tly-flaghint'>· {hint}</span>\n\n"
+                        f"<span class='tly-flagmsg'>{html.escape(f.message)}</span>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     place = c1.text_input("Place", r.place, key=f"place-{rid}")
     d = c2.date_input("Date", r.date, key=f"date-{rid}")
@@ -107,7 +108,7 @@ def edit_form(rid: str, flags: list) -> None:
             ss.receipts[rid] = new
             st.rerun()  # re-run checks on the edited values
 
-    st.caption(md(f"Items + tax + tip = ${r.computed_total} · posts ${r.posted_amount}"))
+    st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · posts {usd(r.posted_amount)}"))
     note = st.text_input("Override note (needed to approve with a red flag)", r.review_note or "",
                          key=f"note-{rid}")
     b1, b2, b3 = st.columns(3)

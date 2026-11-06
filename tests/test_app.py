@@ -321,7 +321,7 @@ def test_summary_warns_about_junk_and_negative_income():
     at.text_input(key="income-Venmo").set_value("$1,200.50").run()
     warnings = " ".join(w.value for w in at.warning)
     assert "isn't an amount" in warnings and "Cash is negative" in warnings
-    assert next(m for m in at.metric if m.label == "Income").value == "$1180.50"
+    assert next(m for m in at.metric if m.label == "Income").value == "$1,180.50"
 
 
 def test_empty_review_guide_button_goes_to_upload():

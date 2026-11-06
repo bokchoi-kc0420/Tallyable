@@ -1,7 +1,7 @@
 """The whole book as one Excel file: no Google account, no sharing.
 
-Same tabs and the same look as the formatted Google Sheet (see sheet_format.py),
-so a club can open it in Excel, or import it into its own Google Sheet with
+Same tabs and the same look as the Google Sheet (both are drawn from the View looks in
+views.py), so a club can open it in Excel, or import it into its own Google Sheet with
 File > Import, and nobody has to give Tallyable access to anything.
 """
 from __future__ import annotations
@@ -9,66 +9,58 @@ from __future__ import annotations
 from io import BytesIO
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from . import sheet_format as fmt
+from .views import LINE, SLATE, View
 
-MONEY = '"$"#,##0.00'
+MONEY = fmt.ACCOUNTING
+EDGE = Side(style="thin", color=LINE)
 
 
 def _hex(c: dict) -> str:
     return "".join(f"{round(c.get(k, 0) * 255):02X}" for k in ("red", "green", "blue"))
 
 
-HEADER = PatternFill("solid", fgColor=_hex(fmt.HEADER_BG))
-WHITE_BOLD = Font(bold=True, color=_hex(fmt.WHITE))
-FILLS = {k: PatternFill("solid", fgColor=_hex(v)) for k, v in fmt.SECTION.items()}
-TOTAL = PatternFill("solid", fgColor=_hex(fmt.TOTAL_BG))
-NOTE = Font(italic=True, size=9, color=_hex(fmt.NOTE_FG))
-
-
-def _paint(ws, r: int, c0: int, c1: int, fill=None, font=None) -> None:
-    for c in range(c0, c1):
-        cell = ws.cell(row=r + 1, column=c + 1)
-        if fill:
-            cell.fill = fill
-        if font:
-            cell.font = font
-
-
-def _view(ws, grid: list[list]) -> None:
-    """A report tab: the same rules as sheet_format.view_requests."""
-    freeze = 1
-    for r, row in enumerate(grid):
-        for c, v in enumerate(row):
-            cell = ws.cell(row=r + 1, column=c + 1, value=v if v != "" else None)
-            if isinstance(v, float):
+def _style(ws, look: dict) -> None:
+    (r0, r1), (c0, c1) = look["rows"], look["cols"]
+    if r1 <= r0 or c1 <= c0:
+        return
+    for r in range(r0, r1):
+        for c in range(c0, c1):
+            cell = ws.cell(row=r + 1, column=c + 1)
+            if "fill" in look:
+                cell.fill = PatternFill("solid", fgColor=look["fill"])
+            if any(k in look for k in ("bold", "italic", "size", "color")):
+                f = cell.font
+                cell.font = Font(bold=look.get("bold", f.bold), italic=look.get("italic", f.italic),
+                                 size=look.get("size", f.size), color=look.get("color", f.color))
+            if "align" in look:
+                cell.alignment = Alignment(horizontal=look["align"], vertical="center")
+            if look.get("money"):
                 cell.number_format = MONEY
-        if r == 0:
-            _paint(ws, 0, 0, 1, font=NOTE)
-            continue
+            if look.get("border") == "grid":
+                cell.border = Border(left=EDGE, right=EDGE, top=EDGE, bottom=EDGE)
+            elif look.get("border") == "topbottom":
+                cell.border = Border(left=cell.border.left, right=cell.border.right, top=EDGE, bottom=EDGE)
+    if look.get("merge") and (r1 - r0 > 1 or c1 - c0 > 1):
+        ws.merge_cells(start_row=r0 + 1, start_column=c0 + 1, end_row=r1, end_column=c1)
+
+
+def _view(ws, view: View) -> None:
+    for r, row in enumerate(view.grid):
         for c, v in enumerate(row):
-            if not isinstance(v, str) or not v:
-                continue
-            if v == "LOCATION" or (c == 0 and v in fmt.HEADER_LABELS):
-                _paint(ws, r, c, c + 3 if v == "LOCATION" else len(row), HEADER, WHITE_BOLD)
-                freeze = max(freeze, r + 1)
-                if v != "LOCATION":
-                    break
-            elif v in fmt.SECTION:
-                _paint(ws, r, c, c + 3, FILLS[v], Font(bold=True))
-            elif v in fmt.TOTALS:
-                _paint(ws, r, c, c + (2 if v == "TOTAL" else 3), TOTAL, Font(bold=True))
-            elif r == 1:
-                _paint(ws, r, c, c + 1, font=Font(bold=True, size=12))
-    ws.freeze_panes = ws.cell(row=freeze + 1, column=1)
-    _widths(ws, grid[1:])
+            ws.cell(row=r + 1, column=c + 1, value=v if v != "" else None)
+    for look in view.looks:
+        _style(ws, look)
+    ws.freeze_panes = ws.cell(row=view.freeze_rows + 1, column=view.freeze_cols + 1)
+    _widths(ws, view.grid[1:])
 
 
 def _tidy(ws, header: list[str], rows: list[dict], money: set[str]) -> None:
     ws.append(header)
-    _paint(ws, 0, 0, len(header), HEADER, WHITE_BOLD)
+    _style(ws, {"rows": (0, 1), "cols": (0, len(header)), "fill": SLATE, "color": "FFFFFF", "bold": True})
     for rec in rows:
         ws.append([rec.get(h, "") for h in header])
     for c, h in enumerate(header):
@@ -82,19 +74,18 @@ def _tidy(ws, header: list[str], rows: list[dict], money: set[str]) -> None:
 def _widths(ws, grid: list[list]) -> None:
     cols = max((len(r) for r in grid), default=0)
     for c in range(cols):
-        longest = max((len(f"{r[c]:,.2f}" if isinstance(r[c], float) else str(r[c])) for r in grid if c < len(r)),
-                      default=0)
-        ws.column_dimensions[get_column_letter(c + 1)].width = min(max(longest + 2, 8), 50)
+        longest = max((len(fmt._text(r[c])) for r in grid if c < len(r)), default=0)
+        ws.column_dimensions[get_column_letter(c + 1)].width = min(max(longest * 1.15 + 3, 8), 60)
 
 
-def book_xlsx(views: dict[str, list[list]], transactions: list[dict], tx_fields: list[str]) -> bytes:
+def book_xlsx(views: dict[str, View], transactions: list[dict], tx_fields: list[str]) -> bytes:
     """Report tabs first, then the line-item data. Returns the .xlsx file's bytes."""
     wb = Workbook()
     wb.remove(wb.active)
-    for title, grid in views.items():
+    for title, view in views.items():
         ws = wb.create_sheet(title[:31])  # Excel's tab-name limit
         ws.sheet_properties.tabColor = _hex(fmt.REPORT_TAB)
-        _view(ws, grid)
+        _view(ws, view)
     ws = wb.create_sheet("Transactions")
     ws.sheet_properties.tabColor = _hex(fmt.DATA_TAB)
     _tidy(ws, tx_fields, transactions, fmt.TIDY_MONEY)

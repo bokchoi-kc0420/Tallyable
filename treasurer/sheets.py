@@ -26,21 +26,28 @@ from decimal import Decimal
 from pathlib import Path
 
 from . import sheet_format as fmt
-from .models import Receipt, Status, cell_decimal
+from .models import Receipt, Status
 from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
+from .views import (
+    BALANCE,
+    BASE_EVENT_FIELDS,
+    View,
+    expense_tab_title,
+    group,
+    num,
+    render_balance_sheet,
+    render_expense_report,
+    render_ledger,
+    term_tabs,
+)
 
 # Where an event's money comes from. Each club sets its own list in the app; these are
 # only the defaults. On the Events tab every column that isn't a base field is a source,
 # so a new source simply becomes a new column.
 DEFAULT_SOURCES = ["Zelle", "Venmo", "Cash", "Grants and funding"]
-BASE_EVENT_FIELDS = ["event_id", "name", "date", "attendees"]
 EVENT_FIELDS = ["event_id", "name", "date", *DEFAULT_SOURCES, "attendees"]  # header for a new sheet
-
-
-VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements tabs. Edits here are overwritten on the next push."
-
-TX, EVENTS, BALANCE, LEDGER, REIMB = "Transactions", "Events", "Balance Sheet", "Ledger", "Reimbursements"
+TX, EVENTS, LEDGER, REIMB = "Transactions", "Events", "Ledger", "Reimbursements"
 
 
 @dataclass(frozen=True)
@@ -52,190 +59,10 @@ class EventInfo:
     calendar: str = "semester"  # "semester" or "quarter": how balance-sheet tabs are split
 
 
-D = cell_decimal  # sheet cell -> Decimal (see models.cell_decimal)
-
-
-def num(x: Decimal) -> float:
-    """Decimal -> number for the sheet, so Sheets can sum it."""
-    return float(x)
-
-
-def income_sources(event: dict) -> list[str]:
-    """The income columns of an Events row, in sheet order."""
-    return [k for k in event if k not in BASE_EVENT_FIELDS]
-
-
-def is_returned(row: dict) -> bool:
-    """A Transactions row's `returned` cell, which comes back as TRUE/FALSE text or a bool."""
-    return str(row["returned"]).upper() == "TRUE"
-
-
 def event_row(event: EventInfo, income: dict[str, Decimal]) -> dict:
     """An Events-tab row: the event's fields plus one column per income source."""
     return {"event_id": event.event_id, "name": event.name, "date": event.date.isoformat(),
             "attendees": event.attendees or "", **{s: num(v) for s, v in income.items()}}
-
-
-# ---------- tidy rows -> rendered views (pure functions, no network) ----------
-
-def _group(tx: list[dict]) -> OrderedDict[str, OrderedDict[str, list[dict]]]:
-    """event_id -> receipt_id -> line-item rows, in the order they were posted."""
-    out: OrderedDict = OrderedDict()
-    for row in tx:
-        out.setdefault(row["event_id"], OrderedDict()).setdefault(row["receipt_id"], []).append(row)
-    return out
-
-
-def _receipt_lines(items: list[dict]) -> list[list]:
-    """Liability rows for one receipt: one per item, then VAT and tip.
-
-    Returned items are listed with no amount (the club rule: list it, exclude the
-    cost). The VAT row is whatever is left of the posted amount after items and tip,
-    so it already excludes the returned items' share of tax and the block sums exactly.
-    """
-    first = items[0]
-    place = first["place"]
-    kept = sum((D(i["amount"]) for i in items if not is_returned(i)), Decimal("0"))
-    tip = D(first["receipt_tip"])
-    vat = D(first["receipt_posted"]) - kept - tip
-    lines = []
-    for i in items:
-        returned = is_returned(i)
-        label = f"{i['item']} x{i['unit']}" + (" (returned)" if returned else "")
-        lines.append([place, label, "" if returned else num(D(i["amount"]))])
-    lines.append([place, "VAT", num(vat)])
-    if tip:
-        lines.append([place, "TIP", num(tip)])
-    return lines
-
-
-def event_block(event: dict, receipts: OrderedDict[str, list[dict]]) -> list[list]:
-    """One event's 3-column block of the balance sheet."""
-    sources = income_sources(event)
-    assets = [[src, "", num(D(event.get(src) or 0))] for src in sources]
-    total_assets = sum((D(event.get(src) or 0) for src in sources), Decimal("0"))
-    liabilities = [line for items in receipts.values() for line in _receipt_lines(items)]
-    total_liabilities = sum((D(items[0]["receipt_posted"]) for items in receipts.values()), Decimal("0"))
-    return [
-        [f"{event['name']} ({event['date']})", "", ""],
-        ["LOCATION", "ITEMS (#)", "AMOUNT"],
-        ["ASSETS", "", ""],
-        *assets,
-        ["TOTAL ASSETS", "", num(total_assets)],
-        ["LIABILITIES", "", ""],
-        *liabilities,
-        ["TOTAL LIABILITIES", "", num(total_liabilities)],
-        ["TOTAL BALANCE", "", num(total_assets - total_liabilities)],
-    ]
-
-
-def render_balance_sheet(events: list[dict], tx: list[dict]) -> list[list]:
-    """Blocks side by side, one blank column between them, ordered by event date."""
-    grouped = _group(tx)
-    blocks = [event_block(e, grouped.get(e["event_id"], OrderedDict()))
-              for e in sorted(events, key=lambda e: str(e["date"]))]
-    height = max((len(b) for b in blocks), default=0)
-    grid = [[VIEW_NOTE]]
-    for r in range(height):
-        row: list = []
-        for n, b in enumerate(blocks):
-            if n:
-                row.append("")
-            row.extend(b[r] if r < len(b) else ["", "", ""])
-        grid.append(row)
-    return grid
-
-
-EXPENSE_HEADER = ["Place", "Category", "Items", "Unit", "Price($)", "VAT (TAX)", "TIP", "Total expenditure", "Notes"]
-
-
-def expense_tab_title(event: dict) -> str:
-    return f"Expense Report: {event['name']}"[:95]
-
-
-def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -> list[list]:
-    """The club's per-event expense report. In the paper version tax, tip and total
-    are merged cells spanning a receipt's item rows; here they sit on the receipt's
-    first row and the rows below are left blank, which reads the same way.
-    Notes holds the payer (as the club's sheet does) plus the receipt id and any return."""
-    rows = [[VIEW_NOTE], [event["name"]], ["Date", str(event["date"])],
-            ["Participants", event.get("attendees", "") or ""], [], EXPENSE_HEADER]
-    total = Decimal("0")
-    for rid, items in receipts.items():
-        f = items[0]
-        for n, i in enumerate(items):
-            note = f"{f['payer'] or 'no payer'} ({rid})" if n == 0 else ""
-            if is_returned(i):
-                note = (note + "; " if note else "") + "returned, cost excluded"
-            first = n == 0
-            rows.append([f["place"] if first else "", i["category"], i["item"], i["unit"], num(D(i["price"])),
-                         num(D(f["receipt_tax"])) if first else "", num(D(f["receipt_tip"])) if first else "",
-                         num(D(f["receipt_posted"])) if first else "", note])
-        total += D(f["receipt_posted"])
-    rows += [[], ["", "", "", "", "", "", "TOTAL", num(total), ""]]
-    return rows
-
-
-QUARTERS = {9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Winter", 2: "Winter", 3: "Winter",
-            4: "Spring", 5: "Spring", 6: "Spring", 7: "Summer", 8: "Summer"}
-SEMESTERS = {8: "Fall", 9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Spring", 2: "Spring", 3: "Spring",
-             4: "Spring", 5: "Spring", 6: "Summer", 7: "Summer"}
-CALENDARS = {"semester": SEMESTERS, "quarter": QUARTERS}
-
-
-def academic_term(d: str | date, calendar: str = "semester") -> str:
-    """The school term a date falls in. Semesters: Fall (Aug-Dec), Spring (Jan-May), Summer
-    (Jun-Jul). Quarters: Fall (Sep-Dec), Winter (Jan-Mar), Spring (Apr-Jun), Summer (Jul-Aug).
-    The club starts a new balance sheet each term."""
-    d = date.fromisoformat(str(d)[:10])
-    return f"{CALENDARS.get(calendar, SEMESTERS)[d.month]} {d.year}"
-
-
-def term_tabs(events: list[dict], tx: list[dict], calendar: str = "semester") -> dict[str, list[list]]:
-    """One balance sheet per school term, holding that term's events."""
-    by_q: dict[str, list[dict]] = OrderedDict()
-    for e in sorted(events, key=lambda e: str(e["date"])):
-        by_q.setdefault(academic_term(e["date"], calendar), []).append(e)
-    out = {}
-    for q, evs in by_q.items():
-        ids = {str(e["event_id"]) for e in evs}
-        out[f"{BALANCE}: {q}"] = render_balance_sheet(evs, [r for r in tx if str(r["event_id"]) in ids])
-    return out
-
-
-LEDGER_HEADER = ["DATE", "DESCRIPTION", "ASSETS", "LIABILITIES", "TOTAL ASSETS", "TOTAL LIABILITIES", "BALANCE"]
-
-
-def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) -> list[list]:
-    """One row per income source, receipt and reimbursement, by date, with running totals.
-
-    Income is dated on the event day; each receipt on its own date. On the same
-    day, income comes first. A reimbursement row has no asset or liability amount:
-    it settles an expense that is already counted (see reimburse.py).
-    """
-    names = {e["event_id"]: e["name"] for e in events}
-    entries = []  # (date, order, description, income, expense)
-    for e in events:
-        for src in income_sources(e):
-            amt = D(e.get(src) or 0)
-            if amt:
-                entries.append((str(e["date"]), 0, f"{src}: {e['name']}", amt, Decimal("0")))
-    for event_id, receipts in _group(tx).items():
-        for rid, items in receipts.items():
-            f = items[0]
-            entries.append((str(f["date"]), 1, f"{f['place']} ({rid}, paid by {f['payer'] or '?'}): "
-                            f"{names.get(event_id, event_id)}", Decimal("0"), D(f["receipt_posted"])))
-    for r in reimb:
-        entries.append((str(r["date"]), 2, f"Paid back {r['payer']} ${D(r['amount']):.2f} via {r['method']} "
-                        f"(settles expenses above): {names.get(str(r['event_id']), r['event_id'])}",
-                        Decimal("0"), Decimal("0")))
-    entries.sort(key=lambda x: (x[0], x[1]))
-    rows, ta, tl = [[VIEW_NOTE], LEDGER_HEADER], Decimal("0"), Decimal("0")
-    for d, _, desc, inc, exp in entries:
-        ta += inc
-        tl += exp
-        rows.append([d, desc, num(inc) if inc else "", num(exp) if exp else "", num(ta), num(tl), num(ta - tl)])
-    return rows
 
 
 # ---------- the sink ----------
@@ -306,7 +133,7 @@ class GoogleSheetsSink:
         for title, grid in term_tabs(events, tx, event.calendar).items():
             self._rewrite(title, grid)
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
-        self._rewrite(expense_tab_title(ev), render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())))
+        self._rewrite(expense_tab_title(ev), render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())))
         reimb_ws = self._tab(REIMB, REIMB_FIELDS)
         reimb = reimb_ws.get_all_records()
         self._rewrite(LEDGER, render_ledger(events, tx, reimb))
@@ -347,12 +174,12 @@ class GoogleSheetsSink:
         else:
             ws.append_rows([row], value_input_option="RAW")
 
-    def _rewrite(self, title: str, grid: list[list]) -> None:
+    def _rewrite(self, title: str, view: View) -> None:
         ws = self._tab(title)
         ws.clear()
-        if grid:
-            ws.update(values=grid, range_name="A1", value_input_option="RAW")
-        self._pending.setdefault("views", []).extend(fmt.view_requests(ws.id, grid))
+        if view.grid:
+            ws.update(values=view.grid, range_name="A1", value_input_option="RAW")
+        self._pending.setdefault("views", []).extend(fmt.view_requests(ws.id, view))
 
     def _tidy_format(self, ws, header: list[str], rows: int, money: set[str] = frozenset()) -> None:
         self._pending.setdefault("tidy", []).extend(fmt.tidy_requests(ws.id, header, rows, money))
@@ -387,7 +214,7 @@ def _cell(field: str, v):
 # ---------- the same views without Google Sheets ----------
 
 def local_views(receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal],
-                reimb: list[dict] = ()) -> dict[str, list[list]]:
+                reimb: list[dict] = ()) -> dict[str, View]:
     """Balance Sheet, Ledger and Expense Report for one event, built from the app's
     approved receipts, exactly as the Sheets sink would draw them. For downloads when
     Sheets isn't set up, and for the online demo."""
@@ -397,7 +224,7 @@ def local_views(receipts: list[Receipt], event: EventInfo, income: dict[str, Dec
     return {
         BALANCE: render_balance_sheet([ev], tx),
         LEDGER: render_ledger([ev], tx, mine),
-        "Expense Report": render_expense_report(ev, _group(tx).get(event.event_id, OrderedDict())),
+        "Expense Report": render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())),
     }
 
 
@@ -405,11 +232,3 @@ def local_transactions(receipts: list[Receipt]) -> list[dict]:
     """Transactions-tab rows for the app's approved receipts."""
     return [{f: _cell(f, row[f]) for f in TX_FIELDS} for r in receipts
             if r.counts for row in transaction_rows(r)]
-
-
-def grid_to_csv(grid: list[list]) -> str:
-    import csv
-    import io
-    buf = io.StringIO()
-    csv.writer(buf).writerows(grid)
-    return buf.getvalue()
