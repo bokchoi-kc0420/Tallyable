@@ -124,8 +124,10 @@ class GoogleSheetsSink:
         linked = linked or {}
         sheet_id = linked.get("book") or os.getenv("TALLYABLE_SHEET_ID")
         ledger_id = linked.get("ledger") or os.getenv("TALLYABLE_LEDGER_SHEET_ID")  # optional: its own file
+        if not sheet_id:
+            return None
         client = bot_client(root, key_info)
-        if not sheet_id or not client:
+        if not client:
             return None
         return cls(client.open_by_key(sheet_id), client.open_by_key(ledger_id) if ledger_id else None)
 

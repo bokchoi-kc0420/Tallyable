@@ -50,13 +50,12 @@ def confirm_new_event() -> None:
     with st.sidebar.container(border=True, key="confirm-new"):
         st.markdown(f"**Start a new event?**  \n{ss.event['name']} is saved! Find it anytime under Past events.")
         st.caption("Photos you uploaded but haven't drafted yet won't come along.")
-        c = st.columns(2)
-        if c[0].button("Start new", type="primary", key="confirm-new-yes", width="stretch"):
+        if st.button("Yes, start a new one", type="primary", key="confirm-new-yes", width="stretch"):
             save_session()
             ss.confirm_new = False
             start_new_event()
             st.rerun()
-        if c[1].button("Keep going", key="confirm-new-no", width="stretch"):
+        if st.button("Keep going", key="confirm-new-no", width="stretch"):
             ss.confirm_new = False
             st.rerun()
 
@@ -173,8 +172,9 @@ def show() -> tuple[str, EventInfo]:
                     st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
                               icon=":material/open_in_new:", type="tertiary",
                               help="Your current event is saved first, so you can come back to it here.")
-    with st.sidebar.expander("Your Google Sheets", icon=":material/link:"):
-        connect.box("sidebar")
+    label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
+    if st.sidebar.button(label, icon=":material/link:", type="tertiary", key="open-connect"):
+        connect.dialog()
     if ss.get("past_error"):
         st.sidebar.error(ss.pop("past_error"))
     return page, event

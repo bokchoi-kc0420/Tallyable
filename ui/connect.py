@@ -30,6 +30,11 @@ def check(ids: dict) -> str | None:
     return None
 
 
+@st.dialog("Connect your Google Sheets", width="large")
+def dialog() -> None:
+    box("dialog")
+
+
 def box(key: str) -> None:
     """The connect form. `key` keeps widget keys apart where it's drawn twice."""
     email = bot_email(ROOT, GCP_KEY)
