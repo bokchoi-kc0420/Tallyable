@@ -2,7 +2,7 @@
 
 Streamlit keeps everything in memory per browser tab. A treasurer halfway through
 14 receipts who hits refresh would lose every edit, so after each change the app
-writes the session to output/session.json, and the Upload screen offers to resume.
+writes the session to output/session.json, and a new tab picks it up where it left off.
 Photos are stored base64 so the file is self-contained (about 1 MB for 14 photos).
 """
 from __future__ import annotations
@@ -16,8 +16,9 @@ from .models import Receipt
 
 VERSION = 1
 # Saved as they are. The event, receipts and photos need converting, so dump/load handle them by name.
-PLAIN_KEYS = ("notes", "edits", "income", "drafted_at", "review_started", "started")
+PLAIN_KEYS = ("notes", "edits", "income", "drafted_at", "review_started", "started", "step")
 SAVED_KEYS = ("event", "receipts", "images", *PLAIN_KEYS)
+STEP = "1. Upload"  # files saved before the step was kept open on Upload
 
 
 def dump(state: dict) -> str:
@@ -28,7 +29,7 @@ def dump(state: dict) -> str:
         "event": ev,
         "receipts": {k: r.model_dump(mode="json") for k, r in state["receipts"].items()},
         "images": {k: [base64.b64encode(b).decode(), m] for k, (b, m) in state["images"].items()},
-        **{k: state[k] for k in PLAIN_KEYS},
+        **{k: state.get(k, STEP if k == "step" else None) for k in PLAIN_KEYS},
     }, sort_keys=True)
 
 
@@ -52,7 +53,8 @@ def load(path: Path) -> dict | None:
             "event": ev,
             "receipts": {k: Receipt.model_validate(v) for k, v in raw["receipts"].items()},
             "images": {k: (base64.b64decode(b), m) for k, (b, m) in raw["images"].items()},
-            **{k: raw[k] for k in PLAIN_KEYS},
+            **{k: raw[k] for k in PLAIN_KEYS if k != "step"},
+            "step": raw.get("step") or STEP,
         }
     except (OSError, ValueError, KeyError, TypeError):
         return None
