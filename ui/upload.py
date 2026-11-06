@@ -116,9 +116,9 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
     ss.demo = []
     ss.drafted_at = ss.drafted_at or time.time()
     cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
-    ss.last_draft = f"**Drafted {len(ss.receipts)} receipts{cost}.** Next, check each one against its photo."
+    ss.last_draft = f"**Done! I read {len(ss.receipts)} receipts{cost}.** Now check them against the photos."
     if skipped:
-        ss.last_draft += f" Skipped {len(skipped)} already drafted: {', '.join(skipped)}."
+        ss.last_draft += f" (Skipped {len(skipped)} I'd already read.)"
 
 
 def show(event: EventInfo) -> None:
@@ -128,8 +128,8 @@ def show(event: EventInfo) -> None:
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
     else:
-        guide("Demo mode:", "I can only read the sample event's 14 receipts, with a few planted mistakes for you to "
-              "catch. Reading your own receipts needs the full version, with Claude turned on.", key="demo", tip=True)
+        guide("Demo mode:", "I can only read the 14 sample receipts (I hid a few mistakes in them for you to find). "
+              "Your own receipts need the full version.", key="demo", tip=True)
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "mascot-empty.png"), width=190)
@@ -142,8 +142,8 @@ def show(event: EventInfo) -> None:
 
     if sources:
         untagged = sum(1 for name, _ in sources if not ss.get(f"payer-{name}"))
-        guide(f"{len(sources)} receipts loaded.", md("Pick who paid for each (below), then click **Draft rows**. "
-              + (f"{untagged} still have no payer; those get flagged in Review." if untagged else "Every receipt has a payer.")),
+        guide(f"{len(sources)} receipts in!", md("Tag who paid for each one below, then hit **Draft rows**."
+              + (f" ({untagged} still need a payer.)" if untagged else " Everyone's tagged.")),
               key="loaded", tip=True)
         c = st.columns([3, 1, 2], vertical_alignment="bottom")
         everyone = c[0].selectbox("Set every payer to", payers()[1:], key="payer-all")
@@ -158,7 +158,7 @@ def show(event: EventInfo) -> None:
 
     if sources:
         st.subheader("Who paid")
-        st.caption("Each receipt's photo is shown, so you can tell them apart without opening them.")
+        st.caption("The photos are here so you can tell them apart.")
         grid = st.columns(4)
         for n, (name, data) in enumerate(sources):
             with grid[n % 4].container(border=True, key=f"who-{n}"):

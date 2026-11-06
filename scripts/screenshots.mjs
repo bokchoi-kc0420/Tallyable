@@ -78,6 +78,8 @@ try {
   await page.screenshot({ path: join(OUT, "2-review-R11-note.png") });
   await page.getByRole("button", { name: "Leave out" }).click();
   await idle();
+  await page.locator('[data-testid="stSidebar"] label').filter({ hasText: "R11" }).first().click();
+  await idle();
   await shot("2-review-R11-left-out");
 
   await page.getByRole("button", { name: /Approve the \d+ with no flags/ }).click();

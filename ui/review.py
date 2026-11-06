@@ -39,9 +39,9 @@ def approve_clean(flags: dict) -> None:
     if not clean:
         return
     c = st.columns([3, 1.4], vertical_alignment="center")
-    c[0].caption(f"{len(clean)} receipt{'s have' if len(clean) != 1 else ' has'} no flags at all. You can approve "
-                 "them in one click. Flagged ones still need you, one by one. Glance at the photos first: "
-                 "the checks catch math and missing info, not a wrong item.")
+    c[0].caption(f"{len(clean)} receipt{'s look' if len(clean) != 1 else ' looks'} clean. Approve them all at once, then "
+                 "go through the flagged ones. Give the photos a quick look first: I catch math and missing info, "
+                 "not a wrong item.")
     if not c[1].button(f"Approve the {len(clean)} with no flags", icon=":material/done_all:", key="approve-clean",
                        width="stretch"):
         return
@@ -68,12 +68,13 @@ def edit_form(rid: str, flags: list) -> None:
     r = ss.receipts[rid]
     for note in ss.notes.get(rid, []):
         st.warning(md(note))
-    if r.status is not Status.DRAFTED:
+    if r.status is not Status.DRAFTED:  # decided: one card says what happened, the flags are done with
         label, tone = STATUS_CHIP[r.status]
-        st.markdown(f'<div class="tly-decided {tone}">This receipt is <b>{label}</b>.'
-                    f'{" Click Reopen to change it." if r.status is not Status.POSTED else ""}</div>',
+        why = f" · {html.escape(r.review_note)}" if r.review_note else ""
+        undo = "" if r.status is Status.POSTED else "<br><small>Changed your mind? Hit Reopen.</small>"
+        st.markdown(f'<div class="tly-decided {tone}"><b>{label.capitalize()}</b>{why}{undo}</div>',
                     unsafe_allow_html=True)
-    for n, f in enumerate(flags):
+    for n, f in enumerate(flags if r.status is Status.DRAFTED else []):
         icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
         tone, hint = FLAG_TONE[f.severity]
         with st.container(key=f"flag-{tone}-{rid}-{n}"):
@@ -119,7 +120,7 @@ def edit_form(rid: str, flags: list) -> None:
         st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
     decided = r.status is not Status.DRAFTED
     approve = b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note))
-    leave_out = b2.button("Leave out", disabled=locked or decided or not note.strip(),
+    leave_out = b2.container(key="leave-out").button("Leave out", disabled=locked or decided or not note.strip(),
                           help="Not a club expense (a duplicate, a personal buy, another event). "
                                "Write why in the note first.")
     if approve or leave_out:
@@ -145,8 +146,8 @@ def show() -> None:
     approve_clean(flags)
     if checked == len(ss.receipts):
         ok = sum(1 for x in ss.receipts.values() if x.counts)
-        next_step(f"**All {checked} receipts reviewed:** {ok} approved, {checked - ok} left out. "
-                  "Next, add the event's income and push the approved rows to the books.",
+        next_step(f"**That's all {checked}!** {ok} approved, {checked - ok} left out. "
+                  "Next up: add the money that came in.",
                   "Go to Summary →", "3. Summary", "to-summary")
 
     def attention(x: str) -> bool:

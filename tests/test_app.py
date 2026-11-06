@@ -244,11 +244,11 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
 def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = AppTest.from_file(APP, default_timeout=30).run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert any("14 receipts loaded" in i.value and "14 still have no payer" in i.value for i in at.markdown)
+    assert any("14 receipts in" in i.value and "14 still need a payer" in i.value for i in at.markdown)
     at.selectbox(key="payer-all").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
-    assert any("Every receipt has a payer" in i.value for i in at.markdown)
+    assert any("Everyone's tagged" in i.value for i in at.markdown)
     next(b for b in at.button if b.label == "Draft rows").click().run()
     assert not at.exception
     assert {r.payer for r in at.session_state["receipts"].values()} == {"Member C"}
@@ -283,7 +283,7 @@ def test_drafting_the_same_photos_twice_reads_them_once():
         next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
         next(b for b in at.button if b.label == "Draft rows").click().run()
     assert len(at.session_state["receipts"]) == 14
-    assert "Skipped 14 already drafted" in at.session_state["last_draft"]
+    assert "Skipped 14 I'd already read" in at.session_state["last_draft"]
 
 
 def test_a_finished_event_can_be_reopened_later():
@@ -392,7 +392,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     assert approved and len(approved) < len(rs)  # flagged ones wait for a person
     at.sidebar.radio(key="review-pick").set_value(approved[0]).run()
     assert next(b for b in at.button if b.label == "Approve").disabled
-    assert any("approved" in m.value and "Reopen" in m.value for m in at.markdown)
+    assert any("Approved" in m.value and "Reopen" in m.value for m in at.markdown)
     assert not at.exception
 
 
