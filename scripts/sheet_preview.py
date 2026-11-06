@@ -1,6 +1,6 @@
 """Draw the books for the fake event and save each report tab as a PNG, to check the
 sheet's look without a Google account. Builds the Excel download (same look as the
-Google Sheet), then prints it with LibreOffice.
+Google Sheet), then prints it with LibreOffice using the file's own print settings.
 
     python scripts/sheet_preview.py [out_dir]        (default: output/sheet_preview)
 
@@ -36,16 +36,12 @@ def main(out: Path) -> None:
         if r.receipt_id == "R06":  # the planted math error, fixed the way a reviewer would
             r = r.model_copy(update={"total": r.computed_total})
         receipts.append(r.model_copy(update={"status": Status.APPROVED}))
-    event = EventInfo("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14), 45)
+    event = EventInfo("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14), 45, start_balance=Decimal("1200"))
     income = {"Zelle": Decimal("300"), "Venmo": Decimal("250"), "Cash": Decimal("40"),
               "Grants and funding": Decimal("50")}
     wb = load_workbook(BytesIO(book_xlsx(local_views(receipts, event, income), local_transactions(receipts),
                                          TX_FIELDS)))
     wb.remove(wb["Transactions"])
-    for ws in wb.worksheets:  # one landscape page wide per tab
-        ws.page_setup.orientation = "landscape"
-        ws.sheet_properties.pageSetUpPr.fitToPage = True
-        ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
     book = out / "books.xlsx"
     wb.save(book)
     subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(out), str(book)],

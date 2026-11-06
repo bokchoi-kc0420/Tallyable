@@ -2,7 +2,7 @@
 (see views.py) into Sheets API `batchUpdate` requests, so they are tested without a network.
 
 What a treasurer sees after a push:
-- Report tabs first (Expense Report, Balance Sheets, Ledger), in teal. Data tabs
+- Report tabs first (Expense Report, Balance Sheets, Receipts, General Ledger), in teal. Data tabs
   the tool keeps (Transactions, Events, Reimbursements) last, in gray.
 - The report tabs in the club's format: colors, merged cells, borders and accounting
   dollars as drawn in views.py. Header rows frozen, so they stay put while scrolling.
@@ -12,11 +12,12 @@ Formatting is cosmetic: if a request fails, the push has already succeeded.
 """
 from __future__ import annotations
 
-from .views import LINE, SLATE
+from .views import INK, LINE, SLATE
 
 # Accounting dollars, as the club's sheets show them: "$" at the left edge, the amount at the right.
 ACCOUNTING = '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)'
 MONEY = {"numberFormat": {"type": "CURRENCY", "pattern": ACCOUNTING}}
+DOLLARS = '"$"#,##0.00'  # "$571.75" in one piece, for a total that stands alone (a card, a balance)
 REPORT_TAB = {"red": 0.06, "green": 0.46, "blue": 0.43}
 DATA_TAB = {"red": 0.6, "green": 0.62, "blue": 0.65}
 TIDY_MONEY = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}
@@ -40,10 +41,19 @@ def _paint(sheet_id: int, rng: tuple, fmt: dict) -> dict:
                            "fields": ",".join(fields)}}
 
 
-def _freeze(sheet_id: int, rows: int, cols: int = 0) -> dict:
-    return {"updateSheetProperties": {"properties": {"sheetId": sheet_id, "gridProperties": {
-        "frozenRowCount": rows, "frozenColumnCount": cols}},
-        "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"}}
+def _freeze(sheet_id: int, rows: int, cols: int = 0, hide_grid: bool = False) -> dict:
+    grid = {"frozenRowCount": rows, "frozenColumnCount": cols}
+    fields = "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"
+    if hide_grid:
+        grid["hideGridlines"] = True
+        fields += ",gridProperties.hideGridlines"
+    return {"updateSheetProperties": {"properties": {"sheetId": sheet_id, "gridProperties": grid}, "fields": fields}}
+
+
+def _size(sheet_id: int, dimension: str, index: int, px: int) -> dict:
+    return {"updateDimensionProperties": {
+        "range": {"sheetId": sheet_id, "dimension": dimension, "startIndex": index, "endIndex": index + 1},
+        "properties": {"pixelSize": px}, "fields": "pixelSize"}}
 
 
 def _widths(sheet_id: int, grid: list[list], skip_rows: int = 0) -> list[dict]:
@@ -52,10 +62,7 @@ def _widths(sheet_id: int, grid: list[list], skip_rows: int = 0) -> list[dict]:
     out = []
     for c in range(cols):
         longest = max((len(_text(r[c])) for r in grid[skip_rows:] if c < len(r)), default=0)
-        px = min(max(longest * 7 + 30, 60), 360)
-        out.append({"updateDimensionProperties": {
-            "range": {"sheetId": sheet_id, "dimension": "COLUMNS", "startIndex": c, "endIndex": c + 1},
-            "properties": {"pixelSize": px}, "fields": "pixelSize"}})
+        out.append(_size(sheet_id, "COLUMNS", c, min(max(longest * 7 + 30, 60), 360)))
     return out
 
 
@@ -69,6 +76,8 @@ def cell_format(look: dict) -> dict:
     if "fill" in look:
         out["backgroundColor"] = rgb(look["fill"])
     text = {k: look[k] for k in ("bold", "italic") if k in look}
+    if "strike" in look:
+        text["strikethrough"] = look["strike"]
     if "size" in look:
         text["fontSize"] = look["size"]
     if "color" in look:
@@ -77,24 +86,32 @@ def cell_format(look: dict) -> dict:
         out["textFormat"] = text
     if "align" in look:
         out["horizontalAlignment"] = look["align"].upper()
-    if look.get("money"):
+    if "valign" in look:
+        out["verticalAlignment"] = look["valign"].upper()
+    if look.get("wrap"):
+        out["wrapStrategy"] = "WRAP"
+    if look.get("money") == "plain":
+        out["numberFormat"] = {"type": "CURRENCY", "pattern": DOLLARS}
+    elif look.get("money"):
         out |= MONEY
     return out
 
 
 def _border(sheet_id: int, rng: tuple, kind: str) -> dict:
+    """grid: thin light lines on every cell; box: a dark medium line around the range only
+    (one receipt, one card); topbottom: thin lines above and below."""
     line = {"style": "SOLID", "colorStyle": {"rgbColor": rgb(LINE)}}
-    sides = ["top", "bottom"] if kind == "topbottom" else ["top", "bottom", "left", "right",
-                                                           "innerHorizontal", "innerVertical"]
+    sides = {"topbottom": ["top", "bottom"], "box": ["top", "bottom", "left", "right"]}.get(
+        kind, ["top", "bottom", "left", "right", "innerHorizontal", "innerVertical"])
+    if kind == "box":
+        line = {"style": "SOLID_MEDIUM", "colorStyle": {"rgbColor": rgb(INK)}}
     return {"updateBorders": {"range": _range(sheet_id, *rng), **{s: line for s in sides}}}
 
 
 def view_requests(sheet_id: int, view) -> list[dict]:
-    """Formatting for a rebuilt report tab. Old formatting and merges are cleared first,
-    since a view's rows move around between pushes."""
-    reqs = [{"repeatCell": {"range": {"sheetId": sheet_id}, "cell": {"userEnteredFormat": {}},
-                            "fields": "userEnteredFormat"}},
-            {"unmergeCells": {"range": {"sheetId": sheet_id}}}]
+    """Formatting for a report tab the sink has just made, so there is nothing old to clear.
+    Gridlines are hidden: Sheets doesn't print them, so the screen shows what the paper will."""
+    reqs = []
     for look in view.looks:
         rng = (*look["rows"], *look["cols"])
         fmt = cell_format(look)
@@ -104,8 +121,14 @@ def view_requests(sheet_id: int, view) -> list[dict]:
             reqs.append({"mergeCells": {"range": _range(sheet_id, *rng), "mergeType": "MERGE_ALL"}})
         if "border" in look:
             reqs.append(_border(sheet_id, rng, look["border"]))
-    reqs.append(_freeze(sheet_id, view.freeze_rows, view.freeze_cols))
-    reqs += _widths(sheet_id, view.grid, skip_rows=1)  # the long note on row 1 doesn't set a width
+    reqs.append(_freeze(sheet_id, view.freeze_rows, view.freeze_cols, hide_grid=True))
+    if view.widths:
+        reqs += [_size(sheet_id, "COLUMNS", c, px) for c, px in enumerate(view.widths)]
+    else:
+        reqs += _widths(sheet_id, view.grid, skip_rows=1)  # the long note on row 1 doesn't set a width
+    reqs += [_size(sheet_id, "ROWS", r, px) for r, px in sorted(view.heights.items())]
+    if view.filter:
+        reqs.append({"setBasicFilter": {"filter": {"range": _range(sheet_id, *view.filter)}}})
     return reqs
 
 
@@ -121,7 +144,8 @@ def tidy_requests(sheet_id: int, header: list[str], rows: int, money: set[str] =
 
 
 def order_requests(tabs: list[tuple[int, str]], data_tabs: set[str]) -> list[dict]:
-    """Report tabs first and teal, data tabs last and gray. `tabs` is (sheet_id, title)."""
+    """Report tabs first and teal; data tabs last, gray and hidden (Tallyable's raw rows,
+    kept in the file but out of the way and out of print). `tabs` is (sheet_id, title)."""
     def rank(title: str) -> tuple:
         if title.startswith("Expense Report"):
             return (0, title)
@@ -129,7 +153,7 @@ def order_requests(tabs: list[tuple[int, str]], data_tabs: set[str]) -> list[dic
             return (1, title)
         if title == "Balance Sheet":
             return (2, title)
-        if title == "Ledger":
+        if title in ("Receipts", "General Ledger"):
             return (3, title)
         if title in data_tabs:
             return (5, title)
@@ -141,5 +165,8 @@ def order_requests(tabs: list[tuple[int, str]], data_tabs: set[str]) -> list[dic
         if rank(title)[0] != 4:
             props["tabColorStyle"] = {"rgbColor": DATA_TAB if title in data_tabs else REPORT_TAB}
             fields += ",tabColorStyle"
+        if title in data_tabs:
+            props["hidden"] = True
+            fields += ",hidden"
         reqs.append({"updateSheetProperties": {"properties": props, "fields": fields}})
     return reqs

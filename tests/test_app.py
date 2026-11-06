@@ -71,7 +71,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     next(b for b in at.button if b.label.startswith("Push to")).click().run()
     assert not at.exception
     assert at.session_state["receipts"]["R01"].status is Status.POSTED
-    assert {"Balance Sheet", "Ledger", "Expense Report"} <= {b.label for b in at.get("download_button")}
+    assert {"Balance Sheet", "General Ledger", "Expense Report", "Receipts"} <= {b.label for b in at.get("download_button")}
     log = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "run_log.csv"
     row = list(csv.DictReader(log.open()))[-1]
     assert row["posted"] == "1" and row["minutes_review_to_push"] != ""
