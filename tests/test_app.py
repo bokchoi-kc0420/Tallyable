@@ -169,9 +169,23 @@ def test_event_setup_and_start_new_event():
     assert next(t for t in at.sidebar.text_input if t.label == "Event name").disabled
     assert all(r.event_id.startswith("EVT-2026-11-14-WINTER") for r in at.session_state["receipts"].values())
     at.sidebar.button(key="new-event").click().run()
+    assert at.session_state["receipts"]  # nothing cleared until the treasurer confirms
+    at.sidebar.button(key="confirm-new-no").click().run()
+    assert at.session_state["receipts"]
+    at.sidebar.button(key="new-event").click().run()
+    at.sidebar.button(key="confirm-new-yes").click().run()
     assert at.session_state["receipts"] == {}
     assert at.header[0].value == "Start a new event"  # who's in carries over, ready to confirm
     assert at.session_state["event"]["members"] == "Treasurer"
+
+
+def test_an_event_set_up_but_not_drafted_survives_a_new_event():
+    at = new_app().run()
+    at.session_state["event"] = {**at.session_state["event"], "name": "Bake Sale (FAKE)", "event_id": "EVT-BAKE"}
+    at.run()
+    at.sidebar.button(key="new-event").click().run()
+    at.sidebar.button(key="confirm-new-yes").click().run()
+    assert any("Bake Sale" in m.value for m in at.sidebar.markdown)  # under Past events, not wiped
 
 
 def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
@@ -297,6 +311,7 @@ def test_a_finished_event_can_be_reopened_later():
     at = drafted_app()
     next(b for b in at.button if b.label == "Approve").click().run()
     at.sidebar.button(key="new-event").click().run()
+    at.sidebar.button(key="confirm-new-yes").click().run()
     assert at.session_state["receipts"] == {}
     assert at.session_state["event"]["name"] == "New event"
     assert at.session_state["event"]["members"].startswith("Member A")  # club settings carry over
@@ -403,7 +418,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     assert not at.exception
 
 
-def test_my_funder_rules_and_school_calendar():
+def test_my_funder_rules():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
@@ -417,7 +432,6 @@ def test_my_funder_rules_and_school_calendar():
     assert not at.exception
     assert any("Student Government" in m.value for m in [*at.markdown, *at.success, *at.caption, *at.error, *at.warning, *at.info])
     assert at.session_state["event"]["funder"]["name"] == "Student Government"
-    assert at.session_state["event"]["calendar"] == "semester"
 
 
 def test_a_new_event_starts_with_who_is_in_before_upload():

@@ -146,35 +146,6 @@ def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
     return view
 
 
-# ---------- one balance sheet per school term ----------
-
-QUARTERS = {9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Winter", 2: "Winter", 3: "Winter",
-            4: "Spring", 5: "Spring", 6: "Spring", 7: "Summer", 8: "Summer"}
-SEMESTERS = {8: "Fall", 9: "Fall", 10: "Fall", 11: "Fall", 12: "Fall", 1: "Spring", 2: "Spring", 3: "Spring",
-             4: "Spring", 5: "Spring", 6: "Summer", 7: "Summer"}
-CALENDARS = {"semester": SEMESTERS, "quarter": QUARTERS}
-
-
-def academic_term(d: str | date, calendar: str = "semester") -> str:
-    """The school term a date falls in. Semesters: Fall (Aug-Dec), Spring (Jan-May), Summer
-    (Jun-Jul). Quarters: Fall (Sep-Dec), Winter (Jan-Mar), Spring (Apr-Jun), Summer (Jul-Aug).
-    The club starts a new balance sheet each term."""
-    d = date.fromisoformat(str(d)[:10])
-    return f"{CALENDARS.get(calendar, SEMESTERS)[d.month]} {d.year}"
-
-
-def term_tabs(events: list[dict], tx: list[dict], calendar: str = "semester") -> dict[str, View]:
-    """One balance sheet per school term, holding that term's events."""
-    by_term: dict[str, list[dict]] = OrderedDict()
-    for e in sorted(events, key=lambda e: str(e["date"])):
-        by_term.setdefault(academic_term(e["date"], calendar), []).append(e)
-    out = {}
-    for term, evs in by_term.items():
-        ids = {str(e["event_id"]) for e in evs}
-        out[f"{BALANCE}: {term}"] = render_balance_sheet(evs, [r for r in tx if str(r["event_id"]) in ids])
-    return out
-
-
 def grid_to_csv(grid: list[list]) -> str:
     import csv
     import io

@@ -145,6 +145,13 @@ def test_push_writes_tidy_tabs_and_is_idempotent(approved):
     assert len(book.tabs[EVENTS].cells) == 2                  # event upserted, not duplicated
 
 
+def test_old_per_term_tabs_are_cleared_on_push(approved):
+    book = FakeBook()
+    book.add_worksheet("Balance Sheet: Fall 2026", 10, 5)  # from an older version
+    GoogleSheetsSink(book).post(approved, EVENT, INCOME)
+    assert not [t for t in book.tabs if t.startswith("Balance Sheet: ")] and BALANCE in book.tabs
+
+
 def test_balance_sheet_matches_expected_total(approved):
     book = FakeBook()
     GoogleSheetsSink(book).post(approved, EVENT, INCOME)
@@ -253,29 +260,6 @@ def test_local_views_match_what_sheets_would_draw(approved):
     assert views[BALANCE].grid == book.tabs[BALANCE].cells
     assert views[LEDGER].grid == book.tabs[LEDGER].cells
     assert "571.75" in grid_to_csv(views["Expense Report"].grid)
-
-
-def test_academic_quarters():
-    from treasurer.views import academic_term
-    assert academic_term("2026-11-14", "quarter") == "Fall 2026"
-    assert academic_term(date(2027, 1, 9), "quarter") == "Winter 2027"
-    assert academic_term("2027-04-01", "quarter") == "Spring 2027"
-    assert academic_term("2027-07-04", "quarter") == "Summer 2027"
-
-
-def test_each_quarter_gets_its_own_balance_sheet(approved):
-    book = FakeBook()
-    sink = GoogleSheetsSink(book)
-    sink.post(approved[:2], EVENT, INCOME)
-    winter = EventInfo("EVT-FAKE-03", "New Year Social (FAKE)", date(2027, 1, 20), calendar="quarter")
-    other = approved[2].model_copy(update={"event_id": "EVT-FAKE-03", "date": date(2027, 1, 19)})
-    sink.post([other], winter, {"Cash": Decimal("20.00")})
-    fall, win = book.tabs["Balance Sheet: Fall 2026"].cells, book.tabs["Balance Sheet: Winter 2027"].cells
-    def sections(grid):
-        return [r[0] for r in grid if r and "(FAKE) (" in str(r[0])]
-    assert sections(fall) == ["Fall Mentor Mixer (FAKE) (2026-11-14)"]
-    assert sections(win) == ["New Year Social (FAKE) (2027-01-20)"]
-    assert len(sections(book.tabs[BALANCE].cells)) == 2  # the all-events tab still has both
 
 
 def test_push_formats_the_sheet_for_reading(approved):
@@ -398,11 +382,3 @@ def test_formatted_currency_cells_read_back_as_numbers():
     assert D(500) == Decimal("500")
     with pytest.raises(ValueError, match="isn't a number"):
         D("abc")
-
-
-def test_semester_schools_get_semester_tabs():
-    from treasurer.views import academic_term
-    assert academic_term("2026-08-28") == "Fall 2026"
-    assert academic_term("2027-03-01") == "Spring 2027"
-    assert academic_term("2027-03-01", "quarter") == "Winter 2027"
-    assert academic_term("2027-06-15") == "Summer 2027"

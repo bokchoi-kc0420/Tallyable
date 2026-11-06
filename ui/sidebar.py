@@ -40,9 +40,30 @@ def start_new_event() -> None:
     session_store.clear(SESSION_FILE)
 
 
+def confirm_new_event() -> None:
+    """Ask before clearing the screen, so a stray click can't wipe an event in progress."""
+    if not ss.receipts and not ss.event.get("set_up"):  # nothing to lose
+        ss.confirm_new = False
+        start_new_event()
+        st.rerun()
+    with st.sidebar.container(border=True, key="confirm-new"):
+        st.markdown(f"**Start a new event?**  \n{ss.event['name']} is saved! Find it anytime under Past events.")
+        st.caption("Photos you uploaded but haven't drafted yet won't come along.")
+        c = st.columns(2)
+        if c[0].button("Start new", type="primary", key="confirm-new-yes", width="stretch"):
+            save_session()
+            ss.confirm_new = False
+            start_new_event()
+            st.rerun()
+        if c[1].button("Keep going", key="confirm-new-no", width="stretch"):
+            ss.confirm_new = False
+            st.rerun()
+
+
 def save_session() -> None:
-    """Write the session to disk when it changed since the last save."""
-    if not ss.receipts:
+    """Write the session to disk when it changed since the last save. An event counts once
+    it's set up, even before any receipts, so starting a new one never loses it."""
+    if not ss.receipts and not ss.event.get("set_up"):
         return
     state = {k: ss[k] for k in session_store.SAVED_KEYS}
     text = session_store.dump(state)
@@ -64,7 +85,7 @@ def open_past(path: Path) -> None:
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
     ss.pop("_saved", None)
-    ss.step = "4. Close out"
+    ss.step = "4. Close out" if ss.receipts else STEPS[0]
 
 
 def stepper_css(current: str) -> None:
@@ -112,8 +133,9 @@ def show() -> tuple[str, EventInfo]:
     st.sidebar.caption("Close out a club event: receipts in, checked books out.")
     if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                          help="Starts a blank event. This one stays saved under Past events."):
-        start_new_event()
-        st.rerun()
+        ss.confirm_new = True
+    if ss.get("confirm_new"):
+        confirm_new_event()
     event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
     event_card = event_group.empty()  # filled below, once the event fields are read
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
@@ -122,9 +144,6 @@ def show() -> tuple[str, EventInfo]:
         name = st.text_input("Event name", ss.event["name"], disabled=locked)
         d = st.date_input("Event date", ss.event["date"], disabled=locked)
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
-        cal = st.radio("School calendar", ["Semesters", "Quarters"], horizontal=True,
-                       index=0 if ss.event.get("calendar", "semester") == "semester" else 1,
-                       help="Your books get one balance sheet per term.")
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
         start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
@@ -132,14 +151,13 @@ def show() -> tuple[str, EventInfo]:
                                 help="What the club had before this year's first event. Type it once a year: "
                                      "the General Ledger starts from it.")
         changed = name != ss.event["name"] or d != ss.event["date"]
-        ss.event.update(calendar="semester" if cal == "Semesters" else "quarter", target=target, start_balance=start)
+        ss.event.update(target=target, start_balance=start)
         ss.event.update(name=name, date=d, attendees=attendees,
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
             st.caption("Name and date are locked once receipts are drafted.")
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
-                      calendar=ss.event.get("calendar", "semester"),
                       start_balance=None if start is None else Decimal(str(start)))
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts)), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)

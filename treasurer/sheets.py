@@ -38,7 +38,6 @@ from .views import (
     group,
     num,
     render_balance_sheet,
-    term_tabs,
 )
 
 # Where an event's money comes from. Each club sets its own list in the app; these are
@@ -55,7 +54,6 @@ class EventInfo:
     name: str
     date: date
     attendees: int | None = None
-    calendar: str = "semester"  # "semester" or "quarter": how balance-sheet tabs are split
     start_balance: Decimal | None = None  # what the club had at the start of the school year
 
 
@@ -135,8 +133,9 @@ class GoogleSheetsSink:
         events = self._records(EVENTS, EVENT_FIELDS)
         tx = tx_ws.get_all_records()
         self._rewrite(BALANCE, render_balance_sheet(events, tx))
-        for title, grid in term_tabs(events, tx, event.calendar).items():
-            self._rewrite(title, grid)
+        for ws in self.book.worksheets():  # per-term tabs from older versions: one Balance Sheet holds it all
+            if ws.title.startswith(f"{BALANCE}: "):
+                self.book.del_worksheet(ws)
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())))
         reimb_ws = self._tab(REIMB, REIMB_FIELDS)
