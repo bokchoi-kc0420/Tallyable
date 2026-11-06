@@ -15,7 +15,7 @@ from treasurer.sheets import DEFAULT_SOURCES, EventInfo
 from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
 
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
-                 "attendees": 45, "members": "Member A, Member B, Member C, Member D",
+                 "attendees": 45, "members": "",  # added on Upload; nobody can be tagged until there is one
                  "sources": ", ".join(DEFAULT_SOURCES)}
 HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the landing page start.bat serves
 
@@ -122,7 +122,6 @@ def show() -> tuple[str, EventInfo]:
         name = st.text_input("Event name", ss.event["name"], disabled=locked)
         d = st.date_input("Event date", ss.event["date"], disabled=locked)
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
-        members = st.text_input("Members who might pay", ss.event["members"], help="Comma separated")
         cal = st.radio("School calendar", ["Semesters", "Quarters"], horizontal=True,
                        index=0 if ss.event.get("calendar", "semester") == "semester" else 1,
                        help="Your books get one balance sheet per term.")
@@ -130,7 +129,7 @@ def show() -> tuple[str, EventInfo]:
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
         changed = name != ss.event["name"] or d != ss.event["date"]
         ss.event.update(calendar="semester" if cal == "Semesters" else "quarter", target=target)
-        ss.event.update(name=name, date=d, attendees=attendees, members=members,
+        ss.event.update(name=name, date=d, attendees=attendees,
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
             st.caption("Name and date are locked once receipts are drafted.")

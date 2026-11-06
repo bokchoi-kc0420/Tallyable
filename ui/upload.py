@@ -121,6 +121,36 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
         ss.last_draft += f" (Skipped {len(skipped)} I'd already read.)"
 
 
+def set_members(names: list[str]) -> None:
+    ss.event = {**ss.event, "members": ", ".join(names)}
+
+
+def add_member() -> None:
+    """Button and Enter callback: add the typed name (commas would split it, so they're dropped)."""
+    name = ss.get("new-member", "").replace(",", " ").strip()
+    if name and name not in payers():
+        set_members([*payers()[1:], name])
+    ss["new-member"] = ""
+
+
+def members_box() -> None:
+    """Who might have paid. Receipts are tagged with these names, so Draft waits for at least one."""
+    with st.container(border=True, key="members-box"):
+        st.markdown("**Who's in on this tally?**")
+        st.caption("Add everyone who might've paid for something. You'll tag each receipt with one of them.")
+        c = st.columns([3, 1], vertical_alignment="bottom")
+        c[0].text_input("Name", key="new-member", placeholder="e.g. Jamie Lee", label_visibility="collapsed",
+                        on_change=add_member)
+        c[1].button("Add member", icon=":material/add:", key="add-member", on_click=add_member, width="stretch")
+        names = payers()[1:]
+        with st.container(horizontal=True, key="member-chips"):
+            for n, name in enumerate(names):
+                st.button(name, icon=":material/close:", key=f"rm-member-{n}", help=f"Remove {name}",
+                          on_click=set_members, args=([x for x in names if x != name],))
+        if not names:
+            st.caption(":red[Add at least one member to draft your receipts.]")
+
+
 def show(event: EventInfo) -> None:
     st.header("Upload receipts")
     step_bar("1. Upload")
@@ -140,18 +170,20 @@ def show(event: EventInfo) -> None:
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
     sources = [(f.name, f.getvalue()) for f in files] if files else [(p.name, p.read_bytes()) for p in ss.get("demo", [])]
 
+    members_box()
     if sources:
         untagged = sum(1 for name, _ in sources if not ss.get(f"payer-{name}"))
         guide(f"{len(sources)} receipts in!", md("Tag who paid for each one below, then hit **Draft rows**."
               + (f" ({untagged} still need a payer.)" if untagged else " Everyone's tagged.")),
               key="loaded", tip=True)
         c = st.columns([3, 1, 2], vertical_alignment="bottom")
-        everyone = c[0].selectbox("Set every payer to", payers()[1:], key="payer-all")
+        everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
         if c[1].button("Apply to all"):
             for name, _ in sources:
                 ss[f"payer-{name}"] = everyone
             st.rerun()
-        if c[2].button("Draft rows", type="primary"):
+        if c[2].button("Draft rows", type="primary", disabled=len(payers()) < 2,
+                       help=None if len(payers()) > 1 else "Add at least one member first"):
             draft(sources, ex, reader, event.event_id)
     if ss.get("last_draft") and ss.receipts:
         next_step(ss.last_draft, "Go to Review →", "2. Review", "to-review")

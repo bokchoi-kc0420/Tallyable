@@ -8,6 +8,15 @@ from streamlit.testing.v1 import AppTest
 from treasurer.models import Status
 
 APP = str(Path(__file__).parent.parent / "app.py")
+MEMBERS = "Member A, Member B, Member C, Member D"
+
+
+def new_app(members: str = MEMBERS) -> AppTest:
+    """The app with the club's members already added, as a treasurer would on Upload."""
+    from ui.sidebar import DEFAULT_EVENT
+    at = AppTest.from_file(APP, default_timeout=30)
+    at.session_state["event"] = {**DEFAULT_EVENT, "members": members}
+    return at
 
 
 def owed_table(at) -> list[dict]:
@@ -20,7 +29,7 @@ def owed_table(at) -> list[dict]:
 
 
 def test_draft_approve_and_fix():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.button[0].click().run()  # use the fake event's receipts
     for sb in at.selectbox:
         if sb.key and sb.key.startswith("payer-R"):
@@ -41,7 +50,7 @@ def test_draft_approve_and_fix():
 
 
 def test_push_logs_time_and_close_out_shows_owed_and_report():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.button[0].click().run()
     for sb in at.selectbox:
         if sb.key and sb.key.startswith("payer-R"):
@@ -76,7 +85,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
 
 
 def test_one_click_mark_paid_uses_chosen_method():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.button[0].click().run()
     for sb in at.selectbox:
         if sb.key and sb.key.startswith("payer-R"):
@@ -99,7 +108,7 @@ def test_one_click_mark_paid_uses_chosen_method():
 
 
 def test_mark_paid_back_updates_owed():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.button[0].click().run()
     for sb in at.selectbox:
         if sb.key and sb.key.startswith("payer-R"):
@@ -122,7 +131,7 @@ def test_mark_paid_back_updates_owed():
 
 def test_password_gate(monkeypatch):
     monkeypatch.setenv("APP_PASSWORD", "fake-test-pw")
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     assert at.text_input[0].label == "Password" and not at.sidebar.radio
     at.text_input[0].set_value("nope").run()
     assert any("Wrong password" in e.value for e in at.error)
@@ -131,7 +140,7 @@ def test_password_gate(monkeypatch):
 
 
 def test_unreadable_file_can_be_entered_by_hand():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.session_state["failed"] = {"R16.jpg": (None, "R16.jpg won't open as an image.")}
     at.run()
     assert any("won't open" in e.value for e in at.error)
@@ -150,13 +159,12 @@ def test_unreadable_file_can_be_entered_by_hand():
 
 
 def test_event_setup_and_start_new_event():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app("Treasurer").run()
     name = next(t for t in at.sidebar.text_input if t.label == "Event name")
     name.set_value("Winter Social (FAKE)").run()
     assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-WINTER")
-    members = next(t for t in at.sidebar.text_input if t.label == "Members who might pay")
-    members.set_value("Treasurer, Member Z").run()
-    assert "Member Z" in [o for sb in at.selectbox if sb.label == "Payer" for o in sb.options]
+    at.text_input(key="new-member").set_value("Member Z").run()  # Enter adds the name
+    assert at.session_state["event"]["members"].endswith("Member Z")
 
     at.button[0].click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
@@ -168,7 +176,7 @@ def test_event_setup_and_start_new_event():
 
 
 def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     for sb in at.selectbox:
         if sb.key and sb.key.startswith("payer-R"):
@@ -188,13 +196,13 @@ def test_corrupt_session_file_is_ignored():
     out = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
     out.mkdir(parents=True, exist_ok=True)
     (out / "session.json").write_text("{not json")
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     assert not at.exception
     assert at.session_state["receipts"] == {}
 
 
 def drafted_app(payer="Member A"):
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     for sb in at.selectbox:
         if sb.key and sb.key.startswith("payer-R"):
@@ -242,10 +250,10 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
 
 
 def test_upload_says_what_to_do_and_sets_every_payer_at_once():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     assert any("14 receipts in" in i.value and "14 still need a payer" in i.value for i in at.markdown)
-    at.selectbox(key="payer-all").set_value("Member C")
+    next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
     assert any("Everyone's tagged" in i.value for i in at.markdown)
@@ -255,7 +263,7 @@ def test_upload_says_what_to_do_and_sets_every_payer_at_once():
 
 
 def test_each_step_says_what_comes_next():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     next(b for b in at.button if b.label == "Go to Review →").click().run()
@@ -278,7 +286,7 @@ def test_each_step_says_what_comes_next():
 
 
 def test_drafting_the_same_photos_twice_reads_them_once():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     for _ in range(2):
         next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
         next(b for b in at.button if b.label == "Draft rows").click().run()
@@ -302,7 +310,7 @@ def test_a_finished_event_can_be_reopened_later():
 
 
 def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     add = next(b for b in at.button if b.label == "Add")
     add.click().run()
     assert any("Fill in Place and Item" in e.value for e in at.error) and not at.session_state["receipts"]
@@ -317,7 +325,7 @@ def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
 
 
 def test_summary_warns_about_junk_and_negative_income():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.button[0].click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     at.sidebar.radio[0].set_value("3. Summary").run()
@@ -332,7 +340,7 @@ def test_summary_warns_about_junk_and_negative_income():
 
 
 def test_empty_review_guide_button_goes_to_upload():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     at.sidebar.radio[0].set_value("2. Review").run()
     assert any("Nothing to review yet" in m.value for m in at.markdown)
     at.button(key="go-review-empty").click().run()
@@ -341,7 +349,7 @@ def test_empty_review_guide_button_goes_to_upload():
 
 
 def test_income_sources_can_be_added_renamed_and_removed():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     at.sidebar.radio[0].set_value("3. Summary").run()
@@ -366,7 +374,7 @@ def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch,
         url = "https://docs.google.com/spreadsheets/d/fake"
 
     monkeypatch.setattr(sheets.GoogleSheetsSink, "from_env", classmethod(lambda cls, *a: FakeSheet(tmp_path / "t.csv")))
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
@@ -381,7 +389,7 @@ def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch,
 
 
 def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
@@ -397,7 +405,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
 
 
 def test_my_funder_rules_and_school_calendar():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
@@ -411,3 +419,15 @@ def test_my_funder_rules_and_school_calendar():
     assert any("Student Government" in m.value for m in [*at.markdown, *at.success, *at.caption, *at.error, *at.warning, *at.info])
     assert at.session_state["event"]["funder"]["name"] == "Student Government"
     assert at.session_state["event"]["calendar"] == "semester"
+
+
+def test_draft_waits_for_at_least_one_member():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    assert next(b for b in at.button if b.label == "Draft rows").disabled
+    at.text_input(key="new-member").set_value("Jamie Lee").run()
+    at.button(key="add-member").click().run()
+    assert at.session_state["event"]["members"] == "Jamie Lee"
+    assert not next(b for b in at.button if b.label == "Draft rows").disabled
+    at.button(key="rm-member-0").click().run()
+    assert at.session_state["event"]["members"] == ""
