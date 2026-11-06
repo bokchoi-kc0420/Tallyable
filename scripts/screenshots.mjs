@@ -67,6 +67,19 @@ try {
     for (let n = 0; n < await flags.count(); n++) await shot(`2-review-${rid}-flag-${n}`, flags.nth(n));
   }
 
+  // Leave out R11, the planted duplicate: the button waits for a reason.
+  await page.locator('[data-testid="stSidebar"] label').filter({ hasText: "R11" }).first().click();
+  await idle();
+  const note = page.getByPlaceholder(/Why you're approving/);
+  await note.fill("Duplicate of R03, same place, date and total");
+  await note.press("Enter");
+  await idle();
+  await page.getByRole("button", { name: "Leave out" }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(OUT, "2-review-R11-note.png") });
+  await page.getByRole("button", { name: "Leave out" }).click();
+  await idle();
+  await shot("2-review-R11-left-out");
+
   await page.getByRole("button", { name: /Approve the \d+ with no flags/ }).click();
   await idle();
   await step("Summary");
@@ -79,6 +92,8 @@ try {
 
   await step("Close out");
   await shot("4-close-out");
+  await page.getByText(/Left out of the books/).click();
+  await shot("4-close-out-left-out");
 } finally {
   await browser.close();
   app.kill();

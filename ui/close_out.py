@@ -151,12 +151,12 @@ def show(event: EventInfo) -> None:
         return
     waiting = [r.receipt_id for r in ss.receipts.values() if r.status is Status.DRAFTED]
     if waiting:
-        st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
+        st.warning(f"Not reviewed yet, so not counted below: {', '.join(waiting)}")
     else:
         with st.container(key="mascot-cheer"):
             st.image(str(ART / "tally-cheer.png"), width=170)
-        rejected = len(ss.receipts) - len(done)
-        cheer = f"All {len(done)} receipts approved!" if not rejected else f"All reviewed! {len(done)} approved, {rejected} rejected."
+        left_out = len(ss.receipts) - len(done)
+        cheer = f"All {len(done)} receipts approved!" if not left_out else f"All reviewed! {len(done)} approved, {left_out} left out."
         st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)
 
     sink, err = get_sink()
@@ -174,6 +174,12 @@ def show(event: EventInfo) -> None:
     with st.expander("Payback details"):
         html_table([{"Payer": x.payer, "Fronted": usd(x.fronted), "Paid back": usd(x.reimbursed),
                      "Owed": usd(x.owed)} for x in lines], numeric=("Fronted", "Paid back", "Owed"))
+    left_out = [r for r in ss.receipts.values() if r.status is Status.REJECTED]
+    if left_out:
+        with st.expander(f"Left out of the books ({len(left_out)})"):
+            st.caption("Not counted anywhere: not in expenses, who's owed, or the funder report.")
+            html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)",
+                         "Total": usd(r.total), "Why": r.review_note or ""} for r in left_out], numeric=("Total",))
     if owing:
         payback_form(sink, owing, event.event_id)
     else:

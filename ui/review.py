@@ -1,4 +1,4 @@
-"""Step 2: check each drafted receipt against its photo, then approve or reject it."""
+"""Step 2: check each drafted receipt against its photo, then approve it or leave it out of the books."""
 from __future__ import annotations
 
 import html
@@ -64,7 +64,7 @@ def photo(rid: str) -> None:
 
 
 def edit_form(rid: str, flags: list) -> None:
-    """The receipt's fields, line items, and the Approve / Reject / Reopen buttons."""
+    """The receipt's fields, line items, and the Approve / Leave out / Reopen buttons."""
     r = ss.receipts[rid]
     for note in ss.notes.get(rid, []):
         st.warning(md(note))
@@ -109,20 +109,24 @@ def edit_form(rid: str, flags: list) -> None:
             st.rerun()  # re-run checks on the edited values
 
     st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · posts {usd(r.posted_amount)}"))
-    note = st.text_input("Override note (needed to approve with a red flag)", r.review_note or "",
-                         key=f"note-{rid}")
+    note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
+                         placeholder="Why you're approving a red flag, or leaving this out (duplicate, personal...)",
+                         help="Needed to approve a receipt with a red flag, and to leave one out. "
+                              "It's saved with the receipt, so you can explain the call later.")
     b1, b2, b3 = st.columns(3)
     locked = r.status is Status.POSTED
     if locked:
         st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
     decided = r.status is not Status.DRAFTED
     approve = b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note))
-    reject = b2.button("Reject", disabled=locked or decided)
-    if approve or reject:
-        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note or None)
+    leave_out = b2.button("Leave out", disabled=locked or decided or not note.strip(),
+                          help="Not a club expense (a duplicate, a personal buy, another event). "
+                               "Write why in the note first.")
+    if approve or leave_out:
+        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
         st.rerun()
-    if b3.button("Reopen", disabled=locked or not decided, help="Undo an approve or reject"):
+    if b3.button("Reopen", disabled=locked or not decided, help="Undo an approve or leave out"):
         set_status(rid, Status.DRAFTED)
         st.rerun()
 
@@ -141,7 +145,7 @@ def show() -> None:
     approve_clean(flags)
     if checked == len(ss.receipts):
         ok = sum(1 for x in ss.receipts.values() if x.counts)
-        next_step(f"**All {checked} receipts reviewed:** {ok} approved, {checked - ok} rejected. "
+        next_step(f"**All {checked} receipts reviewed:** {ok} approved, {checked - ok} left out. "
                   "Next, add the event's income and push the approved rows to the books.",
                   "Go to Summary →", "3. Summary", "to-summary")
 
@@ -162,7 +166,7 @@ def show() -> None:
     elif ss.get("review-pick") not in ids:
         ss["review-pick"] = ids[0]
     rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
-                           help="⏳ to review · ✅ approved · ❌ rejected · 📤 posted · ⚠️ has a flag")
+                           help="⏳ to review · ✅ approved · ➖ left out · 📤 posted · ⚠️ has a flag")
     left, right = st.columns([2, 3])
     with left:
         photo(rid)

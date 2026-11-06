@@ -22,10 +22,10 @@ RUN_LOG = OUT / "run_log.csv"
 SESSION_FILE = OUT / "session.json"
 PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
-ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
+ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "➖ left out",
         Status.POSTED: "📤 posted"}
 STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved", "ok"),
-               Status.REJECTED: ("rejected", "no"), Status.POSTED: ("in the books", "post")}
+               Status.REJECTED: ("left out", "no"), Status.POSTED: ("in the books", "post")}
 # Tally's pose on the walker bar for each step (Kevin's picks). Close out keeps the original.
 TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small.png",
          "3. Summary": "tally-summary-small.png", "4. Close out": "mascot-small.png"}
@@ -80,7 +80,7 @@ def step_label(step: str) -> str:
 
 
 def reviewed() -> int:
-    """How many receipts have been approved, rejected or posted."""
+    """How many receipts have been approved, left out or posted."""
     return sum(1 for r in ss.receipts.values() if r.status is not Status.DRAFTED)
 
 
