@@ -170,10 +170,10 @@ def test_event_setup_and_start_new_event():
     assert all(r.event_id.startswith("EVT-2026-11-14-WINTER") for r in at.session_state["receipts"].values())
     at.sidebar.button(key="new-event").click().run()
     assert at.session_state["receipts"]  # nothing cleared until the treasurer confirms
-    at.sidebar.button(key="confirm-new-no").click().run()
+    at.button(key="confirm-new-no").click().run()
     assert at.session_state["receipts"]
     at.sidebar.button(key="new-event").click().run()
-    at.sidebar.button(key="confirm-new-yes").click().run()
+    at.button(key="confirm-new-yes").click().run()
     assert at.session_state["receipts"] == {}
     assert at.header[0].value == "Start a new event"  # who's in carries over, ready to confirm
     assert at.session_state["event"]["members"] == "Treasurer"
@@ -184,7 +184,7 @@ def test_an_event_set_up_but_not_drafted_survives_a_new_event():
     at.session_state["event"] = {**at.session_state["event"], "name": "Bake Sale (FAKE)", "event_id": "EVT-BAKE"}
     at.run()
     at.sidebar.button(key="new-event").click().run()
-    at.sidebar.button(key="confirm-new-yes").click().run()
+    at.button(key="confirm-new-yes").click().run()
     assert any("Bake Sale" in m.value for m in at.sidebar.markdown)  # under Past events, not wiped
 
 
@@ -311,7 +311,7 @@ def test_a_finished_event_can_be_reopened_later():
     at = drafted_app()
     next(b for b in at.button if b.label == "Approve").click().run()
     at.sidebar.button(key="new-event").click().run()
-    at.sidebar.button(key="confirm-new-yes").click().run()
+    at.button(key="confirm-new-yes").click().run()
     assert at.session_state["receipts"] == {}
     assert at.session_state["event"]["name"] == "New event"
     assert at.session_state["event"]["members"].startswith("Member A")  # club settings carry over

@@ -41,25 +41,28 @@ def start_new_event() -> None:
     session_store.clear(SESSION_FILE)
 
 
+def close_confirm() -> None:
+    ss.confirm_new = False
+
+
+@st.dialog("Start a new event?", on_dismiss=close_confirm)
 def confirm_new_event() -> None:
-    """Ask before clearing the screen, so a stray click can't wipe an event in progress."""
-    if not ss.receipts and not ss.event.get("set_up"):  # nothing to lose
-        ss.confirm_new = False
+    """Ask before clearing the screen, so a stray click can't wipe an event in progress.
+    Shown while `confirm_new` is set, so each button click redraws it until one closes it."""
+    n = len(ss.receipts)
+    st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n)}</div>',
+                unsafe_allow_html=True)
+    st.markdown(":green[**Saved to Past events ✓**] You can reopen it anytime!")
+    st.caption("Photos you uploaded but haven't drafted yet won't come along.")
+    c = st.columns(2)
+    if c[0].button("Keep going", key="confirm-new-no", width="stretch"):
+        close_confirm()
+        st.rerun()
+    if c[1].button("Yes, start a new one", type="primary", key="confirm-new-yes", width="stretch"):
+        close_confirm()
+        save_session()
         start_new_event()
         st.rerun()
-    with st.sidebar.container(border=True, key="confirm-new"):
-        st.markdown("**Start a new event?**")
-        st.markdown(f'<span class="tly-event-name">{html.escape(ss.event["name"])}</span> is saved! '
-                    "Find it anytime under Past events.", unsafe_allow_html=True)
-        st.caption("Photos you uploaded but haven't drafted yet won't come along.")
-        if st.button("Yes, start a new one", type="primary", key="confirm-new-yes", width="stretch"):
-            save_session()
-            ss.confirm_new = False
-            start_new_event()
-            st.rerun()
-        if st.button("Keep going", key="confirm-new-no", width="stretch"):
-            ss.confirm_new = False
-            st.rerun()
 
 
 def save_session() -> None:
@@ -135,6 +138,9 @@ def show() -> tuple[str, EventInfo]:
     st.sidebar.caption("Close out a club event: receipts in, checked books out.")
     if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                          help="Starts a blank event. This one stays saved under Past events."):
+        if not ss.receipts and not ss.event.get("set_up"):  # nothing to lose
+            start_new_event()
+            st.rerun()
         ss.confirm_new = True
     if ss.get("confirm_new"):
         confirm_new_event()
