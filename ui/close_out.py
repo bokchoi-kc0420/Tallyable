@@ -10,6 +10,7 @@ import streamlit as st
 from treasurer import closeout as co
 from treasurer.checks import Severity
 from treasurer.models import Receipt, Status
+from treasurer.photo_pdf import receipts_pdf
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.sheets import EventInfo
 from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, saved_reimbursements, ss, step_bar, usd
@@ -201,3 +202,17 @@ def show(event: EventInfo) -> None:
     else:
         st.success("Everyone has been paid back.")
     funder_rules(event, done, reimbursed)
+    photos(event, done, lines)
+
+
+def photos(event: EventInfo, done: list[Receipt], lines) -> None:
+    """Every receipt photo, labeled, in one PDF: for the funder, or to check prices against."""
+    st.subheader("Receipt photos")
+    st.caption("One page per receipt, labeled with its total and who paid. Attach it to a funder request, "
+               "or keep it with the books.")
+    owed = {x.payer: x.owed for x in lines}
+    paid = {r.receipt_id: ("Not yet" if owed.get(r.payer or "(no payer)", 0) > 0 else "Yes") if r.payer else ""
+            for r in done}
+    st.download_button("Download receipt photos (PDF)", icon=":material/photo_library:", key="dl-photos",
+                       file_name=f"{event.event_id}_receipt_photos.pdf", mime="application/pdf",
+                       data=receipts_pdf(done, ss.images, paid))

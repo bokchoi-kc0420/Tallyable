@@ -6,6 +6,7 @@ import html
 import os
 import time
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import streamlit as st
@@ -27,7 +28,7 @@ def event_id_for(name: str, d: date) -> str:
 
 def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
-    Club settings (members, income sources) carry over."""
+    Club settings (members, income sources, starting balance) carry over."""
     ss.event = {**ss.event, "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today())}
     for k in ("receipts", "images", "notes", "failed"):
@@ -126,14 +127,20 @@ def show() -> tuple[str, EventInfo]:
                        help="Your books get one balance sheet per term.")
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
+        start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
+                                step=10.0, format="%.2f", placeholder="0.00",
+                                help="What the club had before this year's first event. Type it once a year: "
+                                     "the General Ledger starts from it.")
         changed = name != ss.event["name"] or d != ss.event["date"]
-        ss.event.update(calendar="semester" if cal == "Semesters" else "quarter", target=target)
+        ss.event.update(calendar="semester" if cal == "Semesters" else "quarter", target=target, start_balance=start)
         ss.event.update(name=name, date=d, attendees=attendees,
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
             st.caption("Name and date are locked once receipts are drafted.")
+    start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
-                      calendar=ss.event.get("calendar", "semester"))
+                      calendar=ss.event.get("calendar", "semester"),
+                      start_balance=None if start is None else Decimal(str(start)))
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts)), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)

@@ -7,9 +7,8 @@ format, as plain ranges. sheet_format.py turns the look into Google Sheets reque
 xlsx_export.py into Excel styles. Colors follow the club's sheets:
 - Balance Sheet: one label column, then a 4-column block per event (LOCATION, ITEMS (#),
   the event as the amount column, totals). Block headers alternate tan and gray.
-- Ledger: dark header band, striped rows, income in red, accounting dollars.
-- Expense Report: big title, light-blue labels and header, one receipt per merged block,
-  total in bold red.
+- The Expense Report (expense_view.py) and the General Ledger and Receipts tabs
+  (ledger_view.py) use the same View and colors.
 """
 from __future__ import annotations
 
@@ -21,9 +20,8 @@ from decimal import Decimal
 from .models import cell_decimal as D
 
 VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements tabs. Edits here are overwritten on the next push."
-BASE_EVENT_FIELDS = ["event_id", "name", "date", "attendees"]
+BASE_EVENT_FIELDS = ["event_id", "name", "date", "attendees", "start_balance"]
 BALANCE = "Balance Sheet"
-LEDGER_HEADER = ["DATE", "DESCRIPTION", "ASSETS", "LIABILITIES", "TOTAL ASSETS", "TOTAL LIABILITIES", "BALANCE"]
 
 # The club's colors: tan and gray balance-sheet blocks, the ledger's dark slate header
 # and pale blue/gray tinted columns, red for income and for what needs a look.
@@ -92,8 +90,8 @@ def _note(view: View) -> None:
 # ---------- Balance Sheet ----------
 
 def _receipt_lines(items: list[dict]) -> list[list]:
-    """Liability rows for one receipt: one per item, then VAT and tip. The place is
-    written on the receipt's first row only, as the club does.
+    """Liability rows for one receipt: one per item, then VAT and tip, the receipt's total
+    on its last row. The place goes on the first row and the date and payer under it.
 
     Returned items are listed with no amount (the club rule: list it, exclude the
     cost). The VAT row is whatever is left of the posted amount after items and tip,
@@ -103,108 +101,80 @@ def _receipt_lines(items: list[dict]) -> list[list]:
     kept = sum((D(i["amount"]) for i in items if not is_returned(i)), Decimal("0"))
     tip = D(first["receipt_tip"])
     vat = D(first["receipt_posted"]) - kept - tip
-    lines = [["", _item_label(i), "" if is_returned(i) else num(D(i["amount"]))] for i in items]
-    lines.append(["", "VAT", num(vat)])
+    lines = [["", _item_label(i), "" if is_returned(i) else num(D(i["amount"])), ""] for i in items]
+    lines.append(["", "VAT", num(vat), ""])
     if tip:
-        lines.append(["", "TIP", num(tip)])
+        lines.append(["", "TIP", num(tip), ""])
     lines[0][0] = first["place"]
+    lines[1][0] = f"{date.fromisoformat(str(first['date'])[:10]).strftime('%m/%d')} · {first['payer'] or 'no payer'}"
+    lines[-1][3] = num(D(first["receipt_posted"]))
     return lines
 
 
 def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
-    """Label column A, then one 4-column block per event, ordered by event date."""
+    """Label column A, then one 4-column block per event, ordered by event date: the
+    event's name on a band, then LOCATION, ITEMS (#), AMOUNT, TOTAL. Every receipt is
+    boxed. Prints landscape, since events sit side by side."""
     grouped = group(tx)
     blocks = []
     for e in sorted(events, key=lambda e: str(e["date"])):
         receipts = grouped.get(e["event_id"], OrderedDict())
         sources = income_sources(e)
-        assets = [[src, "", num(D(e.get(src) or 0))] for src in sources]
+        assets = [[src, "", num(D(e.get(src) or 0)), ""] for src in sources]
         total_in = sum((D(e.get(src) or 0) for src in sources), Decimal("0"))
-        liabilities = [line for items in receipts.values() for line in _receipt_lines(items)]
+        per_receipt = [_receipt_lines(items) for items in receipts.values()]
         total_out = sum((D(items[0]["receipt_posted"]) for items in receipts.values()), Decimal("0"))
-        blocks.append((f"{e['name']} ({e['date']})", assets, liabilities, total_in, total_out))
+        blocks.append((f"{e['name']} ({e['date']})", assets, per_receipt, total_in, total_out))
     n_in = max((len(b[1]) for b in blocks), default=0)
-    n_out = max((len(b[2]) for b in blocks), default=0)
+    n_out = max((sum(len(r) for r in b[2]) for b in blocks), default=0)
 
-    labels = (["", "ASSETS", *[""] * n_in, "TOTAL ASSETS", "LIABILITIES", *[""] * n_out,
+    labels = (["", "", "ASSETS", *[""] * n_in, "TOTAL ASSETS", "LIABILITIES", *[""] * n_out,
                "TOTAL LIABILITIES", "TOTAL BALANCE"])
     grid = [[VIEW_NOTE], *[[label] for label in labels]]
-    total_rows = {r for r, label in enumerate(grid) if str(label[0]).startswith("TOTAL")}
-    t_in, t_out, t_bal = sorted(total_rows)
-    for title, assets, liabilities, total_in, total_out in blocks:
-        body = {1: ["LOCATION", "ITEMS (#)", title, ""], t_in: ["", "", "", num(total_in)],
-                t_out: ["", "", "", num(total_out)], t_bal: ["", "", "", num(total_in - total_out)]}
-        body |= {3 + n: [*line, ""] for n, line in enumerate(assets)}
-        body |= {t_in + 2 + n: [*line, ""] for n, line in enumerate(liabilities)}
+    total_rows = sorted(r for r, label in enumerate(grid) if str(label[0]).startswith("TOTAL"))
+    t_in, t_out, t_bal = total_rows
+    view = View(grid, freeze_rows=3, freeze_cols=1, landscape=True,
+                widths=[118, *[120, 190, 84, 84] * len(blocks)], heights={1: 28})
+    last = len(grid)
+    for k, (title, assets, per_receipt, total_in, total_out) in enumerate(blocks):
+        c, tan = 1 + 4 * k, k % 2 == 0  # tan and gray blocks take turns, as on the club's sheet
+        liabilities = [line for lines in per_receipt for line in lines]
+        body = {1: [title, "", "", ""], 2: ["LOCATION", "ITEMS (#)", "AMOUNT", "TOTAL"],
+                t_in: ["", "", "", num(total_in)], t_out: ["", "", "", num(total_out)],
+                t_bal: ["", "", "", num(total_in - total_out)]}
+        body |= {4 + n: line for n, line in enumerate(assets)}
+        body |= {t_in + 2 + n: line for n, line in enumerate(liabilities)}
         for r, row in enumerate(grid):
             row.extend(body.get(r, ["", "", "", ""]) if r else [])
-
-    view = View(grid, freeze_rows=2, freeze_cols=1)
+        view.look(3, last, c, c + 4, fill=BEIGE if tan else "F7F7F7")
+        view.look(1, 2, c, c + 4, merge=True, fill=TAN if tan else GRAY, bold=True, size=11, align="center",
+                  valign="middle", color=INK)
+        view.look(2, 3, c, c + 4, fill=TAN if tan else GRAY, bold=True, size=9, color=INK)
+        view.look(2, 3, c + 2, c + 4, align="center")
+        view.look(3, last, c + 2, c + 4, money=True)
+        view.look(4, 4 + len(assets), c, c + 4, border="grid")
+        view.look(t_bal, t_bal + 1, c + 3, c + 4, color=RED if total_in < total_out else "1E7B4F")
+        top = t_in + 2
+        for lines in per_receipt:  # each receipt in its own box
+            view.look(top, top + len(lines), c, c + 1, bold=True)
+            view.look(top + 1, top + 2, c, c + 1, bold=False, size=8, color=MUTED if "no payer" not in lines[1][0] else RED)
+            view.look(top, top + len(lines), c + 3, c + 4, bold=True)
+            view.look(top, top + len(lines), c, c + 4, border="box")
+            top += len(lines)
+        for r, row in enumerate(liabilities, start=t_in + 2):
+            if row[1] in ("VAT", "TIP"):
+                view.look(r, r + 1, c + 1, c + 2, color=MUTED)
+            if str(row[1]).endswith("(returned)"):
+                view.look(r, r + 1, c + 1, c + 2, italic=True, color="9AA0A6")
+        view.look(1, last, c, c + 4, border="box")
+    width = 1 + 4 * len(blocks)
     _note(view)
-    width, last = 1 + 4 * len(blocks), len(grid)
-    for r in range(3, last, 2):
-        view.look(r, r + 1, 0, width, fill=STRIPE)
-    for k in range(len(blocks)):
-        c = 1 + 4 * k
-        tan = k % 2 == 0  # tan and gray blocks take turns, as on the club's sheet
-        if tan:
-            view.look(2, last, c, c + 4, fill=BEIGE)
-        view.look(1, 2, c, c + 4, fill=TAN if tan else GRAY, bold=True)
-        view.look(2, last, c + 2, c + 4, money=True)
-    view.look(1, 2, 0, 1, fill=GRAY)
-    for r in (2, t_in + 1):  # ASSETS, LIABILITIES
-        view.look(r, r + 1, 0, 1, bold=True, italic=True)
+    view.look(1, 3, 0, 1, fill=GRAY)
+    for r in (3, t_in + 1):  # ASSETS, LIABILITIES
+        view.look(r, r + 1, 0, 1, bold=True, italic=True, color=INK)
     for r in total_rows:
-        view.look(r, r + 1, 0, width, bold=True, italic=True, border="topbottom")
-    return view
-
-
-# ---------- Ledger ----------
-
-def _us_date(d) -> str:
-    return date.fromisoformat(str(d)[:10]).strftime("%m/%d/%Y")
-
-
-def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) -> View:
-    """One row per income source, receipt and reimbursement, by date, with running totals.
-
-    Income is dated on the event day; each receipt on its own date. On the same
-    day, income comes first. A reimbursement row has no asset or liability amount:
-    it settles an expense that is already counted (see reimburse.py).
-    """
-    names = {e["event_id"]: e["name"] for e in events}
-    entries = []  # (date, order, description, income, expense)
-    for e in events:
-        for src in income_sources(e):
-            amt = D(e.get(src) or 0)
-            if amt:
-                entries.append((str(e["date"]), 0, f"{src}: {e['name']}", amt, Decimal("0")))
-    for event_id, receipts in group(tx).items():
-        for rid, items in receipts.items():
-            f = items[0]
-            entries.append((str(f["date"]), 1, f"{f['place']} ({rid}, paid by {f['payer'] or '?'}): "
-                            f"{names.get(event_id, event_id)}", Decimal("0"), D(f["receipt_posted"])))
-    for r in reimb:
-        entries.append((str(r["date"]), 2, f"Paid back {r['payer']} ${D(r['amount']):.2f} via {r['method']} "
-                        f"(settles expenses above): {names.get(str(r['event_id']), r['event_id'])}",
-                        Decimal("0"), Decimal("0")))
-    entries.sort(key=lambda x: (x[0], x[1]))
-    rows, ta, tl = [[VIEW_NOTE], LEDGER_HEADER], Decimal("0"), Decimal("0")
-    for d, _, desc, inc, exp in entries:
-        ta += inc
-        tl += exp
-        rows.append([_us_date(d), desc, num(inc) if inc else "", num(exp) if exp else "", num(ta), num(tl),
-                     num(ta - tl)])
-
-    view = View(rows, freeze_rows=2)
-    _note(view)
-    width, last = len(LEDGER_HEADER), len(rows)
-    view.look(1, 2, 0, width, fill=SLATE, color="FFFFFF", bold=True)
-    for r in range(2, last, 2):
-        view.look(r, r + 1, 0, width, fill=SLATE_STRIPE)
-    view.look(2, last, 2, 3, color=RED)
-    view.look(2, last, 2, width, money=True)
-    view.look(1, last, 0, width, border="grid")
+        view.look(r, r + 1, 0, width, fill="E4E8EE", bold=True, italic=True, border="topbottom")
+    view.look(1, last, 0, 1, border="box")
     return view
 
 

@@ -27,6 +27,7 @@ from pathlib import Path
 
 from . import sheet_format as fmt
 from .expense_view import expense_tab_title, render_expense_report
+from .ledger_view import render_ledger, render_receipts
 from .models import Receipt, Status
 from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
@@ -37,7 +38,6 @@ from .views import (
     group,
     num,
     render_balance_sheet,
-    render_ledger,
     term_tabs,
 )
 
@@ -46,7 +46,7 @@ from .views import (
 # so a new source simply becomes a new column.
 DEFAULT_SOURCES = ["Cash"]  # a new event starts with Cash only; the treasurer adds the rest
 EVENT_FIELDS = list(BASE_EVENT_FIELDS)  # header for a new sheet; each income source adds its own column
-TX, EVENTS, LEDGER, REIMB = "Transactions", "Events", "Ledger", "Reimbursements"
+TX, EVENTS, LEDGER, REIMB, RECEIPTS = "Transactions", "Events", "General Ledger", "Reimbursements", "Receipts"
 
 
 @dataclass(frozen=True)
@@ -56,12 +56,15 @@ class EventInfo:
     date: date
     attendees: int | None = None
     calendar: str = "semester"  # "semester" or "quarter": how balance-sheet tabs are split
+    start_balance: Decimal | None = None  # what the club had at the start of the school year
 
 
 def event_row(event: EventInfo, income: dict[str, Decimal]) -> dict:
     """An Events-tab row: the event's fields plus one column per income source."""
     return {"event_id": event.event_id, "name": event.name, "date": event.date.isoformat(),
-            "attendees": event.attendees or "", **{s: num(v) for s, v in income.items()}}
+            "attendees": event.attendees or "",
+            "start_balance": "" if event.start_balance is None else num(event.start_balance),
+            **{s: num(v) for s, v in income.items()}}
 
 
 # ---------- the sink ----------
@@ -70,8 +73,9 @@ class GoogleSheetsSink:
     """Works with a gspread Spreadsheet, or anything with the same few methods
     (the tests pass an in-memory fake)."""
 
-    def __init__(self, spreadsheet):
+    def __init__(self, spreadsheet, ledger_book=None):
         self.book = spreadsheet
+        self.ledger_book = ledger_book or spreadsheet  # the General Ledger can live in its own file
         self._pending: list[tuple] = []  # (book, tab title, formatting requests), sent by _apply_format
         self.format_errors: list[str] = []  # tabs whose formatting Sheets refused on the last push
 
@@ -84,6 +88,7 @@ class GoogleSheetsSink:
         from dotenv import load_dotenv
         load_dotenv(root / ".env")
         key_file, sheet_id = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"), os.getenv("TALLYABLE_SHEET_ID")
+        ledger_id = os.getenv("TALLYABLE_LEDGER_SHEET_ID")  # optional: a separate file for the General Ledger
         if not sheet_id or not (key_file or key_info):
             return None
         import gspread
@@ -93,7 +98,7 @@ class GoogleSheetsSink:
         else:
             path = Path(key_file) if Path(key_file).is_absolute() else root / key_file
             client = gspread.service_account(filename=str(path), http_client=BackOffHTTPClient)
-        return cls(client.open_by_key(sheet_id))
+        return cls(client.open_by_key(sheet_id), client.open_by_key(ledger_id) if ledger_id else None)
 
     @property
     def label(self) -> str:
@@ -136,7 +141,8 @@ class GoogleSheetsSink:
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())))
         reimb_ws = self._tab(REIMB, REIMB_FIELDS)
         reimb = reimb_ws.get_all_records()
-        self._rewrite(LEDGER, render_ledger(events, tx, reimb))
+        self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
+        self._rewrite(LEDGER, render_ledger(events, tx, reimb), self.ledger_book)
         self._tidy_format(tx_ws, TX_FIELDS, len(tx) + 1)
         ev_ws = self._tab(EVENTS, EVENT_FIELDS)
         ev_header = [h for h in ev_ws.row_values(1) if h]
@@ -166,19 +172,22 @@ class GoogleSheetsSink:
         self._refresh_ledger(ws)
 
     def _refresh_ledger(self, ws) -> None:
+        """A payback shows in the ledger and on the Receipts tab."""
         reimb = ws.get_all_records()
-        self._rewrite(LEDGER, render_ledger(self._records(EVENTS, EVENT_FIELDS), self._records(TX, TX_FIELDS), reimb))
+        events, tx = self._records(EVENTS, EVENT_FIELDS), self._records(TX, TX_FIELDS)
+        self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
+        self._rewrite(LEDGER, render_ledger(events, tx, reimb), self.ledger_book)
         self._tidy_format(ws, REIMB_FIELDS, len(reimb) + 1)
         self._apply_format()
 
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
         ws = self._tab(EVENTS, EVENT_FIELDS)
         header = [h for h in ws.row_values(1) if h] or list(EVENT_FIELDS)
-        new = [s for s in income if s not in header]
-        if new:  # a source this sheet hasn't seen: add it as a column
+        values = event_row(event, income)
+        new = [k for k in values if k not in header]
+        if new:  # a source (or a field from a newer Tallyable) this sheet hasn't seen: add a column
             header += new
             ws.update(values=[header], range_name="A1", value_input_option="RAW")
-        values = event_row(event, income)
         row = [values.get(h, "" if h in BASE_EVENT_FIELDS else 0.0) for h in header]
         ids = [str(r["event_id"]) for r in ws.get_all_records()]
         if event.event_id in ids:
@@ -206,6 +215,9 @@ class GoogleSheetsSink:
         if view.grid:
             ws.update(values=view.grid, range_name="A1", value_input_option="RAW")
         self._pending.append((book, title, fmt.view_requests(ws.id, view)))
+        _drop_blank_sheet1(book)
+
+
 
     def _tidy_format(self, ws, header: list[str], rows: int, money: set[str] = frozenset()) -> None:
         self._pending.append((self.book, ws.title, fmt.tidy_requests(ws.id, header, rows, money)))
@@ -226,6 +238,14 @@ class GoogleSheetsSink:
         self._pending = []
 
 
+def _drop_blank_sheet1(book) -> None:
+    """A new Google Sheet comes with an empty "Sheet1"; once Tallyable has drawn a tab, it goes."""
+    tabs = book.worksheets()
+    for ws in tabs:
+        if ws.title == "Sheet1" and len(tabs) > 1 and not ws.get_all_values():
+            book.del_worksheet(ws)
+
+
 MONEY_FIELDS = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}
 
 
@@ -242,16 +262,17 @@ def _cell(field: str, v):
 
 def local_views(receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal],
                 reimb: list[dict] = ()) -> dict[str, View]:
-    """Balance Sheet, Ledger and Expense Report for one event, built from the app's
+    """Expense Report, Balance Sheet, Receipts and General Ledger for one event, built from the app's
     approved receipts, exactly as the Sheets sink would draw them. For downloads when
     Sheets isn't set up, and for the online demo."""
     ev = event_row(event, income)
     tx = local_transactions(receipts)
     mine = [x for x in reimb if str(x["event_id"]) == event.event_id]
     return {
-        BALANCE: render_balance_sheet([ev], tx),
-        LEDGER: render_ledger([ev], tx, mine),
         "Expense Report": render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())),
+        BALANCE: render_balance_sheet([ev], tx),
+        RECEIPTS: render_receipts([ev], tx, mine),
+        LEDGER: render_ledger([ev], tx, mine),
     }
 
 

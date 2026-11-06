@@ -2,7 +2,7 @@
 (see views.py) into Sheets API `batchUpdate` requests, so they are tested without a network.
 
 What a treasurer sees after a push:
-- Report tabs first (Expense Report, Balance Sheets, Ledger), in teal. Data tabs
+- Report tabs first (Expense Report, Balance Sheets, Receipts, General Ledger), in teal. Data tabs
   the tool keeps (Transactions, Events, Reimbursements) last, in gray.
 - The report tabs in the club's format: colors, merged cells, borders and accounting
   dollars as drawn in views.py. Header rows frozen, so they stay put while scrolling.
@@ -153,7 +153,7 @@ def order_requests(tabs: list[tuple[int, str]], data_tabs: set[str]) -> list[dic
             return (1, title)
         if title == "Balance Sheet":
             return (2, title)
-        if title == "Ledger":
+        if title in ("Receipts", "General Ledger"):
             return (3, title)
         if title in data_tabs:
             return (5, title)
