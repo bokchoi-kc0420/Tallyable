@@ -14,7 +14,7 @@ from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
 from ui import connect
 from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
-from ui.tickets import NAMES, next_color, stub, ticket
+from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
                  "attendees": 45, "members": "",  # added on Upload; nobody can be tagged until there is one
@@ -37,6 +37,7 @@ def start_new_event() -> None:
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
+    ss.pop("ticket-color", None)  # the color chips show the new event's color, not the last one's
     ss.started = time.time()
     session_store.clear(SESSION_FILE)
 
@@ -86,6 +87,7 @@ def open_past(path: Path) -> None:
         ss.past_error = f"Could not open {path.name}."
         return
     ss.update(saved)
+    ss.pop("ticket-color", None)
     ss.failed = {}
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
@@ -147,8 +149,9 @@ def show() -> tuple[str, EventInfo]:
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
-        color = st.selectbox("Ticket color", NAMES, index=NAMES.index(ss.event.get("color") or NAMES[0]),
-                             help="Picked for you so events in a row don't match. Change it anytime!")
+        color = st.pills("Ticket color", NAMES, default=ss.event.get("color") or NAMES[0], key="ticket-color",
+                         help="Picked for you so events in a row don't match. Change it anytime!") \
+            or ss.event.get("color") or NAMES[0]  # clicking the picked chip again unpicks it: keep the color
         start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
                                 step=10.0, format="%.2f", placeholder="0.00",
                                 help="What the club had before this year's first event. Type it once a year: "
@@ -165,6 +168,8 @@ def show() -> tuple[str, EventInfo]:
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
+    st.html("<style>" + "".join(f'.st-key-ticket-color button:nth-of-type({n}) p::before {{ background: {c}; }}'
+                                for n, (c, _) in enumerate(PALETTE.values(), start=1)) + "</style>")
     past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
     if past:
         with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
