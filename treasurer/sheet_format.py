@@ -1,47 +1,49 @@
-"""Make the Google Sheet easy to read. Pure functions that build Sheets API
-`batchUpdate` requests from the same grids the sink writes, so they are tested
-without a network.
+"""Make the Google Sheet look like the club's own. Pure functions that turn a View's looks
+(see views.py) into Sheets API `batchUpdate` requests, so they are tested without a network.
 
 What a treasurer sees after a push:
 - Report tabs first (Expense Report, Balance Sheets, Ledger), in teal. Data tabs
   the tool keeps (Transactions, Events, Reimbursements) last, in gray.
-- Header rows bold on a dark band and frozen, so they stay put while scrolling.
-- Money as $1,234.50. Section rows (ASSETS, LIABILITIES) tinted, totals bold.
-- Columns sized to their contents; the "built by Tallyable" note in small gray italics.
+- The report tabs in the club's format: colors, merged cells, borders and accounting
+  dollars as drawn in views.py. Header rows frozen, so they stay put while scrolling.
+- Columns sized to their contents.
 
 Formatting is cosmetic: if a request fails, the push has already succeeded.
 """
 from __future__ import annotations
 
-MONEY = {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0.00"}}
-HEADER_BG = {"red": 0.06, "green": 0.36, "blue": 0.34}       # dark teal
-WHITE = {"red": 1, "green": 1, "blue": 1}
-ASSET_BG = {"red": 0.88, "green": 0.96, "blue": 0.91}        # light green
-LIAB_BG = {"red": 0.99, "green": 0.91, "blue": 0.89}         # light red
-TOTAL_BG = {"red": 0.94, "green": 0.95, "blue": 0.96}        # light gray
-NOTE_FG = {"red": 0.45, "green": 0.47, "blue": 0.5}
+from .views import LINE, SLATE
+
+# Accounting dollars, as the club's sheets show them: "$" at the left edge, the amount at the right.
+ACCOUNTING = '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)'
+MONEY = {"numberFormat": {"type": "CURRENCY", "pattern": ACCOUNTING}}
 REPORT_TAB = {"red": 0.06, "green": 0.46, "blue": 0.43}
 DATA_TAB = {"red": 0.6, "green": 0.62, "blue": 0.65}
-
-HEADER_LABELS = {"DATE", "Place"}  # first cell of a full-width header row (Ledger, Expense Report)
-SECTION = {"ASSETS": ASSET_BG, "LIABILITIES": LIAB_BG}
-TOTALS = {"TOTAL ASSETS", "TOTAL LIABILITIES", "TOTAL BALANCE", "TOTAL"}
 TIDY_MONEY = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}
+
+
+def rgb(hex_color: str) -> dict:
+    """"C9A57D" -> the {"red", "green", "blue"} dict Sheets takes."""
+    return {k: int(hex_color[n:n + 2], 16) / 255 for k, n in (("red", 0), ("green", 2), ("blue", 4))}
 
 
 def _range(sheet_id: int, r0: int, r1: int, c0: int, c1: int) -> dict:
     return {"sheetId": sheet_id, "startRowIndex": r0, "endRowIndex": r1, "startColumnIndex": c0, "endColumnIndex": c1}
 
 
-def _paint(sheet_id: int, r0: int, r1: int, c0: int, c1: int, fmt: dict) -> dict:
-    fields = ",".join(f"userEnteredFormat.{k}" for k in fmt)
-    return {"repeatCell": {"range": _range(sheet_id, r0, r1, c0, c1), "cell": {"userEnteredFormat": fmt},
-                           "fields": fields}}
+def _paint(sheet_id: int, rng: tuple, fmt: dict) -> dict:
+    """Set only the fields `fmt` names, so a later look (say, red text) keeps an earlier fill."""
+    fields = []
+    for k, v in fmt.items():
+        fields += [f"userEnteredFormat.{k}.{sub}" for sub in v] if k == "textFormat" else [f"userEnteredFormat.{k}"]
+    return {"repeatCell": {"range": _range(sheet_id, *rng), "cell": {"userEnteredFormat": fmt},
+                           "fields": ",".join(fields)}}
 
 
-def _freeze(sheet_id: int, rows: int) -> dict:
-    return {"updateSheetProperties": {"properties": {"sheetId": sheet_id, "gridProperties": {"frozenRowCount": rows}},
-                                      "fields": "gridProperties.frozenRowCount"}}
+def _freeze(sheet_id: int, rows: int, cols: int = 0) -> dict:
+    return {"updateSheetProperties": {"properties": {"sheetId": sheet_id, "gridProperties": {
+        "frozenRowCount": rows, "frozenColumnCount": cols}},
+        "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"}}
 
 
 def _widths(sheet_id: int, grid: list[list], skip_rows: int = 0) -> list[dict]:
@@ -50,7 +52,7 @@ def _widths(sheet_id: int, grid: list[list], skip_rows: int = 0) -> list[dict]:
     out = []
     for c in range(cols):
         longest = max((len(_text(r[c])) for r in grid[skip_rows:] if c < len(r)), default=0)
-        px = min(max(longest * 7 + 24, 60), 360)
+        px = min(max(longest * 7 + 30, 60), 360)
         out.append({"updateDimensionProperties": {
             "range": {"sheetId": sheet_id, "dimension": "COLUMNS", "startIndex": c, "endIndex": c + 1},
             "properties": {"pixelSize": px}, "fields": "pixelSize"}})
@@ -58,74 +60,62 @@ def _widths(sheet_id: int, grid: list[list], skip_rows: int = 0) -> list[dict]:
 
 
 def _text(v) -> str:
-    return f"{v:,.2f}" if isinstance(v, float) else str(v)
+    return f"${v:,.2f}" if isinstance(v, float) else str(v)
 
 
-def _reset(sheet_id: int) -> dict:
-    """Clear old formatting, since a view's rows move around between pushes."""
-    return {"repeatCell": {"range": {"sheetId": sheet_id}, "cell": {"userEnteredFormat": {}},
-                           "fields": "userEnteredFormat"}}
+def cell_format(look: dict) -> dict:
+    """A look's fill, font, alignment and number format as a Sheets userEnteredFormat."""
+    out: dict = {}
+    if "fill" in look:
+        out["backgroundColor"] = rgb(look["fill"])
+    text = {k: look[k] for k in ("bold", "italic") if k in look}
+    if "size" in look:
+        text["fontSize"] = look["size"]
+    if "color" in look:
+        text["foregroundColor"] = rgb(look["color"])
+    if text:
+        out["textFormat"] = text
+    if "align" in look:
+        out["horizontalAlignment"] = look["align"].upper()
+    if look.get("money"):
+        out |= MONEY
+    return out
 
 
-def view_requests(sheet_id: int, grid: list[list]) -> list[dict]:
-    """Formatting for a rebuilt view (Balance Sheet, Ledger, Expense Report)."""
-    reqs = [_reset(sheet_id)]
-    if not grid:
-        return reqs
-    # The "built by Tallyable" note on row 1.
-    reqs.append(_paint(sheet_id, 0, 1, 0, 1, {"textFormat": {"italic": True, "fontSize": 9, "foregroundColor": NOTE_FG}}))
-    freeze = 1
-    for r, row in enumerate(grid[1:], start=1):
-        for c, v in enumerate(row):
-            if not isinstance(v, str) or not v:
-                continue
-            if v == "LOCATION" or (c == 0 and v in HEADER_LABELS):
-                # Column headers: one 3-column block on the balance sheet, the whole row elsewhere.
-                end = c + 3 if v == "LOCATION" else len(row)
-                reqs.append(_paint(sheet_id, r, r + 1, c, end, {
-                    "backgroundColor": HEADER_BG, "textFormat": {"bold": True, "foregroundColor": WHITE}}))
-                freeze = max(freeze, r + 1)
-                if v != "LOCATION":
-                    break  # the rest of this row is header text, not totals
-            elif v in SECTION:
-                reqs.append(_paint(sheet_id, r, r + 1, c, c + 3, {"backgroundColor": SECTION[v],
-                                                                  "textFormat": {"bold": True}}))
-            elif v in TOTALS:
-                span = 2 if v == "TOTAL" else 3
-                reqs.append(_paint(sheet_id, r, r + 1, c, c + span, {"backgroundColor": TOTAL_BG,
-                                                                     "textFormat": {"bold": True}}))
-            elif r == 1:  # event titles above the headers
-                reqs.append(_paint(sheet_id, 1, 2, c, c + 3, {"textFormat": {"bold": True, "fontSize": 12}}))
-    reqs += _money_runs(sheet_id, grid)
-    reqs.append(_freeze(sheet_id, freeze))
-    reqs += _widths(sheet_id, grid, skip_rows=1)
-    return reqs
+def _border(sheet_id: int, rng: tuple, kind: str) -> dict:
+    line = {"style": "SOLID", "colorStyle": {"rgbColor": rgb(LINE)}}
+    sides = ["top", "bottom"] if kind == "topbottom" else ["top", "bottom", "left", "right",
+                                                           "innerHorizontal", "innerVertical"]
+    return {"updateBorders": {"range": _range(sheet_id, *rng), **{s: line for s in sides}}}
 
 
-def _money_runs(sheet_id: int, grid: list[list]) -> list[dict]:
-    """Currency format on each unbroken vertical run of number cells."""
-    reqs = []
-    width = max((len(r) for r in grid), default=0)
-    for c in range(width):
-        start = None
-        for r in range(len(grid) + 1):
-            is_money = r < len(grid) and c < len(grid[r]) and isinstance(grid[r][c], float)
-            if is_money and start is None:
-                start = r
-            elif not is_money and start is not None:
-                reqs.append(_paint(sheet_id, start, r, c, c + 1, MONEY))
-                start = None
+def view_requests(sheet_id: int, view) -> list[dict]:
+    """Formatting for a rebuilt report tab. Old formatting and merges are cleared first,
+    since a view's rows move around between pushes."""
+    reqs = [{"repeatCell": {"range": {"sheetId": sheet_id}, "cell": {"userEnteredFormat": {}},
+                            "fields": "userEnteredFormat"}},
+            {"unmergeCells": {"range": {"sheetId": sheet_id}}}]
+    for look in view.looks:
+        rng = (*look["rows"], *look["cols"])
+        fmt = cell_format(look)
+        if fmt:
+            reqs.append(_paint(sheet_id, rng, fmt))
+        if look.get("merge"):
+            reqs.append({"mergeCells": {"range": _range(sheet_id, *rng), "mergeType": "MERGE_ALL"}})
+        if "border" in look:
+            reqs.append(_border(sheet_id, rng, look["border"]))
+    reqs.append(_freeze(sheet_id, view.freeze_rows, view.freeze_cols))
+    reqs += _widths(sheet_id, view.grid, skip_rows=1)  # the long note on row 1 doesn't set a width
     return reqs
 
 
 def tidy_requests(sheet_id: int, header: list[str], rows: int, money: set[str] = frozenset()) -> list[dict]:
     """Formatting for a data tab the tool appends to (Transactions, Events, Reimbursements)."""
-    reqs = [_paint(sheet_id, 0, 1, 0, len(header), {"backgroundColor": HEADER_BG,
-                                                    "textFormat": {"bold": True, "foregroundColor": WHITE}}),
+    reqs = [_paint(sheet_id, (0, 1, 0, len(header)), cell_format({"fill": SLATE, "color": "FFFFFF", "bold": True})),
             _freeze(sheet_id, 1)]
     for c, name in enumerate(header):
         if name in TIDY_MONEY or name in money:
-            reqs.append(_paint(sheet_id, 1, max(rows, 2), c, c + 1, MONEY))
+            reqs.append(_paint(sheet_id, (1, max(rows, 2), c, c + 1), MONEY))
     reqs += _widths(sheet_id, [header, *[["x" * 12] * len(header)]])
     return reqs
 

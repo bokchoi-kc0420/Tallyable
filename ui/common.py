@@ -22,10 +22,10 @@ RUN_LOG = OUT / "run_log.csv"
 SESSION_FILE = OUT / "session.json"
 PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
-ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "❌ rejected",
+ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "➖ left out",
         Status.POSTED: "📤 posted"}
 STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved", "ok"),
-               Status.REJECTED: ("rejected", "no"), Status.POSTED: ("in the books", "post")}
+               Status.REJECTED: ("left out", "no"), Status.POSTED: ("in the books", "post")}
 # Tally's pose on the walker bar for each step (Kevin's picks). Close out keeps the original.
 TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small.png",
          "3. Summary": "tally-summary-small.png", "4. Close out": "mascot-small.png"}
@@ -65,13 +65,23 @@ def md(text: str) -> str:
 
 
 def usd(amount: Decimal) -> str:
-    """$12.50, or -$12.50 for a loss (not $-12.50)."""
-    return f"-${-amount}" if amount < 0 else f"${amount}"
+    """$1,212.50 with cents always shown, or -$12.50 for a loss (not $-12.50)."""
+    return f"-${-amount:,.2f}" if amount < 0 else f"${amount:,.2f}"
 
 
 def payers() -> list[str]:
     """The event's members, with a blank first for "not picked yet"."""
     return ["", *[m.strip() for m in ss.event["members"].split(",") if m.strip()]]
+
+
+def step_label(step: str) -> str:
+    """"2. Review" -> "Review"."""
+    return step.split(". ", 1)[1]
+
+
+def reviewed() -> int:
+    """How many receipts have been approved, left out or posted."""
+    return sum(1 for r in ss.receipts.values() if r.status is not Status.DRAFTED)
 
 
 def go(step: str) -> None:
@@ -113,7 +123,7 @@ def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None 
                 st.markdown(f'<p class="tly-bubble-title">{html.escape(title)}</p>', unsafe_allow_html=True)
             st.markdown(text)
             if to:
-                st.button(f"Go to {to.split('. ', 1)[1]}", key=f"go-{key}", type="primary",
+                st.button(f"Go to {step_label(to)}", key=f"go-{key}", type="primary",
                           icon=":material/arrow_forward:", icon_position="right", on_click=go, args=(to,))
     return bubble
 
@@ -137,13 +147,12 @@ def next_step(message: str, label: str, target: str, key: str) -> None:
 
 def step_status() -> tuple[dict[str, bool], dict[str, str]]:
     """Which steps are finished, plus a short progress note (Review · 3/14)."""
-    rs = list(ss.receipts.values())
-    reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
+    rs, checked = list(ss.receipts.values()), reviewed()
     posted = bool(rs) and all(r.status in (Status.POSTED, Status.REJECTED) for r in rs) \
         and any(r.status is Status.POSTED for r in rs)
-    done = {"1. Upload": bool(rs), "2. Review": bool(rs) and reviewed == len(rs), "3. Summary": posted,
+    done = {"1. Upload": bool(rs), "2. Review": bool(rs) and checked == len(rs), "3. Summary": posted,
             "4. Close out": False}
-    return done, {"2. Review": f" · {reviewed}/{len(rs)}" if rs else ""}
+    return done, {"2. Review": f" · {checked}/{len(rs)}" if rs else ""}
 
 
 def step_bar(current: str) -> None:
@@ -152,20 +161,18 @@ def step_bar(current: str) -> None:
     done, detail = step_status()
     i = STEPS.index(current)
     pos = i / (len(STEPS) - 1)
-    rs = list(ss.receipts.values())
-    if current == "2. Review" and rs:
-        reviewed = sum(1 for r in rs if r.status is not Status.DRAFTED)
-        pos += reviewed / len(rs) / (len(STEPS) - 1) * 0.9  # stop just short of the next dot
+    if current == "2. Review" and ss.receipts:
+        pos += reviewed() / len(ss.receipts) / (len(STEPS) - 1) * 0.9  # stop just short of the next dot
     pct = round(pos * 100, 2)
     dots, labels = [], []
     for n, name in enumerate(STEPS):
         left = round(n / (len(STEPS) - 1) * 100, 2)
         state = "done" if done[name] and name != current else "now" if name == current else ""
         dots.append(f'<span class="dot {state}" style="left:{left}%">{"✓" if state == "done" else ""}</span>')
-        label = name.split(". ", 1)[1] + detail.get(name, "")
+        label = step_label(name) + detail.get(name, "")
         align = "start" if n == 0 else "end" if n == len(STEPS) - 1 else "mid"
         labels.append(f'<span class="{state} {align}" style="left:{left}%">{"✓ " if state == "done" else ""}{label}</span>')
-    st.markdown(f'<div class="tly-walk" role="img" aria-label="Step {i + 1} of {len(STEPS)}: {current.split(". ", 1)[1]}">'
+    st.markdown(f'<div class="tly-walk" role="img" aria-label="Step {i + 1} of {len(STEPS)}: {step_label(current)}">'
                 f'<div class="track"><div class="fill" style="width:{pct}%"></div>{"".join(dots)}'
                 f'<img src="{mascot_uri(TALLY[current])}" alt="" style="left:{pct}%"></div>'
                 f'<div class="stops">{"".join(labels)}</div></div>', unsafe_allow_html=True)
@@ -205,7 +212,7 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
     else:
         pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> more out than in</span>'
     cats: dict[str, Decimal] = {}
-    for i in (i for r in receipts if r.status in (Status.APPROVED, Status.POSTED) for i in r.items if not i.returned):
+    for i in (i for r in receipts if r.counts for i in r.items if not i.returned):
         cats[i.category] = cats.get(i.category, Decimal("0")) + i.amount
     cats = {k: v for k, v in cats.items() if v > 0}
     rest = t["expenses"] - sum(cats.values(), Decimal("0"))
@@ -223,15 +230,15 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
         row = (f'<div class="row {cls}"><span class="lbl">{label}</span><div class="track">'
                f'<div style="display:flex;height:100%;width:{width:.2f}%;border-radius:8px;overflow:hidden">{segs}</div></div>'
                f'<span class="amt">{usd(total)}</span></div>')
-        legend = " ".join(f'<span class="tly-chip" style="background:{shades[n % len(shades)]}33">'
-                          f'<span style="color:{shades[n % len(shades)]}">●</span> {html.escape(k)} {usd(v)}</span>'
-                          for n, (k, v) in enumerate(parts.items()))
+        legend = "".join(f'<span class="item"><i style="background:{shades[n % len(shades)]}"></i>'
+                         f'<span class="name">{html.escape(k)}</span><span class="val">{usd(v)}</span></span>'
+                         for n, (k, v) in enumerate(parts.items()))
         return row, legend
 
     in_row, in_leg = bar("in", "In", t["income"], ins, in_shades)
     out_row, out_leg = bar("out", "Out", t["expenses"], cats, out_shades)
     st.markdown(f'<div class="tly-money">{pill}{in_row}{out_row}'
-                f'<div style="line-height:2">{in_leg}</div><div style="line-height:2">{out_leg}</div></div>',
+                f'<div class="tly-legend">{in_leg}</div><div class="tly-legend">{out_leg}</div></div>',
                 unsafe_allow_html=True)
     if t["income"] <= 0:
         st.caption("No income entered yet. Add it on the Summary step.")

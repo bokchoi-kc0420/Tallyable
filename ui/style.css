@@ -82,13 +82,13 @@
 .st-key-step label p { font-size: 1rem; font-weight: 600; line-height: 1.25; margin-top: 4px; white-space: pre-line; }
 .st-key-step label p::after { display: block; font-size: .8rem; font-weight: 400; color: var(--tly-soft); margin-top: 1px; }
 /* Money in vs out */
-.tly-money { display: grid; gap: 10px; }
+.tly-money { display: grid; gap: 10px; padding-bottom: 10px; }
 .tly-money .row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; }
-.tly-money .lbl { font-size: .8rem; font-weight: 600; color: var(--tly-soft); }
+.tly-money .lbl { font-family: Fredoka, sans-serif; font-size: .95rem; font-weight: 600; color: #1F2A22; }
 .tly-money .track { height: 22px; border-radius: 8px; background: rgba(227,217,182,.45); overflow: hidden; }
 .tly-money .fill { height: 100%; border-radius: 8px; }
 .tly-money .in .fill { background: var(--tly-forest); } .tly-money .out .fill { background: var(--tly-sun); }
-.tly-money .amt { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tly-money .amt { font-family: Fredoka, sans-serif; font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .tly-net { justify-self: start; display: inline-flex; gap: 6px;
   align-items: baseline; padding: 6px 12px; border-radius: 999px; font-weight: 600; }
 .tly-net.good { background: var(--tly-done); color: var(--tly-forest); }
@@ -103,7 +103,13 @@
 .st-key-sum-metrics [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"] { background: var(--tly-card); }
 .st-key-sum-metrics [data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"] { background: var(--tly-card); }
 .st-key-income-box { background: var(--tly-card); }
-.tly-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; margin-right: 4px; }
+/* Legend under the bars: one row per part, name left, amount right, two columns */
+.tly-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 220px)); gap: 4px 18px; }
+.tly-legend .item { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.tly-legend i { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.tly-legend .name { font-family: Fredoka, sans-serif; font-weight: 500; color: #1F2A22; }
+.tly-legend .val { margin-left: auto; font-variant-numeric: tabular-nums; color: #3B4237; }
+.tly-money .tly-legend + .tly-legend { border-top: 1px dashed #E3D9B6; padding-top: 8px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* Guide boxes: mascot speech bubble (Kevin's pick 1) */
@@ -173,10 +179,13 @@
 .tly-nothumb { height: 110px; border-radius: 10px; background: #F2ECD3; display: grid; place-items: center;
   font-family: Fredoka, sans-serif; font-weight: 600; color: #1C5C36; }
 /* Check results as cards */
-[class*="st-key-flag-"] { border-radius: 14px; padding: 12px 16px 12px 14px; border-left: 6px solid; margin-bottom: .25rem; }
+[class*="st-key-flag-"] { border-radius: 14px; padding: 12px 16px 14px 16px; border-left: 6px solid; margin-bottom: .25rem;
+}
 [class*="st-key-flag-"] p { margin: 0; color: #1F2A22; }
-[class*="st-key-flag-"] strong { font-size: 1.05rem; }
-[class*="st-key-flag-"] span[role="img"] { font-size: 1.3rem !important; vertical-align: -4px; margin-right: 4px; }
+[class*="st-key-flag-"] strong { font-size: 1rem; }
+[class*="st-key-flag-"] span[role="img"] { font-size: 1.15rem !important; vertical-align: -3px; margin-right: 6px; }
+[class*="st-key-flag-"] .tly-flagmsg { display: block; margin-top: 2px; font-size: .92rem; line-height: 1.45;
+  color: #3B4237; padding-left: 30px; }
 .st-key-flag-block, [class*="st-key-flag-block-"] { background: #FBE4E0; border-color: #C44536; }
 [class*="st-key-flag-block-"] span[role="img"] { color: #A8322A; }
 [class*="st-key-flag-warn-"] { background: #FDF1CC; border-color: #E0A526; }

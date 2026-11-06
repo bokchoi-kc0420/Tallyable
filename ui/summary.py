@@ -1,6 +1,7 @@
 """Step 3: add the event's income, see the totals, and push approved receipts to the books."""
 from __future__ import annotations
 
+import itertools
 import time
 from decimal import Decimal
 
@@ -12,7 +13,8 @@ from treasurer.models import Receipt, Status
 from treasurer.post import TX_FIELDS, event_totals
 from treasurer.reader import make_extractor
 from treasurer.runlog import log_run, minutes, read_runs
-from treasurer.sheets import DEFAULT_SOURCES, EventInfo, grid_to_csv, local_transactions, local_views
+from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
+from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
 from ui.common import RUN_LOG, dec, get_sink, go, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
 
@@ -54,12 +56,8 @@ def remove_source(name: str) -> None:
 
 def add_source() -> None:
     names = sources()
-    new = next((c for c in INCOME_CHOICES if c not in names), None)
-    n = 2
-    while new is None:
-        new = f"Other {n}" if f"Other {n}" not in names else None
-        n += 1
-    set_sources([*names, new])
+    spares = itertools.chain(INCOME_CHOICES, (f"Other {n}" for n in itertools.count(2)))
+    set_sources([*names, next(c for c in spares if c not in names)])
 
 
 def income_box() -> dict[str, Decimal]:
@@ -101,8 +99,8 @@ def metrics(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
     target = int(ss.event.get("target", 10))
     with st.container(key="sum-metrics"):
         m = st.columns(4)
-        m[0].metric("Income", f"${t['income']}", border=True)
-        m[1].metric("Expenses (approved)", f"${t['expenses']}", border=True)
+        m[0].metric("Income", usd(t["income"]), border=True)
+        m[1].metric("Expenses (approved)", usd(t["expenses"]), border=True)
         m[2].metric("Net", usd(t["net"]), border=True,
                     delta=("left over" if t["net"] >= 0 else "short") if t["income"] or t["expenses"] else None,
                     delta_color="normal" if t["net"] >= 0 else "inverse", delta_arrow="off")
@@ -162,8 +160,8 @@ def downloads(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     with st.expander("Or one report at a time (CSV)"):
         cols = st.columns(len(views))
-        for col, (title, grid) in zip(cols, views.items(), strict=True):
-            col.download_button(title, grid_to_csv(grid), file_name=f"{event.event_id}_{title.replace(' ', '_')}.csv",
+        for col, (title, view) in zip(cols, views.items(), strict=True):
+            col.download_button(title, grid_to_csv(view.grid), file_name=f"{event.event_id}_{title.replace(' ', '_')}.csv",
                                 mime="text/csv", key=f"dl-{title}")
 
 
@@ -184,7 +182,7 @@ def show(event: EventInfo) -> None:
         money_panel(receipts, income)
 
     html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)", "Status": r.status,
-                 "Posts": usd(r.posted_amount) if r.status in (Status.APPROVED, Status.POSTED) else "",
+                 "Posts": usd(r.posted_amount) if r.counts else "",
                  "Note": r.review_note or ""} for r in receipts], numeric=("Posts",))
 
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
@@ -207,7 +205,7 @@ def show(event: EventInfo) -> None:
             c[2].button("Go to Close out →", type="primary", on_click=go, args=("4. Close out",), key="to-closeout",
                         width="stretch")
 
-    if any(r.status in (Status.APPROVED, Status.POSTED) for r in receipts):
+    if any(r.counts for r in receipts):
         downloads(sink, receipts, event, income)
 
     st.subheader("Run stats")

@@ -260,9 +260,13 @@ def test_each_step_says_what_comes_next():
     next(b for b in at.button if b.label == "Go to Review →").click().run()
     assert at.sidebar.radio(key="step").value == "2. Review"
     assert not any(b.label == "Go to Summary →" for b in at.button)
-    for rid in list(at.session_state["receipts"]):  # reject everything: quickest way to finish review
+    at.sidebar.radio(key="review-pick").set_value("R01").run()
+    assert next(b for b in at.button if b.label == "Leave out").disabled  # needs a reason first
+    for rid in list(at.session_state["receipts"]):  # leave everything out: quickest way to finish review
         at.sidebar.radio(key="review-pick").set_value(rid).run()
-        next(b for b in at.button if b.label == "Reject").click().run()
+        at.text_input(key=f"note-{rid}").set_value("not ours").run()
+        next(b for b in at.button if b.label == "Leave out").click().run()
+    assert at.session_state["receipts"]["R01"].review_note == "not ours"
     next(b for b in at.button if b.label == "Go to Summary →").click().run()
     assert at.sidebar.radio(key="step").value == "3. Summary"
     assert any("Review" in m.value and "✓" in m.value for m in at.markdown)  # step bar marks review done
@@ -321,7 +325,7 @@ def test_summary_warns_about_junk_and_negative_income():
     at.text_input(key="income-Venmo").set_value("$1,200.50").run()
     warnings = " ".join(w.value for w in at.warning)
     assert "isn't an amount" in warnings and "Cash is negative" in warnings
-    assert next(m for m in at.metric if m.label == "Income").value == "$1180.50"
+    assert next(m for m in at.metric if m.label == "Income").value == "$1,180.50"
 
 
 def test_empty_review_guide_button_goes_to_upload():

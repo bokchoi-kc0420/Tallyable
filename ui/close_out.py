@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+from collections import Counter
 from datetime import date
 
 import streamlit as st
@@ -32,17 +33,14 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str) -> None:
     cap = st.columns([3, 2], vertical_alignment="bottom")
     cap[0].caption(f"Mark paid saves the payback to {sink.label}. It shows in the ledger.")
     quick = cap[1].selectbox("Paid back with", METHODS, key="quick-method") if owing else METHODS[0]
-    counts: dict[str, int] = {}
-    for r in done:
-        who = (r.payer or "").strip() or "(no payer)"
-        counts[who] = counts.get(who, 0) + 1
+    counts = Counter((r.payer or "").strip() or "(no payer)" for r in done)
     for x in lines:
         row = st.columns([0.5, 2, 1.1, 1.5], vertical_alignment="center")
         initials = "".join(w[0] for w in x.payer.split()[:2] if w[0].isalnum()).upper() or "?"
         row[0].markdown(f'<span class="tly-avatar">{html.escape(initials)}</span>', unsafe_allow_html=True)
-        n = counts.get(x.payer, 0)
-        row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted ${x.fronted}]"))
-        row[2].markdown(f'<span class="tly-owed">{md("$" + str(x.owed))}</span>', unsafe_allow_html=True)
+        n = counts[x.payer]
+        row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted {usd(x.fronted)}]"))
+        row[2].markdown(f'<span class="tly-owed">{md(usd(x.owed))}</span>', unsafe_allow_html=True)
         if x.owed <= 0:
             row[3].markdown(":green-badge[✓ Paid]")
             continue
@@ -74,7 +72,7 @@ def payback_form(sink, owing: list, event_id: str) -> None:
             st.error(md(problem))
             return
         if save_payback(sink, Reimbursement(event_id, who, when, amt, method, note)):
-            st.success(md(f"Recorded ${amt} paid back to {who}."))
+            st.success(md(f"Recorded {usd(amt)} paid back to {who}."))
             st.rerun()
 
 
@@ -119,7 +117,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     event = co.Event(info.event_id, info.name, info.date, attendees=attendees)
     flags = co.check_funder_rules(event, done, pack, requested, applied_on)
     most, steps = co.max_request(event, done, pack)
-    st.metric("Most you can request", f"${most}", border=True)
+    st.metric("Most you can request", usd(most), border=True)
     with st.expander("How that was worked out"):
         for s in steps:
             st.write(md(s))
@@ -146,19 +144,19 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
 def show(event: EventInfo) -> None:
     st.header("Close out the event")
     step_bar("4. Close out")
-    done = [r for r in ss.receipts.values() if r.status in (Status.APPROVED, Status.POSTED)]
+    done = [r for r in ss.receipts.values() if r.counts]
     if not done:
         guide("Nothing to close out yet!", "Approve some receipts on Review, then I'll show who's owed.",
               key="close-empty", to="2. Review")
         return
     waiting = [r.receipt_id for r in ss.receipts.values() if r.status is Status.DRAFTED]
     if waiting:
-        st.warning(f"Still drafted, so left out below: {', '.join(waiting)}")
+        st.warning(f"Not reviewed yet, so not counted below: {', '.join(waiting)}")
     else:
         with st.container(key="mascot-cheer"):
             st.image(str(ART / "tally-cheer.png"), width=170)
-        rejected = len(ss.receipts) - len(done)
-        cheer = f"All {len(done)} receipts approved!" if not rejected else f"All reviewed! {len(done)} approved, {rejected} rejected."
+        left_out = len(ss.receipts) - len(done)
+        cheer = f"All {len(done)} receipts approved!" if not left_out else f"All reviewed! {len(done)} approved, {left_out} left out."
         st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)
 
     sink, err = get_sink()
@@ -176,6 +174,12 @@ def show(event: EventInfo) -> None:
     with st.expander("Payback details"):
         html_table([{"Payer": x.payer, "Fronted": usd(x.fronted), "Paid back": usd(x.reimbursed),
                      "Owed": usd(x.owed)} for x in lines], numeric=("Fronted", "Paid back", "Owed"))
+    left_out = [r for r in ss.receipts.values() if r.status is Status.REJECTED]
+    if left_out:
+        with st.expander(f"Left out of the books ({len(left_out)})"):
+            st.caption("Not counted anywhere: not in expenses, who's owed, or the funder report.")
+            html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)",
+                         "Total": usd(r.total), "Why": r.review_note or ""} for r in left_out], numeric=("Total",))
     if owing:
         payback_form(sink, owing, event.event_id)
     else:

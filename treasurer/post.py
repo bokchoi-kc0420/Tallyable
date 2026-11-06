@@ -11,6 +11,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from .models import Receipt, Status
+from .reimburse import REIMB_FIELDS
 
 TX_FIELDS = ["event_id", "receipt_id", "date", "place", "payer", "category", "item", "unit", "price",
              "amount", "returned", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted", "image_file"]
@@ -26,7 +27,7 @@ def transaction_rows(r: Receipt) -> list[dict]:
 
 
 def event_totals(receipts: list[Receipt], income: dict[str, Decimal]) -> dict[str, Decimal]:
-    approved = [r for r in receipts if r.status in (Status.APPROVED, Status.POSTED)]
+    approved = [r for r in receipts if r.counts]
     expenses = sum((r.posted_amount for r in approved), Decimal("0"))
     inc = sum(income.values(), Decimal("0"))
     margin = (inc - expenses) / inc * 100 if inc else Decimal("0")
@@ -73,7 +74,6 @@ class LocalCsvSink:
             return list(csv.DictReader(fh))
 
     def record_reimbursement(self, r) -> None:
-        from .reimburse import REIMB_FIELDS
         new_file = not self._reimb_path.exists()
         self._reimb_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._reimb_path, "a", newline="") as fh:

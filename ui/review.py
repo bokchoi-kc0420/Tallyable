@@ -1,6 +1,7 @@
-"""Step 2: check each drafted receipt against its photo, then approve or reject it."""
+"""Step 2: check each drafted receipt against its photo, then approve it or leave it out of the books."""
 from __future__ import annotations
 
+import html
 import time
 from decimal import Decimal
 
@@ -9,7 +10,7 @@ import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
-from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, ss, step_bar
+from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, reviewed, ss, step_bar, usd
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
@@ -28,6 +29,10 @@ def next_drafted(after: str) -> str | None:
     return next((x for x in rest if ss.receipts[x].status is Status.DRAFTED), None)
 
 
+def set_status(rid: str, status: Status, **changes) -> None:
+    ss.receipts[rid] = ss.receipts[rid].model_copy(update={"status": status, **changes})
+
+
 def approve_clean(flags: dict) -> None:
     """Offer one click for the receipts the checks found nothing wrong with."""
     clean = [x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED and not flags[x] and not ss.notes.get(x)]
@@ -41,7 +46,7 @@ def approve_clean(flags: dict) -> None:
                        width="stretch"):
         return
     for x in clean:
-        ss.receipts[x] = ss.receipts[x].model_copy(update={"status": Status.APPROVED})
+        set_status(x, Status.APPROVED)
     ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
     st.rerun()
 
@@ -59,7 +64,7 @@ def photo(rid: str) -> None:
 
 
 def edit_form(rid: str, flags: list) -> None:
-    """The receipt's fields, line items, and the Approve / Reject / Reopen buttons."""
+    """The receipt's fields, line items, and the Approve / Leave out / Reopen buttons."""
     r = ss.receipts[rid]
     for note in ss.notes.get(rid, []):
         st.warning(md(note))
@@ -72,8 +77,8 @@ def edit_form(rid: str, flags: list) -> None:
         icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
         tone, hint = FLAG_TONE[f.severity]
         with st.container(key=f"flag-{tone}-{rid}-{n}"):
-            st.markdown(f"{icon} **{title}** · <span class='tly-flaghint'>{hint}</span>  \n{md(f.message)}",
-                        unsafe_allow_html=True)
+            st.markdown(f"{icon} **{title}** <span class='tly-flaghint'>· {hint}</span>\n\n"
+                        f"<span class='tly-flagmsg'>{html.escape(f.message)}</span>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     place = c1.text_input("Place", r.place, key=f"place-{rid}")
     d = c2.date_input("Date", r.date, key=f"date-{rid}")
@@ -103,24 +108,26 @@ def edit_form(rid: str, flags: list) -> None:
             ss.receipts[rid] = new
             st.rerun()  # re-run checks on the edited values
 
-    st.caption(md(f"Items + tax + tip = ${r.computed_total} · posts ${r.posted_amount}"))
-    note = st.text_input("Override note (needed to approve with a red flag)", r.review_note or "",
-                         key=f"note-{rid}")
+    st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · posts {usd(r.posted_amount)}"))
+    note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
+                         placeholder="Why you're approving a red flag, or leaving this out (duplicate, personal...)",
+                         help="Needed to approve a receipt with a red flag, and to leave one out. "
+                              "It's saved with the receipt, so you can explain the call later.")
     b1, b2, b3 = st.columns(3)
     locked = r.status is Status.POSTED
     if locked:
         st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
     decided = r.status is not Status.DRAFTED
-    if b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note)):
-        ss.receipts[rid] = r.model_copy(update={"status": Status.APPROVED, "review_note": note or None})
+    approve = b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note))
+    leave_out = b2.button("Leave out", disabled=locked or decided or not note.strip(),
+                          help="Not a club expense (a duplicate, a personal buy, another event). "
+                               "Write why in the note first.")
+    if approve or leave_out:
+        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
         st.rerun()
-    if b2.button("Reject", disabled=locked or decided):
-        ss.receipts[rid] = r.model_copy(update={"status": Status.REJECTED, "review_note": note or None})
-        ss.next_pick = next_drafted(rid)
-        st.rerun()
-    if b3.button("Reopen", disabled=locked or r.status is Status.DRAFTED, help="Undo an approve or reject"):
-        ss.receipts[rid] = r.model_copy(update={"status": Status.DRAFTED})
+    if b3.button("Reopen", disabled=locked or not decided, help="Undo an approve or leave out"):
+        set_status(rid, Status.DRAFTED)
         st.rerun()
 
 
@@ -133,12 +140,12 @@ def show() -> None:
         return
     ss.review_started = ss.review_started or time.time()
     flags = run_checks(list(ss.receipts.values()))
-    reviewed = sum(1 for x in ss.receipts.values() if x.status is not Status.DRAFTED)
-    st.progress(reviewed / len(ss.receipts), text=f"{reviewed} of {len(ss.receipts)} reviewed")
+    checked = reviewed()
+    st.progress(checked / len(ss.receipts), text=f"{checked} of {len(ss.receipts)} reviewed")
     approve_clean(flags)
-    if reviewed == len(ss.receipts):
-        ok = sum(1 for x in ss.receipts.values() if x.status in (Status.APPROVED, Status.POSTED))
-        next_step(f"**All {reviewed} receipts reviewed:** {ok} approved, {reviewed - ok} rejected. "
+    if checked == len(ss.receipts):
+        ok = sum(1 for x in ss.receipts.values() if x.counts)
+        next_step(f"**All {checked} receipts reviewed:** {ok} approved, {checked - ok} left out. "
                   "Next, add the event's income and push the approved rows to the books.",
                   "Go to Summary →", "3. Summary", "to-summary")
 
@@ -159,7 +166,7 @@ def show() -> None:
     elif ss.get("review-pick") not in ids:
         ss["review-pick"] = ids[0]
     rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
-                           help="⏳ to review · ✅ approved · ❌ rejected · 📤 posted · ⚠️ has a flag")
+                           help="⏳ to review · ✅ approved · ➖ left out · 📤 posted · ⚠️ has a flag")
     left, right = st.columns([2, 3])
     with left:
         photo(rid)
