@@ -8,13 +8,12 @@ from pathlib import Path
 
 import streamlit as st
 
-from treasurer import session_store
 from treasurer.extract import ExtractionError
 from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
-from treasurer.models import LineItem, Receipt, Status
+from treasurer.models import LineItem, Receipt
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
-from ui.common import ART, FAKE, SESSION_FILE, dec, guide, loading, md, next_step, payers, ss, step_bar
+from ui.common import ART, FAKE, dec, guide, loading, md, next_step, payers, ss, step_bar
 
 
 def next_id(filename: str | None = None) -> str:
@@ -122,26 +121,9 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
         ss.last_draft += f" Skipped {len(skipped)} already drafted: {', '.join(skipped)}."
 
 
-def offer_resume() -> None:
-    """On a fresh start, offer the session saved on disk (only when it has receipts)."""
-    saved = session_store.load(SESSION_FILE) if not ss.receipts and SESSION_FILE.exists() else None
-    if not saved or not saved["receipts"]:
-        return
-    n = len(saved["receipts"])
-    done = sum(1 for r in saved["receipts"].values() if r.status is not Status.DRAFTED)
-    with guide("Welcome back!", f"You have a saved session for {saved['event']['name']}: "
-               f"{n} receipts, {done} reviewed.", key="resume", tip=True):
-        resume = st.button("Resume where I left off")
-    if not resume:
-        return
-    ss.update(saved)
-    st.rerun()
-
-
 def show(event: EventInfo) -> None:
     st.header("Upload receipts")
     step_bar("1. Upload")
-    offer_resume()
     ex, reader = make_extractor()
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")

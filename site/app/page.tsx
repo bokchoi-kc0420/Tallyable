@@ -66,8 +66,8 @@ export default function Home() {
           <Reveal delay={0.15}>
             <dl className="mt-8 grid gap-4 text-center sm:grid-cols-3">
               {[
-                ["2 min 53 s", "to close out a 14-receipt test event, vs about 10 by hand"],
-                ["99.5%", "of line items read right on our 14-receipt test set"],
+                ["6 of 6", "planted mistakes caught on a test event: bad math, a duplicate, a missing payer, and more"],
+                ["99.5%", "of line items read right on 14 test receipts, and 100% on 12 it had never seen"],
                 ["0 rows", "reach your sheet before you approve them"],
               ].map(([big, small]) => (
                 <div key={big} className="lift rounded-2xl border-2 border-forest bg-white p-5">
