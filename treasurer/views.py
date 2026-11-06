@@ -24,22 +24,31 @@ VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements
 BASE_EVENT_FIELDS = ["event_id", "name", "date", "attendees"]
 BALANCE = "Balance Sheet"
 LEDGER_HEADER = ["DATE", "DESCRIPTION", "ASSETS", "LIABILITIES", "TOTAL ASSETS", "TOTAL LIABILITIES", "BALANCE"]
-EXPENSE_HEADER = ["Place", "Category", "Items", "Unit", "Price($)", "VAT (TAX)", "TIP", "Total expenditure", "Notes"]
 
-# The club's colors.
+# The club's colors: tan and gray balance-sheet blocks, the ledger's dark slate header
+# and pale blue/gray tinted columns, red for income and for what needs a look.
 TAN, GRAY, BEIGE, STRIPE = "C9A57D", "BDBDBD", "FBF2E8", "F3F3F3"
 SLATE, SLATE_STRIPE, BLUE, RED, NOTE_GRAY, LINE = "3D4451", "E8ECF4", "CFE2F3", "D93025", "73787F", "B7B7B7"
+DARK, MID, INK, TINT, TINT2, MUTED = "333F4F", "595959", "222A35", "EAEEF4", "F2F2F2", "6B7280"
 
 
 @dataclass
 class View:
     """A report tab: values plus how they look. A look is a dict with `rows` and `cols`
-    (half-open, zero-based) and any of: fill, color (hex), bold, italic, size, align,
-    money, border ("grid" or "topbottom"), merge."""
+    (half-open, zero-based) and any of: fill, color (hex), bold, italic, strike, size,
+    align, valign ("middle"), wrap, money (True = accounting, "plain" = $1.00), border ("grid", "box" or "topbottom"), merge.
+    `widths` are column widths in pixels, chosen so the tab fits a letter page
+    (`landscape` for wide ones); without them columns are sized to their contents.
+    `heights` are row heights in pixels; `filter` is the (r0, r1, c0, c1) to put filter
+    buttons on."""
     grid: list[list]
     looks: list[dict] = field(default_factory=list)
     freeze_rows: int = 1
     freeze_cols: int = 0
+    widths: list[int] = field(default_factory=list)
+    heights: dict[int, int] = field(default_factory=dict)
+    landscape: bool = False
+    filter: tuple | None = None
 
     def look(self, r0: int, r1: int, c0: int, c1: int, **style) -> None:
         self.looks.append({"rows": (r0, r1), "cols": (c0, c1), **style})
@@ -196,55 +205,6 @@ def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) ->
     view.look(2, last, 2, 3, color=RED)
     view.look(2, last, 2, width, money=True)
     view.look(1, last, 0, width, border="grid")
-    return view
-
-
-# ---------- Expense Report ----------
-
-def expense_tab_title(event: dict) -> str:
-    return f"Expense Report: {event['name']}"[:95]
-
-
-def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -> View:
-    """The club's per-event expense report. Tax, tip, total and payer are per receipt, so
-    they sit in cells merged down the receipt's item rows, like the club's sheet.
-    Notes holds the payer (as the club's sheet does) plus the receipt id."""
-    rows = [[VIEW_NOTE], ["Expense Report"],
-            ["Event title", event["name"], "", "", "", "", "date", _us_date(event["date"]), ""],
-            ["Participants", event.get("attendees", "") or "", "", "", "", "", "location", "", ""],
-            EXPENSE_HEADER]
-    view = View(rows, freeze_rows=5)
-    total = Decimal("0")
-    for rid, items in receipts.items():
-        f, top = items[0], len(rows)
-        for n, i in enumerate(items):
-            first = n == 0
-            rows.append([f["place"] if first else "", i["category"], _item_label(i, False), int(D(i["unit"])),
-                         num(D(i["price"])), num(D(f["receipt_tax"])) if first else "",
-                         num(D(f["receipt_tip"])) if first else "", num(D(f["receipt_posted"])) if first else "",
-                         f"{f['payer'] or 'no payer'} ({rid})" if first else ""])
-        if len(items) > 1:
-            for c in (0, 5, 6, 7, 8):
-                view.look(top, len(rows), c, c + 1, merge=True)
-        total += D(f["receipt_posted"])
-    rows.append(["Total expenses", "", "", "", "", "", "", num(total), ""])
-
-    _note(view)
-    last = len(rows)
-    view.look(1, 2, 0, 9, merge=True, bold=True, size=20)
-    for r in (2, 3):
-        view.look(r, r + 1, 1, 6, merge=True, align="center")
-        view.look(r, r + 1, 7, 9, merge=True, align="center")
-        for c in (0, 6):
-            view.look(r, r + 1, c, c + 1, fill=BLUE, bold=True, align="center")
-    view.look(4, 5, 0, 9, fill=BLUE, bold=True, align="center")
-    view.look(5, last - 1, 0, 1, align="center")
-    view.look(5, last - 1, 8, 9, align="center")
-    view.look(5, last, 4, 8, money=True)
-    view.look(last - 1, last, 0, 9, fill=BLUE)
-    view.look(last - 1, last, 0, 1, bold=True, align="center")
-    view.look(last - 1, last, 7, 8, bold=True, size=14, color=RED)
-    view.look(2, last, 0, 9, border="grid")
     return view
 
 

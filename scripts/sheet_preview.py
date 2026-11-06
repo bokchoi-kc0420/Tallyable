@@ -1,6 +1,6 @@
 """Draw the books for the fake event and save each report tab as a PNG, to check the
 sheet's look without a Google account. Builds the Excel download (same look as the
-Google Sheet), then prints it with LibreOffice.
+Google Sheet), then prints it with LibreOffice using the file's own print settings.
 
     python scripts/sheet_preview.py [out_dir]        (default: output/sheet_preview)
 
@@ -42,10 +42,6 @@ def main(out: Path) -> None:
     wb = load_workbook(BytesIO(book_xlsx(local_views(receipts, event, income), local_transactions(receipts),
                                          TX_FIELDS)))
     wb.remove(wb["Transactions"])
-    for ws in wb.worksheets:  # one landscape page wide per tab
-        ws.page_setup.orientation = "landscape"
-        ws.sheet_properties.pageSetUpPr.fitToPage = True
-        ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
     book = out / "books.xlsx"
     wb.save(book)
     subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(out), str(book)],

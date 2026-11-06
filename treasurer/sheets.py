@@ -26,6 +26,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from . import sheet_format as fmt
+from .expense_view import expense_tab_title, render_expense_report
 from .models import Receipt, Status
 from .post import TX_FIELDS, transaction_rows
 from .reimburse import REIMB_FIELDS
@@ -33,11 +34,9 @@ from .views import (
     BALANCE,
     BASE_EVENT_FIELDS,
     View,
-    expense_tab_title,
     group,
     num,
     render_balance_sheet,
-    render_expense_report,
     render_ledger,
     term_tabs,
 )
@@ -73,7 +72,7 @@ class GoogleSheetsSink:
 
     def __init__(self, spreadsheet):
         self.book = spreadsheet
-        self._pending: dict[str, list[dict]] = {}  # formatting requests per tab, sent by _apply_format
+        self._pending: list[tuple] = []  # (book, tab title, formatting requests), sent by _apply_format
         self.format_errors: list[str] = []  # tabs whose formatting Sheets refused on the last push
 
     @classmethod
@@ -188,29 +187,43 @@ class GoogleSheetsSink:
         else:
             ws.append_rows([row], value_input_option="RAW")
 
-    def _rewrite(self, title: str, view: View) -> None:
-        ws = self._tab(title)
-        ws.clear()
+    def _rewrite(self, title: str, view: View, book=None) -> None:
+        """Draw a report tab from scratch. The old tab is deleted rather than cleared, so
+        nothing left on it (a freeze line, a Sheets table, banding, merges, colors a
+        treasurer or 'Convert to table' added) can clash with the new look. The new tab is
+        added before the old one goes, because a spreadsheet can't lose its last tab."""
+        import gspread
+        book = book or self.book
+        try:
+            old = book.worksheet(title)
+        except gspread.WorksheetNotFound:
+            old = None
+        cols = max((len(r) for r in view.grid), default=1)
+        ws = book.add_worksheet(title=f"{title} (new)" if old else title, rows=len(view.grid) + 5, cols=cols)
+        if old:
+            book.del_worksheet(old)
+            ws.update_title(title)
         if view.grid:
             ws.update(values=view.grid, range_name="A1", value_input_option="RAW")
-        self._pending[title] = fmt.view_requests(ws.id, view)
+        self._pending.append((book, title, fmt.view_requests(ws.id, view)))
 
     def _tidy_format(self, ws, header: list[str], rows: int, money: set[str] = frozenset()) -> None:
-        self._pending[ws.title] = fmt.tidy_requests(ws.id, header, rows, money)
+        self._pending.append((self.book, ws.title, fmt.tidy_requests(ws.id, header, rows, money)))
 
     def _apply_format(self) -> None:
-        """One batch per tab: Sheets rejects a whole batch over one bad request, so a tab
-        the treasurer changed by hand (say, made into a Sheets table) can't leave every
-        other tab unformatted. Formatting is cosmetic: a failure is reported, never fatal."""
-        tabs = [(ws.id, ws.title) for ws in self.book.worksheets()]
-        self._pending["tab order"] = fmt.order_requests(tabs, {TX, EVENTS, REIMB})
+        """One batch per tab: Sheets rejects a whole batch over one bad request, so one tab
+        can't leave every other tab unformatted. Formatting is cosmetic: a failure is
+        reported, never fatal. Then each book's tab order, with the data tabs hidden."""
+        for book in {id(b): b for b, _, _ in self._pending}.values():
+            tabs = [(ws.id, ws.title) for ws in book.worksheets()]
+            self._pending.append((book, "tab order", fmt.order_requests(tabs, {TX, EVENTS, REIMB})))
         self.format_errors = []
-        for title, requests in self._pending.items():
+        for book, title, requests in self._pending:
             try:
-                self.book.batch_update({"requests": requests})
+                book.batch_update({"requests": requests})
             except Exception as e:
                 self.format_errors.append(f"{title}: {e}")
-        self._pending = {}
+        self._pending = []
 
 
 MONEY_FIELDS = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}
