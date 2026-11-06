@@ -153,6 +153,19 @@ class GoogleSheetsSink:
         row = r.row()
         ws = self._tab(REIMB, REIMB_FIELDS)
         ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS]], value_input_option="RAW")
+        self._refresh_ledger(ws)
+
+    def undo_reimbursement(self, event_id: str) -> None:
+        """Delete this event's most recent payback (a misclicked Mark paid) and rebuild the Ledger."""
+        ws = self._tab(REIMB, REIMB_FIELDS)
+        rows = ws.get_all_records()
+        last = max((i for i, r in enumerate(rows) if str(r["event_id"]) == event_id), default=None)
+        if last is None:
+            return
+        ws.delete_rows(last + 2)  # +1 for the header, +1 because sheet rows count from 1
+        self._refresh_ledger(ws)
+
+    def _refresh_ledger(self, ws) -> None:
         reimb = ws.get_all_records()
         self._rewrite(LEDGER, render_ledger(self._records(EVENTS, EVENT_FIELDS), self._records(TX, TX_FIELDS), reimb))
         self._tidy_format(ws, REIMB_FIELDS, len(reimb) + 1)

@@ -94,6 +94,13 @@ try {
   await shot("4-close-out");
   await page.getByText(/Left out of the books/).click();
   await shot("4-close-out-left-out");
+  await page.getByRole("button", { name: "Mark paid" }).first().click();
+  await idle();
+  await shot("4-close-out-undo", page.locator(".st-key-undo-paid").locator("xpath=../../..").first());
+  await page.getByRole("combobox", { name: /^Funder/ }).scrollIntoViewIfNeeded();
+  await page.getByRole("combobox", { name: /^Funder/ }).click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "4-close-out-funders.png") });
 } finally {
   await browser.close();
   app.kill();

@@ -71,7 +71,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     assert not at.exception
     owed = owed_table(at)
     assert [r["Payer"] for r in owed] == ["Member A"] and owed[0]["Owed"] == "$31.07"
-    at.selectbox(key="funder").set_value("Example: UC Davis CFC").run()
+    at.selectbox(key="funder").set_value("Example: event grant (up to $2,500)").run()
     assert any(b.label.startswith("Download funder report") for b in at.get("download_button"))
 
 
@@ -93,6 +93,9 @@ def test_one_click_mark_paid_uses_chosen_method():
     rows = list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
     assert rows[-1]["method"] == "Venmo" and rows[-1]["payer"] == "Member C"
     assert not [b for b in at.button if b.key == "paid-Member C"]  # now shows Paid instead
+    at.button(key="undo-paid").click().run()  # a misclick can be taken back
+    assert owed_table(at)[0]["Owed"] != "$0.00"
+    assert not list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
 
 
 def test_mark_paid_back_updates_owed():

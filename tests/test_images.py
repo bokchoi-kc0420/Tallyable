@@ -1,6 +1,5 @@
 """Messy uploads: rotation, blur, HEIC, PDF, damaged and unsupported files."""
 import io
-import sys
 from pathlib import Path
 
 import pytest
@@ -44,15 +43,7 @@ def test_huge_photo_is_shrunk():
     assert max(Image.open(io.BytesIO(f.data)).size) == MAX_SIDE
 
 
-def test_heic_without_plugin_says_what_to_do(monkeypatch):
-    monkeypatch.setitem(sys.modules, "pillow_heif", None)  # simulate not installed
-    with pytest.raises(UnsupportedFile, match="pillow-heif"):
-        prepare(b"\x00\x00\x00\x18ftypheic", "IMG_0001.HEIC")
-
-
-def test_heic_converts_to_jpg_when_plugin_present():
-    pillow_heif = pytest.importorskip("pillow_heif")
-    pillow_heif.register_heif_opener()
+def test_iphone_heic_photo_converts_to_jpg():
     buf = io.BytesIO()
     Image.open(io.BytesIO(R01)).save(buf, "HEIF")
     f = prepare(buf.getvalue(), "R01.heic")
