@@ -114,7 +114,7 @@ def _receipt_lines(items: list[dict]) -> list[list]:
 def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
     """Label column A, then one 4-column block per event, ordered by event date: the
     event's name on a band, then LOCATION, ITEMS (#), AMOUNT, TOTAL. Every receipt is
-    boxed. Prints landscape, since events sit side by side."""
+    boxed. Prints landscape once there are two events side by side."""
     grouped = group(tx)
     blocks = []
     for e in sorted(events, key=lambda e: str(e["date"])):
@@ -122,7 +122,8 @@ def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
         sources = income_sources(e)
         assets = [[src, "", num(D(e.get(src) or 0)), ""] for src in sources]
         total_in = sum((D(e.get(src) or 0) for src in sources), Decimal("0"))
-        per_receipt = [_receipt_lines(items) for items in receipts.values()]
+        by_date = sorted(receipts.values(), key=lambda items: (str(items[0]["date"]), items[0]["receipt_id"]))
+        per_receipt = [_receipt_lines(items) for items in by_date]  # same order as the Expense Report
         total_out = sum((D(items[0]["receipt_posted"]) for items in receipts.values()), Decimal("0"))
         blocks.append((f"{e['name']} ({e['date']})", assets, per_receipt, total_in, total_out))
     n_in = max((len(b[1]) for b in blocks), default=0)
@@ -133,7 +134,7 @@ def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
     grid = [[VIEW_NOTE], *[[label] for label in labels]]
     total_rows = sorted(r for r, label in enumerate(grid) if str(label[0]).startswith("TOTAL"))
     t_in, t_out, t_bal = total_rows
-    view = View(grid, freeze_rows=3, freeze_cols=1, landscape=True,
+    view = View(grid, freeze_rows=3, freeze_cols=1, landscape=len(blocks) > 1,
                 widths=[118, *[120, 190, 84, 84] * len(blocks)], heights={1: 28})
     last = len(grid)
     for k, (title, assets, per_receipt, total_in, total_out) in enumerate(blocks):

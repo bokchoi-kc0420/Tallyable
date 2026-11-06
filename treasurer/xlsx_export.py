@@ -93,7 +93,9 @@ def _print_setup(ws, view: View) -> None:
     ws.sheet_view.showGridLines = False
     ws.page_setup.orientation = "landscape" if view.landscape else "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
-    ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
+    # A short tab that only just spills (an event's breakdowns) shrinks onto one page;
+    # a long one prints at full size over as many pages as it needs.
+    ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 1 if len(view.grid) <= 60 else 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_margins.left = ws.page_margins.right = 0.5
     ws.print_options.horizontalCentered = True

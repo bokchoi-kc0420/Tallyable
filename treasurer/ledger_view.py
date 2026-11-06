@@ -95,7 +95,8 @@ def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) ->
         view.look(LEDGER_TOP, LEDGER_TOP + 1, c, c + 1, fill=MID if c in (2, 4) else DARK)
         view.look(LEDGER_TOP + 1, last, c, c + 1, fill=TINT2 if c in (2, 4) else TINT)
     view.look(LEDGER_TOP, LEDGER_TOP + 1, 0, 7, color="FFFFFF", bold=True, size=9, valign="middle", wrap=True)
-    view.look(LEDGER_TOP + 1, last, 0, 7, border="grid")
+    view.look(LEDGER_TOP + 1, last, 0, 7, border="grid", valign="middle")
+    view.look(LEDGER_TOP + 1, last, 1, 2, wrap=True)  # long descriptions wrap instead of hiding
     view.look(LEDGER_TOP + 1, last, 2, 7, money=True)
     view.look(LEDGER_TOP + 1, last, 2, 3, color=RED)
     view.look(LEDGER_TOP + 1, last, 6, 7, bold=True)

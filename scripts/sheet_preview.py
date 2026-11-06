@@ -36,7 +36,7 @@ def main(out: Path) -> None:
         if r.receipt_id == "R06":  # the planted math error, fixed the way a reviewer would
             r = r.model_copy(update={"total": r.computed_total})
         receipts.append(r.model_copy(update={"status": Status.APPROVED}))
-    event = EventInfo("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14), 45)
+    event = EventInfo("EVT-FAKE-01", "Fall Mentor Mixer (FAKE)", date(2026, 11, 14), 45, start_balance=Decimal("1200"))
     income = {"Zelle": Decimal("300"), "Venmo": Decimal("250"), "Cash": Decimal("40"),
               "Grants and funding": Decimal("50")}
     wb = load_workbook(BytesIO(book_xlsx(local_views(receipts, event, income), local_transactions(receipts),
