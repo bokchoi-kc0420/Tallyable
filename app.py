@@ -12,7 +12,7 @@ import time
 
 import streamlit as st
 
-from ui import close_out, review, sidebar, summary, upload
+from ui import close_out, demo, review, sidebar, summary, upload
 from ui.common import ART, ROOT, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
@@ -29,6 +29,9 @@ if os.getenv("APP_PASSWORD") and not ss.get("authed"):
     if pw:
         st.error("Wrong password.")
     st.stop()
+
+demo.enter()
+demo.return_code()
 
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
 ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to the reader

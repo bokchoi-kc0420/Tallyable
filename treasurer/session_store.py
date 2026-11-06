@@ -29,6 +29,7 @@ def dump(state: dict) -> str:
         "receipts": {k: r.model_dump(mode="json") for k, r in state["receipts"].items()},
         "images": {k: [base64.b64encode(b).decode(), m] for k, (b, m) in state["images"].items()},
         **{k: state[k] for k in PLAIN_KEYS},
+        "step": state.get("step", "1. Upload"),
     }, sort_keys=True)
 
 
@@ -53,6 +54,7 @@ def load(path: Path) -> dict | None:
             "receipts": {k: Receipt.model_validate(v) for k, v in raw["receipts"].items()},
             "images": {k: (base64.b64decode(b), m) for k, (b, m) in raw["images"].items()},
             **{k: raw[k] for k in PLAIN_KEYS},
+            "step": raw.get("step", "1. Upload"),
         }
     except (OSError, ValueError, KeyError, TypeError):
         return None

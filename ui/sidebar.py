@@ -11,12 +11,12 @@ from pathlib import Path
 import streamlit as st
 
 from treasurer import session_store
-from treasurer.sheets import DEFAULT_SOURCES, EventInfo
-from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
+from treasurer.sheets import EventInfo
+from ui.common import ART, STEPS, output_dir, reviewed, ss, step_label, step_status
 
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
                  "attendees": 45, "members": "Member A, Member B, Member C, Member D",
-                 "sources": ", ".join(DEFAULT_SOURCES)}
+                 "sources": "Cash"}
 HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the landing page start.bat serves
 
 
@@ -36,7 +36,7 @@ def start_new_event() -> None:
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
     ss.started = time.time()
-    session_store.clear(SESSION_FILE)
+    session_store.clear(output_dir() / "session.json")
 
 
 def save_session() -> None:
@@ -44,11 +44,12 @@ def save_session() -> None:
     if not ss.receipts:
         return
     state = {k: ss[k] for k in session_store.SAVED_KEYS}
+    state["step"] = ss.get("step", "1. Upload")
     text = session_store.dump(state)
     if text == ss.get("_saved"):
         return
-    session_store.save(SESSION_FILE, state)
-    session_store.save(PAST / f"{ss.event['event_id']}.json", state)
+    session_store.save((output_dir() / "session.json"), state)
+    session_store.save((output_dir() / "events") / f"{ss.event['event_id']}.json", state)
     ss._saved = text
 
 
@@ -139,7 +140,7 @@ def show() -> tuple[str, EventInfo]:
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts)), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
-    past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
+    past = [e for e in session_store.past_events(output_dir() / "events") if e["event_id"] != ss.event["event_id"]]
     if past:
         with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
             for n, e in enumerate(past):

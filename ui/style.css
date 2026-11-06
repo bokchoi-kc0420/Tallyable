@@ -215,3 +215,7 @@
 [data-testid="stSidebarHeader"] img[data-testid="stSidebarLogo"], [data-testid="stSidebarLogo"] {
   height: 3.4rem !important; max-width: 15rem; width: auto; }
 [data-testid="stSidebarHeader"] a:hover img { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
+
+/* Keep receipt descriptions readable and summary legends inside their panel. */
+[class*="st-key-flag-"] .tly-flagmsg { font-family: Arial, sans-serif; font-weight: 400; text-align: left; padding-left: 30px; margin-top: 6px; }
+.tly-money { padding: 0 0 20px; }

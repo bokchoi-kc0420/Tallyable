@@ -13,10 +13,24 @@ from treasurer.models import Receipt, Status
 from treasurer.post import TX_FIELDS, event_totals
 from treasurer.reader import make_extractor
 from treasurer.runlog import log_run, minutes, read_runs
-from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
+from treasurer.sheets import EventInfo, local_transactions, local_views
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
-from ui.common import RUN_LOG, dec, get_sink, go, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
+from ui.common import (
+    dec,
+    get_sink,
+    go,
+    guide,
+    html_table,
+    loading,
+    md,
+    money_panel,
+    output_dir,
+    saved_reimbursements,
+    ss,
+    step_bar,
+    usd,
+)
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
                   "Grants and funding", "Donations", "Fundraiser", "Other"]
@@ -27,7 +41,7 @@ SOURCE_ICONS = {"zelle": "phone_iphone", "venmo": "phone_iphone", "cash app": "p
 
 
 def sources() -> list[str]:
-    return [x.strip() for x in ss.event.get("sources", ", ".join(DEFAULT_SOURCES)).split(",") if x.strip()]
+    return [x.strip() for x in ss.event.get("sources", "Cash").split(",") if x.strip()]
 
 
 def set_sources(names: list[str]) -> None:
@@ -62,7 +76,7 @@ def add_source() -> None:
 
 def income_box() -> dict[str, Decimal]:
     """One row per income source: icon, source dropdown, amount, remove. Returns the amounts."""
-    names = list(dict.fromkeys(sources())) or list(DEFAULT_SOURCES)
+    names = list(dict.fromkeys(sources())) or ["Cash"]
     income = {}
     with st.container(border=True, key="income-box"):
         head = st.columns([0.45, 3, 2, 0.5])
@@ -130,7 +144,7 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
     if written:
         now, flags = time.time(), run_checks(receipts)
         ex, reader = make_extractor()
-        log_run(RUN_LOG, {
+        log_run(output_dir() / "run_log.csv", {
             "event_id": event.event_id, "reader": reader, "model": getattr(ex, "model", "stub"),
             "receipts": len(receipts), "posted": len(written), "edits": ss.edits,
             "overrides": sum(1 for r in receipts if r.review_note and r.status is not Status.REJECTED
@@ -213,7 +227,7 @@ def show(event: EventInfo) -> None:
     s[0].metric("Minutes in tool", f"{(time.time() - ss.started) / 60:.1f}")
     s[1].metric("Edits to drafts", ss.edits)
     s[2].metric("Flags open", sum(1 for fl in run_checks(receipts).values() for f in fl if f.severity is Severity.BLOCK))
-    runs = read_runs(RUN_LOG)
+    runs = read_runs(output_dir() / "run_log.csv")
     if runs:
-        st.caption(f"Past runs, from {RUN_LOG}")
+        st.caption("Your past runs")
         st.dataframe(pd.DataFrame(runs), width="stretch", hide_index=True)

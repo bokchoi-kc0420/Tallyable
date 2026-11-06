@@ -10,17 +10,14 @@ from pathlib import Path
 
 import streamlit as st
 
+from treasurer.demo_workspace import public_demo, workspace_path
 from treasurer.models import Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.sheets import GoogleSheetsSink
 
 ROOT = Path(__file__).parent.parent
-OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
 ART = ROOT / "assets"
-RUN_LOG = OUT / "run_log.csv"
-SESSION_FILE = OUT / "session.json"
-PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
 ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "➖ left out",
         Status.POSTED: "📤 posted"}
@@ -47,6 +44,7 @@ def load_cloud_secrets() -> dict | None:
 
 
 GCP_KEY = load_cloud_secrets()
+OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 
 
 def dec(text: str, default: str = "0") -> Decimal:
@@ -89,8 +87,17 @@ def go(step: str) -> None:
     ss.step = step
 
 
+def output_dir() -> Path:
+    """Resolve per request, never cache one visitor's path in a module global."""
+    if public_demo():
+        return workspace_path(OUT, ss["_demo_code"])
+    return OUT
+
+
 def get_sink():
     """Google Sheets if it is set up, else the local CSV. Returns (sink, error)."""
+    if public_demo():
+        return LocalCsvSink(output_dir() / "transactions.csv"), None
     try:
         return GoogleSheetsSink.from_env(ROOT, GCP_KEY) or LocalCsvSink(OUT / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network

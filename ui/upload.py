@@ -9,12 +9,13 @@ from pathlib import Path
 import streamlit as st
 
 from treasurer import session_store
+from treasurer.demo_workspace import public_demo
 from treasurer.extract import ExtractionError
 from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
-from ui.common import ART, FAKE, SESSION_FILE, dec, guide, loading, md, next_step, payers, ss, step_bar
+from ui.common import ART, FAKE, dec, guide, loading, md, next_step, output_dir, payers, ss, step_bar
 
 
 def next_id(filename: str | None = None) -> str:
@@ -124,7 +125,7 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
 
 def offer_resume() -> None:
     """On a fresh start, offer the session saved on disk (only when it has receipts)."""
-    saved = session_store.load(SESSION_FILE) if not ss.receipts and SESSION_FILE.exists() else None
+    saved = session_store.load(output_dir() / "session.json") if not ss.receipts and (output_dir() / "session.json").exists() else None
     if not saved or not saved["receipts"]:
         return
     n = len(saved["receipts"])
@@ -146,13 +147,16 @@ def show(event: EventInfo) -> None:
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
     else:
-        guide("Demo mode:", "I can only read the fake event's receipts (with a few planted misreads to catch). "
-              "Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.", key="demo", tip=True)
+        guide("Demo mode:", "I can only read the fake event's receipts (with a few planted misreads to catch). " +
+              ("Use the supplied sample receipts below." if public_demo() else
+               "Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude."), key="demo", tip=True)
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "mascot-empty.png"), width=190)
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
-    files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
+    files = None
+    if not public_demo():
+        files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
     if st.button("Use the fake event's 14 receipts instead"):
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))

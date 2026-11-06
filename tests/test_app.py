@@ -52,7 +52,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     next(b for b in at.button if b.label == "Approve").click().run()  # R01
 
     at.sidebar.radio[0].set_value("3. Summary").run()
-    at.text_input(key="income-Zelle").set_value("100.00").run()
+    at.text_input(key="income-Cash").set_value("100.00").run()
     push = next(b for b in at.button if b.label.startswith("Push to"))
     assert push.disabled  # other receipts still drafted
     for rid, r in list(at.session_state["receipts"].items()):
@@ -320,6 +320,8 @@ def test_summary_warns_about_junk_and_negative_income():
     at.button[0].click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     at.sidebar.radio[0].set_value("3. Summary").run()
+    at.button(key="add-source").click().run()
+    at.button(key="add-source").click().run()
     at.text_input(key="income-Zelle").set_value("abc").run()
     at.text_input(key="income-Cash").set_value("-20").run()
     at.text_input(key="income-Venmo").set_value("$1,200.50").run()
@@ -342,13 +344,14 @@ def test_income_sources_can_be_added_renamed_and_removed():
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     at.sidebar.radio[0].set_value("3. Summary").run()
-    at.text_input(key="income-Venmo").set_value("40").run()
+    assert at.session_state["event"]["sources"] == "Cash"
+    at.text_input(key="income-Cash").set_value("40").run()
     at.button(key="add-source").click().run()
-    assert at.text_input(key="income-Card / Square")
-    at.selectbox(key="src-Venmo").set_value("Ticket sales").run()
+    assert at.text_input(key="income-Zelle")
+    at.selectbox(key="src-Cash").set_value("Ticket sales").run()
     assert at.text_input(key="income-Ticket sales").value == "40"
-    assert "Venmo" not in at.session_state["event"]["sources"]
-    at.button(key="rm-Cash").click().run()
+    assert "Cash" not in at.session_state["event"]["sources"]
+    at.button(key="rm-Zelle").click().run()
     assert "Cash" not in at.session_state["event"]["sources"]
     assert not at.exception
 
