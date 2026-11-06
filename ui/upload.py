@@ -13,6 +13,7 @@ from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
 from treasurer.models import LineItem, Receipt
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
+from ui import start
 from ui.common import ART, FAKE, dec, guide, loading, md, next_step, payers, ss, step_bar
 
 
@@ -121,34 +122,11 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
         ss.last_draft += f" (Skipped {len(skipped)} I'd already read.)"
 
 
-def set_members(names: list[str]) -> None:
-    ss.event = {**ss.event, "members": ", ".join(names)}
-
-
-def add_member() -> None:
-    """Button and Enter callback: add the typed name (commas would split it, so they're dropped)."""
-    name = ss.get("new-member", "").replace(",", " ").strip()
-    if name and name not in payers():
-        set_members([*payers()[1:], name])
-    ss["new-member"] = ""
-
-
-def members_box() -> None:
-    """Who might have paid. Receipts are tagged with these names, so Draft waits for at least one."""
-    with st.container(border=True, key="members-box"):
-        st.markdown("**Who's in on this tally?**")
-        st.caption("Add everyone who might've paid for something. You'll tag each receipt with one of them.")
-        c = st.columns([3, 1], vertical_alignment="bottom")
-        c[0].text_input("Name", key="new-member", placeholder="e.g. Jamie Lee", label_visibility="collapsed",
-                        on_change=add_member)
-        c[1].button("Add member", icon=":material/add:", key="add-member", on_click=add_member, width="stretch")
-        names = payers()[1:]
-        with st.container(horizontal=True, key="member-chips"):
-            for n, name in enumerate(names):
-                st.button(name, icon=":material/close:", key=f"rm-member-{n}", help=f"Remove {name}",
-                          on_click=set_members, args=([x for x in names if x != name],))
-        if not names:
-            st.caption(":red[Add at least one member to draft your receipts.]")
+def tagged_with() -> None:
+    """The members picked on the Start page, with a way back there to change them."""
+    c = st.columns([5, 1], vertical_alignment="center")
+    c[0].markdown(md(f"**Who's in:** {', '.join(payers()[1:])}"))
+    c[1].button("Edit", icon=":material/edit:", key="edit-members", width="stretch", on_click=start.reopen)
 
 
 def show(event: EventInfo) -> None:
@@ -170,7 +148,7 @@ def show(event: EventInfo) -> None:
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
     sources = [(f.name, f.getvalue()) for f in files] if files else [(p.name, p.read_bytes()) for p in ss.get("demo", [])]
 
-    members_box()
+    tagged_with()
     if sources:
         untagged = sum(1 for name, _ in sources if not ss.get(f"payer-{name}"))
         guide(f"{len(sources)} receipts in!", md("Tag who paid for each one below, then hit **Draft rows**."

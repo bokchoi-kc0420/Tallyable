@@ -15,7 +15,7 @@ def new_app(members: str = MEMBERS) -> AppTest:
     """The app with the club's members already added, as a treasurer would on Upload."""
     from ui.sidebar import DEFAULT_EVENT
     at = AppTest.from_file(APP, default_timeout=30)
-    at.session_state["event"] = {**DEFAULT_EVENT, "members": members}
+    at.session_state["event"] = {**DEFAULT_EVENT, "members": members, "set_up": True}
     return at
 
 
@@ -163,9 +163,6 @@ def test_event_setup_and_start_new_event():
     name = next(t for t in at.sidebar.text_input if t.label == "Event name")
     name.set_value("Winter Social (FAKE)").run()
     assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-WINTER")
-    at.text_input(key="new-member").set_value("Member Z").run()  # Enter adds the name
-    assert at.session_state["event"]["members"].endswith("Member Z")
-
     at.button[0].click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     at.run()
@@ -173,6 +170,8 @@ def test_event_setup_and_start_new_event():
     assert all(r.event_id.startswith("EVT-2026-11-14-WINTER") for r in at.session_state["receipts"].values())
     at.sidebar.button(key="new-event").click().run()
     assert at.session_state["receipts"] == {}
+    assert at.header[0].value == "Start a new event"  # who's in carries over, ready to confirm
+    assert at.session_state["event"]["members"] == "Treasurer"
 
 
 def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
@@ -421,13 +420,30 @@ def test_my_funder_rules_and_school_calendar():
     assert at.session_state["event"]["calendar"] == "semester"
 
 
-def test_draft_waits_for_at_least_one_member():
+def test_a_new_event_starts_with_who_is_in_before_upload():
     at = AppTest.from_file(APP, default_timeout=30).run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert next(b for b in at.button if b.label == "Draft rows").disabled
-    at.text_input(key="new-member").set_value("Jamie Lee").run()
-    at.button(key="add-member").click().run()
+    assert at.header[0].value == "Start a new event"
+    assert at.button(key="start-go").disabled  # nobody in yet
+    at.text_input(key="new-member").set_value("Jamie Lee").run()  # Enter adds the name
+    at.text_input(key="start-name").set_value("Spring Picnic (FAKE)").run()
+    at.button(key="start-go").click().run()
+    assert at.header[0].value == "Upload receipts"
     assert at.session_state["event"]["members"] == "Jamie Lee"
-    assert not next(b for b in at.button if b.label == "Draft rows").disabled
+    assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-SPRINGPICNIC")
+    at.button(key="edit-members").click().run()  # back to change who's in
+    assert at.header[0].value == "Start a new event"
     at.button(key="rm-member-0").click().run()
     assert at.session_state["event"]["members"] == ""
+
+
+def test_a_forgotten_member_can_be_added_after_drafting():
+    at = new_app("Jamie Lee").run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Draft rows").click().run()
+    event_id = at.session_state["event"]["event_id"]
+    at.button(key="edit-members").click().run()
+    assert at.text_input(key="start-name").disabled  # the receipts carry this event's id
+    at.text_input(key="new-member").set_value("Sam Park").run()
+    at.button(key="start-go").click().run()
+    assert at.session_state["event"]["members"] == "Jamie Lee, Sam Park"
+    assert at.session_state["event"]["event_id"] == event_id

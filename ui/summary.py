@@ -122,6 +122,7 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
                  "receipts already written are skipped.")
         return
     pushing.empty()
+    ss.format_errors = getattr(sink, "format_errors", [])
     # Every approved receipt is in the books now: just written, or already there from an
     # earlier push (a resumed session, or a second browser tab).
     for rid, rec in list(ss.receipts.items()):
@@ -204,6 +205,9 @@ def show(event: EventInfo) -> None:
                 c[1].link_button("Open the sheet", url, icon=":material/open_in_new:", width="stretch")
             c[2].button("Go to Close out →", type="primary", on_click=go, args=("4. Close out",), key="to-closeout",
                         width="stretch")
+        if ss.get("format_errors"):
+            st.warning(md("Your numbers are in the sheet, but Google wouldn't apply the colors and layout on: "
+                          + "; ".join(ss.format_errors) + ". Send this to whoever set up Tallyable."))
 
     if any(r.counts for r in receipts):
         downloads(sink, receipts, event, income)

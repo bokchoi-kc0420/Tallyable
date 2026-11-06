@@ -232,13 +232,23 @@ def test_push_formats_the_sheet_for_reading(approved):
     assert tabs[0].startswith("Expense Report") and tabs[-3:] == sorted(["Events", "Reimbursements", "Transactions"])
 
 
-def test_formatting_failure_never_fails_the_push(approved):
+def test_one_tab_refusing_its_format_does_not_stop_the_others(approved):
     book = FakeBook()
+    sent = []
 
-    def refuse(body):
-        raise RuntimeError("table headers can't be formatted")
-    book.batch_update = refuse
-    assert GoogleSheetsSink(book).post(approved, EVENT, INCOME)  # receipts still written
+    def refuse_transactions(body):  # say the treasurer made Transactions into a Sheets table
+        tx_id = book.tabs["Transactions"].id
+        if any(v.get("range", {}).get("sheetId") == tx_id for r in body["requests"] for v in r.values()):
+            raise RuntimeError("table headers can't be formatted")
+        sent.extend(body["requests"])
+    book.batch_update = refuse_transactions
+    sink = GoogleSheetsSink(book)
+    assert sink.post(approved, EVENT, INCOME)  # receipts still written
+    assert [e.split(":")[0] for e in sink.format_errors] == ["Transactions"]  # reported, not hidden
+    assert any("mergeCells" in r for r in sent)  # the report tabs still got their look
+    merges = [r["mergeCells"]["range"] for r in sent if "mergeCells" in r]
+    assert all((m["endRowIndex"] - m["startRowIndex"]) * (m["endColumnIndex"] - m["startColumnIndex"]) > 1
+               for m in merges)  # Sheets refuses a one-cell merge (R15 has a single item)
 
 
 def test_view_formatting_rules():

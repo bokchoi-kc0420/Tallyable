@@ -73,7 +73,8 @@ class GoogleSheetsSink:
 
     def __init__(self, spreadsheet):
         self.book = spreadsheet
-        self._pending: dict[str, list[dict]] = {}  # formatting requests, sent in one go by _apply_format
+        self._pending: dict[str, list[dict]] = {}  # formatting requests per tab, sent by _apply_format
+        self.format_errors: list[str] = []  # tabs whose formatting Sheets refused on the last push
 
     @classmethod
     def from_env(cls, root: Path, key_info: dict | None = None) -> GoogleSheetsSink | None:
@@ -192,24 +193,24 @@ class GoogleSheetsSink:
         ws.clear()
         if view.grid:
             ws.update(values=view.grid, range_name="A1", value_input_option="RAW")
-        self._pending.setdefault("views", []).extend(fmt.view_requests(ws.id, view))
+        self._pending[title] = fmt.view_requests(ws.id, view)
 
     def _tidy_format(self, ws, header: list[str], rows: int, money: set[str] = frozenset()) -> None:
-        self._pending.setdefault("tidy", []).extend(fmt.tidy_requests(ws.id, header, rows, money))
+        self._pending[ws.title] = fmt.tidy_requests(ws.id, header, rows, money)
 
     def _apply_format(self) -> None:
-        """Send the formatting in two batches, so a tab the treasurer turned into a
-        Sheets table (which can refuse header formatting) doesn't stop the views
-        from being formatted. Formatting is cosmetic: a failure never fails a push."""
+        """One batch per tab: Sheets rejects a whole batch over one bad request, so a tab
+        the treasurer changed by hand (say, made into a Sheets table) can't leave every
+        other tab unformatted. Formatting is cosmetic: a failure is reported, never fatal."""
         tabs = [(ws.id, ws.title) for ws in self.book.worksheets()]
-        batches = [self._pending.pop("views", []) + fmt.order_requests(tabs, {TX, EVENTS, REIMB}),
-                   self._pending.pop("tidy", [])]
-        for requests in batches:
-            if requests:
-                try:
-                    self.book.batch_update({"requests": requests})
-                except Exception:  # cosmetic only
-                    pass
+        self._pending["tab order"] = fmt.order_requests(tabs, {TX, EVENTS, REIMB})
+        self.format_errors = []
+        for title, requests in self._pending.items():
+            try:
+                self.book.batch_update({"requests": requests})
+            except Exception as e:
+                self.format_errors.append(f"{title}: {e}")
+        self._pending = {}
 
 
 MONEY_FIELDS = {"price", "amount", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted"}
