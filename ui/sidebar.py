@@ -13,6 +13,7 @@ import streamlit as st
 
 from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
+from ui import connect
 from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
 
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
@@ -172,6 +173,8 @@ def show() -> tuple[str, EventInfo]:
                     st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
                               icon=":material/open_in_new:", type="tertiary",
                               help="Your current event is saved first, so you can come back to it here.")
+    with st.sidebar.expander("Your Google Sheets", icon=":material/link:"):
+        connect.box("sidebar")
     if ss.get("past_error"):
         st.sidebar.error(ss.pop("past_error"))
     return page, event

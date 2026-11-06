@@ -92,7 +92,8 @@ def go(step: str) -> None:
 def get_sink():
     """Google Sheets if it is set up, else CSV files on this computer. Returns (sink, error)."""
     try:
-        return GoogleSheetsSink.from_env(ROOT, GCP_KEY) or LocalCsvSink(OUT / "transactions.csv"), None
+        from ui.connect import linked
+        return GoogleSheetsSink.from_env(ROOT, GCP_KEY, linked()) or LocalCsvSink(OUT / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
         return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so the books are saved on "
                                                         f"this computer for now. ({e})")

@@ -382,3 +382,23 @@ def test_formatted_currency_cells_read_back_as_numbers():
     assert D(500) == Decimal("500")
     with pytest.raises(ValueError, match="isn't a number"):
         D("abc")
+
+
+def test_a_pasted_sheet_link_is_used_over_env(monkeypatch, tmp_path):
+    from treasurer import sheets
+    from treasurer.sheets import sheet_id
+    sid = "1jO21Z-bnMWAXuy1uYHzpbnW7ndozoAmAo6Hv_bnrevE"
+    assert sheet_id(f"https://docs.google.com/spreadsheets/d/{sid}/edit?usp=sharing") == sid
+    assert sheet_id(sid) == sid and sheet_id("my sheet") is None
+
+    opened = []
+
+    class Client:
+        def open_by_key(self, key):
+            opened.append(key)
+            return FakeBook()
+    monkeypatch.setattr(sheets, "bot_client", lambda root, key_info=None: Client())
+    monkeypatch.setenv("TALLYABLE_SHEET_ID", "from-env")
+    monkeypatch.delenv("TALLYABLE_LEDGER_SHEET_ID", raising=False)
+    GoogleSheetsSink.from_env(tmp_path, linked={"book": sid})
+    assert opened == [sid]

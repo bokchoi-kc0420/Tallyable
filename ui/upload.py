@@ -168,7 +168,7 @@ def show(event: EventInfo) -> None:
 
     if sources:
         st.subheader("Who paid")
-        st.caption("Peek at the photos so you know which is which.")
+        st.caption("Peek at the photos so you know which is which!")
         grid = st.columns(4)
         for n, (name, data) in enumerate(sources):
             with grid[n % 4].container(border=True, key=f"who-{n}"):
