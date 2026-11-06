@@ -45,8 +45,8 @@ from .views import (
 # Where an event's money comes from. Each club sets its own list in the app; these are
 # only the defaults. On the Events tab every column that isn't a base field is a source,
 # so a new source simply becomes a new column.
-DEFAULT_SOURCES = ["Zelle", "Venmo", "Cash", "Grants and funding"]
-EVENT_FIELDS = ["event_id", "name", "date", *DEFAULT_SOURCES, "attendees"]  # header for a new sheet
+DEFAULT_SOURCES = ["Cash"]  # a new event starts with Cash only; the treasurer adds the rest
+EVENT_FIELDS = list(BASE_EVENT_FIELDS)  # header for a new sheet; each income source adds its own column
 TX, EVENTS, LEDGER, REIMB = "Transactions", "Events", "Ledger", "Reimbursements"
 
 
