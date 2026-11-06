@@ -42,40 +42,30 @@ def starting_balance(events: list[dict]) -> Decimal:
     return Decimal("0")
 
 
-def _entries(events: list[dict], tx: list[dict], reimb) -> list[tuple]:
-    """(date, order, description, income, expense) by date; on one day, income comes first.
-    A payback has no amount: it settles an expense already counted (see reimburse.py)."""
-    names = {e["event_id"]: e["name"] for e in events}
-    out = []
-    for e in events:
-        for src in income_sources(e):
-            amt = D(e.get(src) or 0)
-            if amt:
-                out.append((str(e["date"]), 0, f"{src}: {e['name']}", amt, Decimal("0")))
-    for event_id, receipts in group(tx).items():
-        for rid, items in receipts.items():
-            f = items[0]
-            out.append((str(f["date"]), 1, f"{f['place']} (paid by {f['payer'] or 'no payer'}, {rid}): "
-                        f"{names.get(event_id, event_id)}", Decimal("0"), D(f["receipt_posted"])))
-    for r in reimb:
-        out.append((str(r["date"]), 2, f"Paid back {r['payer']} ${D(r['amount']):.2f} via {r['method']} "
-                    f"(settles expenses above): {names.get(str(r['event_id']), r['event_id'])}",
-                    Decimal("0"), Decimal("0")))
-    return sorted(out, key=lambda x: (x[0], x[1]))
+def _entries(events: list[dict], tx: list[dict]) -> list[tuple]:
+    """One row per event, by date: (date, name, money in, money out). The ledger is the
+    year's recap; each receipt is in that event's own book."""
+    spent: dict = defaultdict(Decimal)
+    for receipts in group(tx).values():
+        for items in receipts.values():
+            spent[items[0]["event_id"]] += D(items[0]["receipt_posted"])
+    rows = [(str(e["date"]), e["name"], sum((D(e.get(s) or 0) for s in income_sources(e)), Decimal("0")),
+             spent[e["event_id"]]) for e in events]
+    return sorted(rows)
 
 
-def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) -> View:
+def render_ledger(events: list[dict], tx: list[dict]) -> View:
     start = starting_balance(events)
-    entries = _entries(events, tx, reimb)
-    ta = sum((x[3] for x in entries), Decimal("0"))
-    tl = sum((x[4] for x in entries), Decimal("0"))
+    entries = _entries(events, tx)
+    ta = sum((x[2] for x in entries), Decimal("0"))
+    tl = sum((x[3] for x in entries), Decimal("0"))
     year = school_year(max((str(e["date"]) for e in events), default=date.today().isoformat()))
     rows = [[f"GENERAL LEDGER {year}", "", "", "", "", "STARTING BALANCE", ""],
             [VIEW_NOTE, "", "", "", "", num(start), ""],
             ["", "", "", "", "", "CURRENT BALANCE", ""],
             ["", "", "", "", "", num(start + ta - tl), ""], [], LEDGER_HEADER]
     run_a = run_l = Decimal("0")
-    for d, _, desc, inc, exp in entries:
+    for d, desc, inc, exp in entries:
         run_a, run_l = run_a + inc, run_l + exp
         rows.append([_us_date(d), desc, num(inc) if inc else "", num(exp) if exp else "", num(run_a), num(run_l),
                      num(start + run_a - run_l)])
@@ -103,8 +93,6 @@ def render_ledger(events: list[dict], tx: list[dict], reimb: list[dict] = ()) ->
     for r in range(LEDGER_TOP + 1, last):
         if rows[r][6] < 0:
             view.look(r, r + 1, 6, 7, color=RED)
-        if "paid by no payer" in rows[r][1]:
-            view.look(r, r + 1, 1, 2, color=RED)
     view.look(last, last + 1, 0, 4, merge=True, fill=MID, color="FFFFFF", bold=True, align="right", valign="middle")
     view.look(last, last + 1, 4, 7, fill=INK, color="FFFFFF", bold=True, money="plain", valign="middle")
     view.look(LEDGER_TOP, last + 1, 0, 7, border="box")

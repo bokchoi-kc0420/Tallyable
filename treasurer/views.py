@@ -5,8 +5,8 @@ exactly the same thing.
 A View is the grid of values plus its look: fills, fonts, borders, merges and money
 format, as plain ranges. sheet_format.py turns the look into Google Sheets requests,
 xlsx_export.py into Excel styles. Colors follow the club's sheets:
-- Balance Sheet: one label column, then a 4-column block per event (LOCATION, ITEMS (#),
-  the event as the amount column, totals). Block headers alternate tan and gray.
+- Balance Sheet: one section per event, stacked: total cards, then assets (tan) on the
+  left and one row per receipt (gray) on the right.
 - The Expense Report (expense_view.py) and the General Ledger and Receipts tabs
   (ledger_view.py) use the same View and colors.
 """
@@ -25,8 +25,8 @@ BALANCE = "Balance Sheet"
 
 # The club's colors: tan and gray balance-sheet blocks, the ledger's dark slate header
 # and pale blue/gray tinted columns, red for income and for what needs a look.
-TAN, GRAY, BEIGE, STRIPE = "C9A57D", "BDBDBD", "FBF2E8", "F3F3F3"
-SLATE, SLATE_STRIPE, BLUE, RED, NOTE_GRAY, LINE = "3D4451", "E8ECF4", "CFE2F3", "D93025", "73787F", "B7B7B7"
+TAN, GRAY, BEIGE = "C9A57D", "BDBDBD", "FBF2E8"
+SLATE, RED, NOTE_GRAY, LINE = "3D4451", "D93025", "73787F", "B7B7B7"
 DARK, MID, INK, TINT, TINT2, MUTED = "333F4F", "595959", "222A35", "EAEEF4", "F2F2F2", "6B7280"
 
 
@@ -75,107 +75,74 @@ def group(tx: list[dict]) -> OrderedDict[str, OrderedDict[str, list[dict]]]:
     return out
 
 
-def _item_label(i: dict, with_count: bool = True) -> str:
-    """"pizza (2)" as the club's balance sheet writes it; a single item has no count.
-    The expense report has its own Unit column, so it leaves the count out."""
-    unit = int(D(i["unit"]))
-    count = f" ({unit})" if with_count and unit != 1 else ""
-    return f"{i['item']}{count}" + (" (returned)" if is_returned(i) else "")
-
-
 def _note(view: View) -> None:
     view.look(0, 1, 0, 1, italic=True, size=9, color=NOTE_GRAY)
 
 
 # ---------- Balance Sheet ----------
 
-def _receipt_lines(items: list[dict]) -> list[list]:
-    """Liability rows for one receipt: one per item, then VAT and tip, the receipt's total
-    on its last row. The place goes on the first row and the date and payer under it.
+GREEN = "1E7B4F"
+BALANCE_WIDTHS = [150, 92, 24, 190, 80, 70, 92]  # assets | gap | liabilities: fits a portrait page
 
-    Returned items are listed with no amount (the club rule: list it, exclude the
-    cost). The VAT row is whatever is left of the posted amount after items and tip,
-    so it already excludes the returned items' share of tax and the block sums exactly.
-    """
-    first = items[0]
-    kept = sum((D(i["amount"]) for i in items if not is_returned(i)), Decimal("0"))
-    tip = D(first["receipt_tip"])
-    vat = D(first["receipt_posted"]) - kept - tip
-    lines = [["", _item_label(i), "" if is_returned(i) else num(D(i["amount"])), ""] for i in items]
-    lines.append(["", "VAT", num(vat), ""])
-    if tip:
-        lines.append(["", "TIP", num(tip), ""])
-    lines[0][0] = first["place"]
-    lines[1][0] = f"{date.fromisoformat(str(first['date'])[:10]).strftime('%m/%d')} · {first['payer'] or 'no payer'}"
-    lines[-1][3] = num(D(first["receipt_posted"]))
-    return lines
+
+def _event_section(e: dict, receipts: list[list[dict]], top: int, view: View) -> list[list]:
+    """One event: its name, three total cards, then assets on the left and one row per
+    receipt on the right. Item detail lives on the Expense Report; the receipt number ties a
+    row to its photo and its Receipts-tab row."""
+    sources = income_sources(e)
+    t_in = sum((D(e.get(s) or 0) for s in sources), Decimal("0"))
+    t_out = sum((D(items[0]["receipt_posted"]) for items in receipts), Decimal("0"))
+    n = max(len(sources), len(receipts), 1)
+    rows = [[f"{e['name']} ({e['date']})", *[""] * 6],
+            ["TOTAL ASSETS", "", "TOTAL LIABILITIES", "", "", "BALANCE", ""],
+            [num(t_in), "", num(t_out), "", "", num(t_in - t_out), ""],
+            ["ASSETS", "", "", "LIABILITIES", "Date", "Receipt", "Total"],
+            *[["", "", "", "", "", "", ""] for _ in range(n)],
+            ["Total", num(t_in), "", "Total", "", "", num(t_out)], []]
+    body, end = top + 4, top + 4 + n
+    for k, s in enumerate(sources):
+        rows[4 + k][:2] = [s, num(D(e.get(s) or 0))]
+    for k, items in enumerate(receipts):
+        f = items[0]
+        when = date.fromisoformat(str(f["date"])[:10]).strftime("%m/%d")
+        rows[4 + k][3:] = [f["place"], when, f["receipt_id"], num(D(f["receipt_posted"]))]
+
+    view.look(top, top + 1, 0, 7, merge=True, bold=True, size=13, color=INK, valign="middle")
+    for c0, c1, head, fill in ((0, 2, TAN, BEIGE), (2, 5, GRAY, BEIGE), (5, 7, INK, TINT)):  # the cards
+        view.look(top + 1, top + 2, c0, c1, merge=True, fill=head, color="FFFFFF" if head == INK else INK,
+                  bold=True, size=9, align="center")
+        view.look(top + 2, top + 3, c0, c1, merge=True, fill=fill, bold=True, size=16, align="center",
+                  money="plain", border="box")
+    view.look(top + 2, top + 3, 5, 7, color=RED if t_in < t_out else GREEN)
+    view.look(top + 3, top + 4, 0, 2, fill=TAN, bold=True, color=INK)
+    view.look(top + 3, top + 4, 3, 7, fill=GRAY, bold=True, color=INK, size=9)
+    view.look(top + 3, top + 4, 3, 4, size=10)
+    view.look(body, end, 0, 2, fill=BEIGE)
+    view.look(body, end, 3, 7, fill="F7F7F7")
+    view.look(body, body + len(sources), 0, 2, border="grid")
+    view.look(body, body + len(receipts), 3, 7, border="grid")
+    view.look(body, body + len(receipts), 3, 4, bold=True)
+    view.look(body, body + len(receipts), 4, 6, color=MUTED, align="center")
+    view.look(body, end + 1, 1, 2, money=True)
+    view.look(body, end + 1, 6, 7, money=True)
+    for c0, c1 in ((0, 2), (3, 7)):
+        view.look(end, end + 1, c0, c1, bold=True, fill="E4E8EE", border="topbottom")
+        view.look(top + 3, end + 1, c0, c1, border="box")
+    return rows
 
 
 def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
-    """Label column A, then one 4-column block per event, ordered by event date: the
-    event's name on a band, then LOCATION, ITEMS (#), AMOUNT, TOTAL. Every receipt is
-    boxed. Prints landscape once there are two events side by side."""
+    """A title, then one section per event, by date, one under the other: assets on the
+    left, liabilities on the right."""
     grouped = group(tx)
-    blocks = []
+    grid = [[VIEW_NOTE], ["Balance Sheet"], []]
+    view = View(grid, freeze_rows=2, widths=BALANCE_WIDTHS, heights={1: 36})
     for e in sorted(events, key=lambda e: str(e["date"])):
-        receipts = grouped.get(e["event_id"], OrderedDict())
-        sources = income_sources(e)
-        assets = [[src, "", num(D(e.get(src) or 0)), ""] for src in sources]
-        total_in = sum((D(e.get(src) or 0) for src in sources), Decimal("0"))
-        by_date = sorted(receipts.values(), key=lambda items: (str(items[0]["date"]), items[0]["receipt_id"]))
-        per_receipt = [_receipt_lines(items) for items in by_date]  # same order as the Expense Report
-        total_out = sum((D(items[0]["receipt_posted"]) for items in receipts.values()), Decimal("0"))
-        blocks.append((f"{e['name']} ({e['date']})", assets, per_receipt, total_in, total_out))
-    n_in = max((len(b[1]) for b in blocks), default=0)
-    n_out = max((sum(len(r) for r in b[2]) for b in blocks), default=0)
-
-    labels = (["", "", "ASSETS", *[""] * n_in, "TOTAL ASSETS", "LIABILITIES", *[""] * n_out,
-               "TOTAL LIABILITIES", "TOTAL BALANCE"])
-    grid = [[VIEW_NOTE], *[[label] for label in labels]]
-    total_rows = sorted(r for r, label in enumerate(grid) if str(label[0]).startswith("TOTAL"))
-    t_in, t_out, t_bal = total_rows
-    view = View(grid, freeze_rows=3, freeze_cols=1, landscape=len(blocks) > 1,
-                widths=[118, *[120, 190, 84, 84] * len(blocks)], heights={1: 28})
-    last = len(grid)
-    for k, (title, assets, per_receipt, total_in, total_out) in enumerate(blocks):
-        c, tan = 1 + 4 * k, k % 2 == 0  # tan and gray blocks take turns, as on the club's sheet
-        liabilities = [line for lines in per_receipt for line in lines]
-        body = {1: [title, "", "", ""], 2: ["LOCATION", "ITEMS (#)", "AMOUNT", "TOTAL"],
-                t_in: ["", "", "", num(total_in)], t_out: ["", "", "", num(total_out)],
-                t_bal: ["", "", "", num(total_in - total_out)]}
-        body |= {4 + n: line for n, line in enumerate(assets)}
-        body |= {t_in + 2 + n: line for n, line in enumerate(liabilities)}
-        for r, row in enumerate(grid):
-            row.extend(body.get(r, ["", "", "", ""]) if r else [])
-        view.look(3, last, c, c + 4, fill=BEIGE if tan else "F7F7F7")
-        view.look(1, 2, c, c + 4, merge=True, fill=TAN if tan else GRAY, bold=True, size=11, align="center",
-                  valign="middle", color=INK)
-        view.look(2, 3, c, c + 4, fill=TAN if tan else GRAY, bold=True, size=9, color=INK)
-        view.look(2, 3, c + 2, c + 4, align="center")
-        view.look(3, last, c + 2, c + 4, money=True)
-        view.look(4, 4 + len(assets), c, c + 4, border="grid")
-        view.look(t_bal, t_bal + 1, c + 3, c + 4, color=RED if total_in < total_out else "1E7B4F")
-        top = t_in + 2
-        for lines in per_receipt:  # each receipt in its own box
-            view.look(top, top + len(lines), c, c + 1, bold=True)
-            view.look(top + 1, top + 2, c, c + 1, bold=False, size=8, color=MUTED if "no payer" not in lines[1][0] else RED)
-            view.look(top, top + len(lines), c + 3, c + 4, bold=True)
-            view.look(top, top + len(lines), c, c + 4, border="box")
-            top += len(lines)
-        for r, row in enumerate(liabilities, start=t_in + 2):
-            if row[1] in ("VAT", "TIP"):
-                view.look(r, r + 1, c + 1, c + 2, color=MUTED)
-            if str(row[1]).endswith("(returned)"):
-                view.look(r, r + 1, c + 1, c + 2, italic=True, color="9AA0A6")
-        view.look(1, last, c, c + 4, border="box")
-    width = 1 + 4 * len(blocks)
+        receipts = sorted(grouped.get(e["event_id"], OrderedDict()).values(),
+                          key=lambda items: (str(items[0]["date"]), items[0]["receipt_id"]))
+        grid.extend(_event_section(e, receipts, len(grid), view))
     _note(view)
-    view.look(1, 3, 0, 1, fill=GRAY)
-    for r in (3, t_in + 1):  # ASSETS, LIABILITIES
-        view.look(r, r + 1, 0, 1, bold=True, italic=True, color=INK)
-    for r in total_rows:
-        view.look(r, r + 1, 0, width, fill="E4E8EE", bold=True, italic=True, border="topbottom")
-    view.look(1, last, 0, 1, border="box")
+    view.look(1, 2, 0, 3, merge=True, bold=True, size=20, color=INK, valign="middle")
     return view
 
 

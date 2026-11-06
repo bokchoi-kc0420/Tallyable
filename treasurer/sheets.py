@@ -142,7 +142,7 @@ class GoogleSheetsSink:
         reimb_ws = self._tab(REIMB, REIMB_FIELDS)
         reimb = reimb_ws.get_all_records()
         self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
-        self._rewrite(LEDGER, render_ledger(events, tx, reimb), self.ledger_book)
+        self._rewrite(LEDGER, render_ledger(events, tx), self.ledger_book)
         self._tidy_format(tx_ws, TX_FIELDS, len(tx) + 1)
         ev_ws = self._tab(EVENTS, EVENT_FIELDS)
         ev_header = [h for h in ev_ws.row_values(1) if h]
@@ -155,28 +155,28 @@ class GoogleSheetsSink:
         return self._records(REIMB, REIMB_FIELDS)
 
     def record_reimbursement(self, r) -> None:
-        """Append to the Reimbursements tab and rebuild the Ledger view."""
+        """Append to the Reimbursements tab and rebuild the Receipts tab."""
         row = r.row()
         ws = self._tab(REIMB, REIMB_FIELDS)
         ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS]], value_input_option="RAW")
-        self._refresh_ledger(ws)
+        self._refresh_receipts(ws)
 
     def undo_reimbursement(self, event_id: str) -> None:
-        """Delete this event's most recent payback (a misclicked Mark paid) and rebuild the Ledger."""
+        """Delete this event's most recent payback (a misclicked Mark paid) and rebuild the Receipts tab."""
         ws = self._tab(REIMB, REIMB_FIELDS)
         rows = ws.get_all_records()
         last = max((i for i, r in enumerate(rows) if str(r["event_id"]) == event_id), default=None)
         if last is None:
             return
         ws.delete_rows(last + 2)  # +1 for the header, +1 because sheet rows count from 1
-        self._refresh_ledger(ws)
+        self._refresh_receipts(ws)
 
-    def _refresh_ledger(self, ws) -> None:
-        """A payback shows in the ledger and on the Receipts tab."""
+    def _refresh_receipts(self, ws) -> None:
+        """A payback shows on the Receipts tab. The ledger has no row for it: it settles an
+        expense already counted there."""
         reimb = ws.get_all_records()
         events, tx = self._records(EVENTS, EVENT_FIELDS), self._records(TX, TX_FIELDS)
         self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
-        self._rewrite(LEDGER, render_ledger(events, tx, reimb), self.ledger_book)
         self._tidy_format(ws, REIMB_FIELDS, len(reimb) + 1)
         self._apply_format()
 
@@ -272,7 +272,7 @@ def local_views(receipts: list[Receipt], event: EventInfo, income: dict[str, Dec
         "Expense Report": render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())),
         BALANCE: render_balance_sheet([ev], tx),
         RECEIPTS: render_receipts([ev], tx, mine),
-        LEDGER: render_ledger([ev], tx, mine),
+        LEDGER: render_ledger([ev], tx),
     }
 
 

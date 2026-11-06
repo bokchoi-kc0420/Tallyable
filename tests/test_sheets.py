@@ -126,13 +126,11 @@ def approved():
     return out
 
 
-def col(grid, label, offset=4):
-    """A total on a labelled row, in the first event block (label column, then LOCATION,
-    ITEMS, amount, total)."""
-    for row in grid:
-        if row and row[0] == label:
-            return Decimal(str(row[offset]))
-    raise KeyError(label)
+def cards(grid, event_name):
+    """An event section's three cards: total assets, total liabilities, balance."""
+    top = next(i for i, r in enumerate(grid) if r and str(r[0]).startswith(event_name))
+    values = grid[top + 2]
+    return Decimal(str(values[0])), Decimal(str(values[2])), Decimal(str(values[5]))
 
 
 def test_push_writes_tidy_tabs_and_is_idempotent(approved):
@@ -151,17 +149,12 @@ def test_balance_sheet_matches_expected_total(approved):
     book = FakeBook()
     GoogleSheetsSink(book).post(approved, EVENT, INCOME)
     grid = book.tabs[BALANCE].cells
-    assert grid[1][1] == "Fall Mentor Mixer (FAKE) (2026-11-14)"  # the event's band
-    assert grid[2][1:5] == ["LOCATION", "ITEMS (#)", "AMOUNT", "TOTAL"]
-    assert col(grid, "TOTAL ASSETS") == Decimal("640.00")
-    assert col(grid, "TOTAL LIABILITIES") == Decimal("571.75")  # the week-1 expected total
-    assert col(grid, "TOTAL BALANCE") == Decimal("68.25")
-    # The liability lines alone add up to the total, so returned items' cost and tax are excluded.
-    start = next(i for i, r in enumerate(grid) if r[0] == "LIABILITIES") + 1
-    end = next(i for i, r in enumerate(grid) if r[0] == "TOTAL LIABILITIES")
-    lines = sum(Decimal(str(r[3])) for r in grid[start:end] if r[3] != "")
-    assert lines.quantize(Decimal("0.01")) == Decimal("571.75")
-    assert any("(returned)" in str(r[2]) and r[3] == "" for r in grid[start:end])
+    assert cards(grid, EVENT.name) == (Decimal("640.00"), Decimal("571.75"), Decimal("68.25"))  # week-1 totals
+    header = next(i for i, r in enumerate(grid) if r and r[0] == "ASSETS")
+    assert grid[header][3:] == ["LIABILITIES", "Date", "Receipt", "Total"]  # assets left, liabilities right
+    rows = grid[header + 1:next(i for i, r in enumerate(grid) if r and r[0] == "Total")]
+    assert len([r for r in rows if r[5]]) == len(approved)  # one row per receipt
+    assert sum(Decimal(str(r[6])) for r in rows if r[6] != "").quantize(Decimal("0.01")) == Decimal("571.75")
 
 
 def test_second_event_goes_sideways_and_ledger_runs(approved):
@@ -172,12 +165,13 @@ def test_second_event_goes_sideways_and_ledger_runs(approved):
     other = approved[2].model_copy(update={"event_id": "EVT-FAKE-02", "date": date(2026, 12, 4)})
     sink.post([other], later, {"Cash": Decimal("20.00")})
     grid = book.tabs[BALANCE].cells
-    assert grid[1][5] == "Winter Social (FAKE) (2026-12-05)"  # block 2 is the next 4 columns
+    names = [r[0] for r in grid if r and str(r[0]).endswith(")") and "(FAKE) (" in str(r[0])]
+    assert names == ["Fall Mentor Mixer (FAKE) (2026-11-14)", "Winter Social (FAKE) (2026-12-05)"]  # stacked by date
 
     ledger = book.tabs[LEDGER].cells
     assert ledger[0][0] == "GENERAL LEDGER 2026-2027" and ledger[LEDGER_TOP][0] == "DATE"
     body = ledger[LEDGER_TOP + 1:-1]
-    assert [r[0] for r in body] == sorted(r[0] for r in body)
+    assert [r[1] for r in body] == [EVENT.name, "Winter Social (FAKE)"]  # one row per event, by date
     total_in = sum(INCOME.values()) + Decimal("20.00")
     total_out = sum(r.posted_amount for r in approved[:3])
     assert Decimal(str(body[-1][4])) == total_in
@@ -217,16 +211,14 @@ def test_from_env_returns_none_without_setup(tmp_path):
     assert GoogleSheetsSink.from_env(tmp_path) is None
 
 
-def test_reimbursement_lands_in_ledger_without_moving_balance(approved):
+def test_a_payback_leaves_the_ledger_alone(approved):
     from treasurer.reimburse import Reimbursement, totals_by_payer
     book = FakeBook()
     sink = GoogleSheetsSink(book)
     sink.post(approved, EVENT, INCOME)
-    before = book.tabs[LEDGER].cells[-2][6]
+    before = book.tabs[LEDGER].cells
     sink.record_reimbursement(Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle"))
-    last = book.tabs[LEDGER].cells[-2]  # the row above TOTAL BALANCE
-    assert last[1].startswith("Paid back Member A $31.07 via Zelle") and last[2] == last[3] == ""
-    assert last[6] == before                                   # balance unchanged
+    assert book.tabs[LEDGER].cells == before  # it settles an expense the ledger already counts
     assert totals_by_payer(sink.reimbursements(), EVENT.event_id) == {"Member A": Decimal("31.07")}
     sink.undo_reimbursement(EVENT.event_id)                    # a misclicked Mark paid
     assert sink.reimbursements() == []
@@ -279,9 +271,11 @@ def test_each_quarter_gets_its_own_balance_sheet(approved):
     other = approved[2].model_copy(update={"event_id": "EVT-FAKE-03", "date": date(2027, 1, 19)})
     sink.post([other], winter, {"Cash": Decimal("20.00")})
     fall, win = book.tabs["Balance Sheet: Fall 2026"].cells, book.tabs["Balance Sheet: Winter 2027"].cells
-    assert fall[1][1].startswith("Fall Mentor Mixer") and len(fall[1]) == 5
-    assert win[1][1].startswith("New Year Social") and len(win[1]) == 5
-    assert len(book.tabs[BALANCE].cells[1]) == 9   # the all-events tab still has both, side by side
+    def sections(grid):
+        return [r[0] for r in grid if r and "(FAKE) (" in str(r[0])]
+    assert sections(fall) == ["Fall Mentor Mixer (FAKE) (2026-11-14)"]
+    assert sections(win) == ["New Year Social (FAKE) (2027-01-20)"]
+    assert len(sections(book.tabs[BALANCE].cells)) == 2  # the all-events tab still has both
 
 
 def test_push_formats_the_sheet_for_reading(approved):
@@ -373,8 +367,8 @@ def test_any_club_can_name_its_own_income_sources(approved):
     assert "Ticket sales" in header and "Sponsor" in header
     flat = [c for row in book.tabs["Balance Sheet"].cells for c in row]
     assert "Ticket sales" in flat and 200.0 in flat  # TOTAL ASSETS
-    ledger = [row[1] for row in book.tabs[LEDGER].cells[LEDGER_TOP + 1:]]
-    assert any(d.startswith("Ticket sales:") for d in ledger)
+    event_row = book.tabs[LEDGER].cells[LEDGER_TOP + 1]
+    assert event_row[1] == EVENT.name and event_row[2] == 200.0  # one row per event, all its income
 
 
 def test_whole_book_exports_to_one_formatted_excel_file(approved):
@@ -389,9 +383,9 @@ def test_whole_book_exports_to_one_formatted_excel_file(approved):
     wb = load_workbook(BytesIO(data))
     assert wb.sheetnames == ["Expense Report", "Balance Sheet", "Receipts", "General Ledger", "Transactions"]
     bs = wb["Balance Sheet"]
-    total = next(r for r in bs.iter_rows() if r[0].value == "TOTAL LIABILITIES")
-    assert total[0].font.bold and total[4].number_format == MONEY
-    assert bs.freeze_panes == "B4"  # the note, the event band, the headers and the label column stay visible
+    total = next(r for r in bs.iter_rows() if r[0].value == "Total")
+    assert total[0].font.bold and total[6].number_format == MONEY
+    assert bs.freeze_panes == "A3"  # the note and the title stay visible
     tx = wb["Transactions"]
     assert tx.max_row == 1 + sum(len(r.items) for r in approved)
 
