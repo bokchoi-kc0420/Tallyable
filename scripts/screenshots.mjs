@@ -51,6 +51,12 @@ try {
   await shot("1-upload-empty");
   await page.getByRole("button", { name: "Use the fake event's 14 receipts instead" }).click();
   await idle();
+  for (const name of ["Jamie Lee", "Sam Park"]) {  // nobody can be tagged until a member is added
+    await page.getByPlaceholder("e.g. Jamie Lee").fill(name);
+    await page.getByPlaceholder("e.g. Jamie Lee").press("Enter");
+    await idle();
+  }
+  await shot("1-upload-members", page.locator(".st-key-members-box"));
   await page.getByRole("button", { name: "Apply to all" }).click();
   await idle();
   await page.getByRole("button", { name: "Draft rows" }).click();
