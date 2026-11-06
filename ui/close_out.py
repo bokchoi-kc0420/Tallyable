@@ -166,7 +166,7 @@ def show(event: EventInfo) -> None:
         return
     waiting = [r.receipt_id for r in ss.receipts.values() if r.status is Status.DRAFTED]
     if waiting:
-        st.warning(f"Not reviewed yet, so not counted below: {', '.join(waiting)}")
+        st.warning(f"Still need a look, so they're not counted yet: {', '.join(waiting)}")
     else:
         with st.container(key="mascot-cheer"):
             st.image(str(ART / "tally-cheer.png"), width=170)

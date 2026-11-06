@@ -11,3 +11,4 @@ secrets.toml
 .streamlit/secrets.toml
 output/
 *.lnk
+*[Kk]ey*.json

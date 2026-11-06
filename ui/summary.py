@@ -138,8 +138,8 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
             "minutes_draft_to_push": minutes(ss.drafted_at, now),
             "minutes_review_to_push": minutes(ss.review_started, now),
         })
-    ss.last_push = (f"**Posted {len(written)} receipts to {sink.label}.**" if written
-                    else "**Already up to date:** every approved receipt is in the books.")
+    ss.last_push = (f"**Pushed {len(written)} receipts to {sink.label}!**" if written
+                    else "**Already up to date.** Every approved receipt is in the books.")
     st.rerun()  # redraw the table and step bar with the posted status
 
 
