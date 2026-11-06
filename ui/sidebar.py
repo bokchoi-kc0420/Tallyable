@@ -149,9 +149,12 @@ def show() -> tuple[str, EventInfo]:
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
-        color = st.pills("Ticket color", NAMES, default=ss.event.get("color") or NAMES[0], key="ticket-color",
-                         help="Picked for you so events in a row don't match. Change it anytime!") \
-            or ss.event.get("color") or NAMES[0]  # clicking the picked chip again unpicks it: keep the color
+        current = ss.event.get("color") or NAMES[0]
+        st.markdown('<p class="tly-field-label">Ticket color</p>', unsafe_allow_html=True,
+                    help="Picked for you so events in a row don't match. Change it anytime!")
+        with st.container(key="color-menu"), st.popover(current, width="stretch"):
+            color = st.pills("Ticket color", NAMES, default=current, key="ticket-color",
+                             label_visibility="collapsed") or current  # clicking the picked chip again unpicks it
         start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
                                 step=10.0, format="%.2f", placeholder="0.00",
                                 help="What the club had before this year's first event. Type it once a year: "
@@ -168,8 +171,10 @@ def show() -> tuple[str, EventInfo]:
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
-    st.html("<style>" + "".join(f'.st-key-ticket-color button:nth-of-type({n}) p::before {{ background: {c}; }}'
-                                for n, (c, _) in enumerate(PALETTE.values(), start=1)) + "</style>")
+    dots = "".join(f".st-key-ticket-color button:nth-of-type({n}) p::before {{ background: {c}; }}"
+                   for n, (c, _) in enumerate(PALETTE.values(), start=1))
+    picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
+    st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
     past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
     if past:
         with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
