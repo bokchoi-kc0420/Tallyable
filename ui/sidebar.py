@@ -28,7 +28,7 @@ def event_id_for(name: str, d: date) -> str:
 def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
     Club settings (members, income sources) carry over."""
-    ss.event = {**ss.event, "name": "New event", "date": date.today(),
+    ss.event = {**ss.event, "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today())}
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
@@ -116,8 +116,7 @@ def show() -> tuple[str, EventInfo]:
     event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
     event_card = event_group.empty()  # filled below, once the event fields are read
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
-    with event_group.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:",
-                                                             expanded=not ss.receipts and ss.event == DEFAULT_EVENT):
+    with event_group.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:"):
         locked = bool(ss.receipts)
         name = st.text_input("Event name", ss.event["name"], disabled=locked)
         d = st.date_input("Event date", ss.event["date"], disabled=locked)

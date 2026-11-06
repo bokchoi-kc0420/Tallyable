@@ -100,7 +100,7 @@ def view_requests(sheet_id: int, view) -> list[dict]:
         fmt = cell_format(look)
         if fmt:
             reqs.append(_paint(sheet_id, rng, fmt))
-        if look.get("merge"):
+        if look.get("merge") and (rng[1] - rng[0]) * (rng[3] - rng[2]) > 1:  # Sheets refuses a one-cell merge
             reqs.append({"mergeCells": {"range": _range(sheet_id, *rng), "mergeType": "MERGE_ALL"}})
         if "border" in look:
             reqs.append(_border(sheet_id, rng, look["border"]))

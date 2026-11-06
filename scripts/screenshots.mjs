@@ -47,16 +47,19 @@ try {
     try { await page.goto(`http://localhost:${PORT}`); break; } catch (e) { if (i > 60) throw e; }
     await page.waitForTimeout(500);
   }
-  await page.getByText("Use the fake event's 14 receipts instead").waitFor({ timeout: 60000 });
-  await shot("1-upload-empty");
-  await page.getByRole("button", { name: "Use the fake event's 14 receipts instead" }).click();
-  await idle();
-  for (const name of ["Jamie Lee", "Sam Park"]) {  // nobody can be tagged until a member is added
+  await page.getByText("Start a new event").waitFor({ timeout: 60000 });
+  await shot("0-start-empty");
+  for (const name of ["Jamie Lee", "Sam Park"]) {  // Continue waits for at least one member
     await page.getByPlaceholder("e.g. Jamie Lee").fill(name);
     await page.getByPlaceholder("e.g. Jamie Lee").press("Enter");
     await idle();
   }
-  await shot("1-upload-members", page.locator(".st-key-members-box"));
+  await shot("0-start-ready");
+  await page.getByRole("button", { name: /Continue to receipts/ }).click();
+  await page.getByText("Use the fake event's 14 receipts instead").waitFor({ timeout: 60000 });
+  await shot("1-upload-empty");
+  await page.getByRole("button", { name: "Use the fake event's 14 receipts instead" }).click();
+  await idle();
   await page.getByRole("button", { name: "Apply to all" }).click();
   await idle();
   await page.getByRole("button", { name: "Draft rows" }).click();

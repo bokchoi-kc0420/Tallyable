@@ -13,7 +13,7 @@ import time
 import streamlit as st
 
 from treasurer import session_store
-from ui import close_out, review, sidebar, summary, upload
+from ui import close_out, review, sidebar, start, summary, upload
 from ui.common import ART, ROOT, SESSION_FILE, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
@@ -44,7 +44,9 @@ ss.setdefault("review_started", None)
 ss.setdefault("income", {})
 
 page, event = sidebar.show()
-if page == "1. Upload":
+if page == "1. Upload" and start.needed():
+    start.show()
+elif page == "1. Upload":
     upload.show(event)
 elif page == "2. Review":
     review.show()
