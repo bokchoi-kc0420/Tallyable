@@ -220,3 +220,7 @@
 [data-testid="stSidebarHeader"] img[data-testid="stSidebarLogo"], [data-testid="stSidebarLogo"] {
   height: 3.4rem !important; max-width: 15rem; width: auto; }
 [data-testid="stSidebarHeader"] a:hover img { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
+
+/* The event's name in the New event confirm box, so it's clear which event is being kept. */
+.tly-event-name { background: var(--tly-forest); color: #fff; font-family: Fredoka, sans-serif; font-weight: 600;
+  border-radius: 8px; padding: 1px 8px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }

@@ -48,7 +48,9 @@ def confirm_new_event() -> None:
         start_new_event()
         st.rerun()
     with st.sidebar.container(border=True, key="confirm-new"):
-        st.markdown(f"**Start a new event?**  \n{ss.event['name']} is saved! Find it anytime under Past events.")
+        st.markdown("**Start a new event?**")
+        st.markdown(f'<span class="tly-event-name">{html.escape(ss.event["name"])}</span> is saved! '
+                    "Find it anytime under Past events.", unsafe_allow_html=True)
         st.caption("Photos you uploaded but haven't drafted yet won't come along.")
         if st.button("Yes, start a new one", type="primary", key="confirm-new-yes", width="stretch"):
             save_session()
