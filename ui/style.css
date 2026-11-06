@@ -222,5 +222,9 @@
 [data-testid="stSidebarHeader"] a:hover img { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
 
 /* The event's ticket in the New event pop-up: ticket-sized, not stretched across the dialog. */
-.tly-confirm { display: flex; justify-content: center; } .tly-confirm .tly-event { width: 300px; }
+/* Both lines in one font (Inter), close together. */
+.tly-confirm-note { font-family: Inter, sans-serif; line-height: 1.45; margin: 12px 0 16px; }
+.tly-confirm-note b { font-family: Inter, sans-serif; color: var(--tly-forest); font-weight: 700; }
+.tly-confirm-note small { font-size: .9rem; color: var(--tly-soft); }
+.tly-confirm { display: flex; justify-content: center; margin-bottom: 14px; } .tly-confirm .tly-event { width: 300px; }
 div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-family: Fredoka, sans-serif !important; font-weight: 600; }

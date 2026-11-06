@@ -52,8 +52,8 @@ def confirm_new_event() -> None:
     n = len(ss.receipts)
     st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n)}</div>',
                 unsafe_allow_html=True)
-    st.markdown(":green[**Saved to Past events ✓**] You can reopen it anytime!")
-    st.caption("Photos you uploaded but haven't drafted yet won't come along.")
+    st.markdown('<p class="tly-confirm-note"><b>Saved to Past events ✓</b> You can reopen it anytime!<br>'
+                "<small>Photos you uploaded but haven't drafted yet won't come along.</small></p>", unsafe_allow_html=True)
     c = st.columns(2)
     if c[0].button("Keep going", key="confirm-new-no", width="stretch"):
         close_confirm()
