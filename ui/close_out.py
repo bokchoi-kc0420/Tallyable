@@ -20,7 +20,8 @@ EXAMPLES = {"Example: event grant (up to $2,500)": co.CFC, "Example: yearly gran
 
 def save_payback(sink, payback: Reimbursement) -> bool:
     try:
-        sink.record_reimbursement(payback)
+        with st.spinner(f"Saving the payback to {payback.payer}..."):
+            sink.record_reimbursement(payback)
     except Exception as e:
         st.error(f"Payback not saved: {e}. Try again.")
         return False
@@ -45,7 +46,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, last: dict 
     owing = [x for x in lines if x.owed > 0]
     st.subheader("Who's owed")
     cap = st.columns([3, 2], vertical_alignment="bottom")
-    cap[0].caption(f"Mark paid saves the payback to {sink.label}. It shows in the ledger.")
+    cap[0].caption(f"Paid someone back? Hit Mark paid and it's saved to {sink.label}.")
     quick = cap[1].selectbox("Paid back with", METHODS, key="quick-method") if owing else METHODS[0]
     counts = Counter((r.payer or "").strip() or "(no payer)" for r in done)
     for x in lines:
@@ -73,7 +74,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, last: dict 
 def payback_form(sink, owing: list, event_id: str) -> None:
     """Pay back part of what's owed, on another date or by another method."""
     with st.expander("Pay back part of it, or by another method"), st.form("payback"):
-        st.caption(f"Mark a payback. It is saved to {sink.label} and shows in the ledger.")
+        st.caption(f"Paid back only part, or on another day? Log it here and it's saved to {sink.label}.")
         c = st.columns(4)
         who = c[0].selectbox("Payer", [x.payer for x in owing])
         amount = c[1].text_input("Amount", "", help="Leave blank to pay back everything owed")
@@ -121,8 +122,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
                           help="Rules from whoever funds your event: student government, a department, a sponsor. "
                                "The examples are real rules from one student government, to show how it works.")
     if funder == "No funder":
-        st.caption("No funder rules checked. Who is owed (above) and the books from Summary are all you need. "
-                   "This event stays saved: reopen it anytime under Past events.")
+        st.caption("No funder? No problem. Paying people back is all that's left.")
         return
     pack = my_funder() if funder == "My funder's rules" else EXAMPLES[funder]
     c = st.columns(3)
@@ -208,8 +208,7 @@ def show(event: EventInfo) -> None:
 def photos(event: EventInfo, done: list[Receipt], lines) -> None:
     """Every receipt photo, labeled, in one PDF: for the funder, or to check prices against."""
     st.subheader("Receipt photos")
-    st.caption("One page per receipt, labeled with its total and who paid. Attach it to a funder request, "
-               "or keep it with the books.")
+    st.caption("Every receipt photo in one PDF, labeled. Handy for funders or your records.")
     owed = {x.payer: x.owed for x in lines}
     paid = {r.receipt_id: ("Not yet" if owed.get(r.payer or "(no payer)", 0) > 0 else "Yes") if r.payer else ""
             for r in done}
