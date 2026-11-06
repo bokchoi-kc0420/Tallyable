@@ -23,10 +23,16 @@ def check(ids: dict) -> str | None:
     """None if the bot can open every linked sheet, else what to tell the treasurer."""
     client = bot_client(ROOT, GCP_KEY)
     for name, sid in ids.items():
+        what = "ledger" if name == "ledger" else "event"
         try:
-            client.open_by_key(sid)
+            book = client.open_by_key(sid)
         except Exception:
-            return f"Tally can't open your {'ledger' if name == 'ledger' else 'event'} sheet yet. Did you share it?"
+            return f"Tally can't open your {what} sheet yet. Did you share it?"
+        try:  # rewrite the title as it is: harmless, but only an Editor may do it
+            book.batch_update({"requests": [{"updateSpreadsheetProperties": {
+                "properties": {"title": book.title}, "fields": "title"}}]})
+        except Exception:
+            return f"Tally can see your {what} sheet but can't write to it. Share it as Editor, not Viewer!"
     return None
 
 

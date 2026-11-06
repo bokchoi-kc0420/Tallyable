@@ -473,3 +473,29 @@ def test_each_new_event_gets_the_next_ticket_color():
     at.sidebar.button(key="new-event").click().run()
     at.button(key="confirm-new-yes").click().run()
     assert at.session_state["event"]["color"] == next_color(first)
+
+
+def test_connect_catches_a_viewer_only_share(monkeypatch):
+    from ui import connect
+
+    class Book:
+        title = "Club books"
+
+        def __init__(self, editor):
+            self.editor = editor
+
+        def batch_update(self, body):
+            if not self.editor:
+                raise PermissionError("403")
+
+    class Client:
+        def __init__(self, editor):
+            self.editor = editor
+
+        def open_by_key(self, key):
+            return Book(self.editor)
+
+    monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=False))
+    assert "Editor, not Viewer" in connect.check({"book": "x"})
+    monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True))
+    assert connect.check({"book": "x"}) is None
