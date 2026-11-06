@@ -122,8 +122,10 @@ class GoogleSheetsSink:
         from dotenv import load_dotenv
         load_dotenv(root / ".env")
         linked = linked or {}
-        sheet_id = linked.get("book") or os.getenv("TALLYABLE_SHEET_ID")
-        ledger_id = linked.get("ledger") or os.getenv("TALLYABLE_LEDGER_SHEET_ID")  # optional: its own file
+        if linked.get("book"):  # a linked book never mixes with .env: no ledger link = ledger in the same book
+            sheet_id, ledger_id = linked["book"], linked.get("ledger")
+        else:
+            sheet_id, ledger_id = os.getenv("TALLYABLE_SHEET_ID"), os.getenv("TALLYABLE_LEDGER_SHEET_ID")
         if not sheet_id:
             return None
         client = bot_client(root, key_info)

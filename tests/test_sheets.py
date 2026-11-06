@@ -399,6 +399,6 @@ def test_a_pasted_sheet_link_is_used_over_env(monkeypatch, tmp_path):
             return FakeBook()
     monkeypatch.setattr(sheets, "bot_client", lambda root, key_info=None: Client())
     monkeypatch.setenv("TALLYABLE_SHEET_ID", "from-env")
-    monkeypatch.delenv("TALLYABLE_LEDGER_SHEET_ID", raising=False)
+    monkeypatch.setenv("TALLYABLE_LEDGER_SHEET_ID", "ledger-from-env")  # ignored: the linked book has no ledger link
     GoogleSheetsSink.from_env(tmp_path, linked={"book": sid})
     assert opened == [sid]
