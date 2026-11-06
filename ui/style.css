@@ -223,4 +223,4 @@
 
 /* The event's name in the New event confirm box, so it's clear which event is being kept. */
 .tly-event-name { background: var(--tly-forest); color: #fff; font-family: Fredoka, sans-serif; font-weight: 600;
-  border-radius: 8px; padding: 1px 8px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  border-radius: 8px; padding: 3px 10px; display: inline-block; line-height: 1.35; vertical-align: middle; }
