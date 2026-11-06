@@ -2,7 +2,7 @@
 
 General Ledger: the club's own ledger format (its "Simple General Ledger" sheet): a big
 title for the school year, Starting and Current balance cards, a dark header, tinted
-columns, red income, filters, and a TOTAL BALANCE row. It can live in its own Google
+columns, filters and a TOTAL BALANCE row. It can live in its own Google
 Sheet, apart from the event books ("the big boss").
 
 Receipts: one row per receipt with whether its payer has been paid back, so the
@@ -88,7 +88,6 @@ def render_ledger(events: list[dict], tx: list[dict]) -> View:
     view.look(LEDGER_TOP + 1, last, 0, 7, border="grid", valign="middle")
     view.look(LEDGER_TOP + 1, last, 1, 2, wrap=True)  # long descriptions wrap instead of hiding
     view.look(LEDGER_TOP + 1, last, 2, 7, money=True)
-    view.look(LEDGER_TOP + 1, last, 2, 3, color=RED)
     view.look(LEDGER_TOP + 1, last, 6, 7, bold=True)
     for r in range(LEDGER_TOP + 1, last):
         if rows[r][6] < 0:

@@ -23,8 +23,8 @@ VIEW_NOTE = "Built by Tallyable from the Transactions, Events and Reimbursements
 BASE_EVENT_FIELDS = ["event_id", "name", "date", "attendees", "start_balance"]
 BALANCE = "Balance Sheet"
 
-# The club's colors: tan and gray balance-sheet blocks, the ledger's dark slate header
-# and pale blue/gray tinted columns, red for income and for what needs a look.
+# Colors: tan and gray balance-sheet panels, a dark slate header
+# and pale tinted columns. Red only marks what needs a look (no payer, a negative balance).
 TAN, GRAY, BEIGE = "C9A57D", "BDBDBD", "FBF2E8"
 SLATE, RED, NOTE_GRAY, LINE = "3D4451", "D93025", "73787F", "B7B7B7"
 DARK, MID, INK, TINT, TINT2, MUTED = "333F4F", "595959", "222A35", "EAEEF4", "F2F2F2", "6B7280"
