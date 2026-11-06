@@ -2,7 +2,6 @@
 Also saving the session, and opening a past event."""
 from __future__ import annotations
 
-import html
 import os
 import time
 from datetime import date
@@ -13,7 +12,9 @@ import streamlit as st
 
 from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
+from ui import connect
 from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
+from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
 DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
                  "attendees": 45, "members": "",  # added on Upload; nobody can be tagged until there is one
@@ -30,19 +31,45 @@ def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
     Club settings (members, income sources, starting balance) carry over."""
     ss.event = {**ss.event, "name": "New event", "date": date.today(), "set_up": False,
-                "event_id": event_id_for("New event", date.today())}
+                "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color"))}
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
+    ss.pop("ticket-color", None)  # the color list shows the new event's color, not the last one's
     ss.started = time.time()
     session_store.clear(SESSION_FILE)
 
 
+def close_confirm() -> None:
+    ss.confirm_new = False
+
+
+@st.dialog("Start a new event?", on_dismiss=close_confirm)
+def confirm_new_event() -> None:
+    """Ask before clearing the screen, so a stray click can't wipe an event in progress.
+    Shown while `confirm_new` is set, so each button click redraws it until one closes it."""
+    n = len(ss.receipts)
+    st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n, ss.event.get("color"))}</div>',
+                unsafe_allow_html=True)
+    st.markdown('<p class="tly-confirm-note"><b>Saved to Past events ✓</b> You can reopen it anytime!<br>'
+                "<small>Photos you uploaded but haven't drafted yet won't come along.</small></p>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if c[0].button("Keep going", key="confirm-new-no", width="stretch"):
+        close_confirm()
+        st.rerun()
+    if c[1].button("Yes, start a new one", type="primary", key="confirm-new-yes", width="stretch"):
+        close_confirm()
+        save_session()
+        start_new_event()
+        st.rerun()
+
+
 def save_session() -> None:
-    """Write the session to disk when it changed since the last save."""
-    if not ss.receipts:
+    """Write the session to disk when it changed since the last save. An event counts once
+    it's set up, even before any receipts, so starting a new one never loses it."""
+    if not ss.receipts and not ss.event.get("set_up"):
         return
     state = {k: ss[k] for k in session_store.SAVED_KEYS}
     text = session_store.dump(state)
@@ -60,11 +87,12 @@ def open_past(path: Path) -> None:
         ss.past_error = f"Could not open {path.name}."
         return
     ss.update(saved)
+    ss.pop("ticket-color", None)
     ss.failed = {}
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
     ss.pop("_saved", None)
-    ss.step = "4. Close out"
+    ss.step = "4. Close out" if ss.receipts else STEPS[0]
 
 
 def stepper_css(current: str) -> None:
@@ -98,13 +126,6 @@ def stepper_css(current: str) -> None:
     st.html("<style>" + "\n".join(rules) + "</style>")
 
 
-def ticket(d: date, name: str, receipts: int, small: bool = False) -> str:
-    """An event as a ticket: a date stub, then the name and receipt count."""
-    return (f'<div class="tly-event{" small" if small else ""}"><div class="stub"><span>{d.strftime("%b").upper()}</span>'
-            f'<b>{d.day}</b><span>{d.year}</span></div><div class="info"><b>{html.escape(name)}</b>'
-            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small></div></div>')
-
-
 def show() -> tuple[str, EventInfo]:
     """Draw the sidebar. Returns the step to show and the event being closed out."""
     ss.setdefault("event", dict(DEFAULT_EVENT))
@@ -112,8 +133,12 @@ def show() -> tuple[str, EventInfo]:
     st.sidebar.caption("Close out a club event: receipts in, checked books out.")
     if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                          help="Starts a blank event. This one stays saved under Past events."):
-        start_new_event()
-        st.rerun()
+        if not ss.receipts and not ss.event.get("set_up"):  # nothing to lose
+            start_new_event()
+            st.rerun()
+        ss.confirm_new = True
+    if ss.get("confirm_new"):
+        confirm_new_event()
     event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
     event_card = event_group.empty()  # filled below, once the event fields are read
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
@@ -122,38 +147,48 @@ def show() -> tuple[str, EventInfo]:
         name = st.text_input("Event name", ss.event["name"], disabled=locked)
         d = st.date_input("Event date", ss.event["date"], disabled=locked)
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
-        cal = st.radio("School calendar", ["Semesters", "Quarters"], horizontal=True,
-                       index=0 if ss.event.get("calendar", "semester") == "semester" else 1,
-                       help="Your books get one balance sheet per term.")
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
+        current = ss.event.get("color") or NAMES[0]
+        st.markdown('<p class="tly-field-label">Ticket color</p>', unsafe_allow_html=True,
+                    help="Picked for you so events in a row don't match. Change it anytime!")
+        with st.container(key="color-menu"), st.popover(current, width="stretch"), st.container(height=190, border=False):
+            color = st.radio("Ticket color", NAMES, index=NAMES.index(current), key="ticket-color",
+                             label_visibility="collapsed")
         start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
                                 step=10.0, format="%.2f", placeholder="0.00",
                                 help="What the club had before this year's first event. Type it once a year: "
                                      "the General Ledger starts from it.")
         changed = name != ss.event["name"] or d != ss.event["date"]
-        ss.event.update(calendar="semester" if cal == "Semesters" else "quarter", target=target, start_balance=start)
+        ss.event.update(target=target, start_balance=start, color=color)
         ss.event.update(name=name, date=d, attendees=attendees,
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
             st.caption("Name and date are locked once receipts are drafted.")
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
-                      calendar=ss.event.get("calendar", "semester"),
                       start_balance=None if start is None else Decimal(str(start)))
-    event_card.markdown(ticket(event.date, event.name, len(ss.receipts)), unsafe_allow_html=True)
+    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
+    dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
+                   for n, (c, _) in enumerate(PALETTE.values(), start=1))
+    picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
+    st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
     past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
     if past:
         with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
+            cols = st.columns(2)
             for n, e in enumerate(past):
                 d = e["date"] if isinstance(e["date"], date) else date.fromisoformat(str(e["date"])[:10])
-                with st.container(key=f"past-{n}"):
-                    st.markdown(ticket(d, e["name"], e["receipts"], small=True), unsafe_allow_html=True)
+                with cols[n % 2].container(key=f"past-{n}"):
+                    st.markdown(stub(d, e["name"], e.get("color")), unsafe_allow_html=True)
                     st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
                               icon=":material/open_in_new:", type="tertiary",
-                              help="Your current event is saved first, so you can come back to it here.")
+                              help=f"Opens {e['name']}. Your current event is saved first.")
+    label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
+    if st.sidebar.button(label, icon=":material/link:", type="tertiary", key="open-connect"):
+        connect.dialog()
     if ss.get("past_error"):
         st.sidebar.error(ss.pop("past_error"))
     return page, event

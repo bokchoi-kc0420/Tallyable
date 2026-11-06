@@ -153,7 +153,7 @@ def show() -> None:
     def attention(x: str) -> bool:
         return any(f.severity is not Severity.INFO for f in flags[x]) or bool(ss.notes.get(x))
 
-    show_only = st.sidebar.selectbox("Show", ["All", "Not reviewed yet", "Needs attention"])
+    show_only = st.sidebar.selectbox("Show", ["All", "Not reviewed yet", "Needs attention"], key="review-filter")
     ids = [x for x, rec in ss.receipts.items()
            if show_only == "All" or (show_only == "Not reviewed yet" and rec.status is Status.DRAFTED)
            or (show_only == "Needs attention" and attention(x))]

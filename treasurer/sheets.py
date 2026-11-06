@@ -18,7 +18,9 @@ Setup: docs/google_sheets_setup.md. Needs in .env:
 """
 from __future__ import annotations
 
+import json
 import os
+import re
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import date
@@ -38,7 +40,6 @@ from .views import (
     group,
     num,
     render_balance_sheet,
-    term_tabs,
 )
 
 # Where an event's money comes from. Each club sets its own list in the app; these are
@@ -55,7 +56,6 @@ class EventInfo:
     name: str
     date: date
     attendees: int | None = None
-    calendar: str = "semester"  # "semester" or "quarter": how balance-sheet tabs are split
     start_balance: Decimal | None = None  # what the club had at the start of the school year
 
 
@@ -69,6 +69,39 @@ def event_row(event: EventInfo, income: dict[str, Decimal]) -> dict:
 
 # ---------- the sink ----------
 
+def bot_client(root: Path, key_info: dict | None = None):
+    """A gspread client signed in as Tallyable's bot, or None when no key is set up."""
+    import gspread
+    from gspread.http_client import BackOffHTTPClient  # waits and retries when Google rate-limits us
+    if key_info:
+        return gspread.service_account_from_dict(dict(key_info), http_client=BackOffHTTPClient)
+    key_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+    if not key_file:
+        return None
+    path = Path(key_file) if Path(key_file).is_absolute() else root / key_file
+    return gspread.service_account(filename=str(path), http_client=BackOffHTTPClient)
+
+
+def bot_email(root: Path, key_info: dict | None = None) -> str | None:
+    """The address a treasurer shares their sheet with."""
+    from dotenv import load_dotenv
+    load_dotenv(root / ".env")
+    if key_info:
+        return key_info.get("client_email")
+    key_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+    path = key_file and (Path(key_file) if Path(key_file).is_absolute() else root / key_file)
+    try:
+        return json.loads(path.read_text())["client_email"] if path else None
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def sheet_id(link: str) -> str | None:
+    """The id in a Google Sheets link (or an id pasted on its own); None if it isn't one."""
+    m = re.search(r"/spreadsheets/d/([A-Za-z0-9_-]{20,})", link) or re.fullmatch(r"\s*([A-Za-z0-9_-]{20,})\s*", link)
+    return m.group(1) if m else None
+
+
 class GoogleSheetsSink:
     """Works with a gspread Spreadsheet, or anything with the same few methods
     (the tests pass an in-memory fake)."""
@@ -80,24 +113,24 @@ class GoogleSheetsSink:
         self.format_errors: list[str] = []  # tabs whose formatting Sheets refused on the last push
 
     @classmethod
-    def from_env(cls, root: Path, key_info: dict | None = None) -> GoogleSheetsSink | None:
+    def from_env(cls, root: Path, key_info: dict | None = None, linked: dict | None = None) -> GoogleSheetsSink | None:
         """None if Sheets is not set up, so the app can fall back to CSV.
 
-        Locally the key is a file named in .env. On Streamlit Cloud there is no file,
-        so the app passes the key's contents from st.secrets as `key_info`."""
+        The sheets are the ones the treasurer linked in the app (`linked`: {"book": id,
+        "ledger": id}), else the ids in .env. Locally the bot's key is a file named in .env;
+        on Streamlit Cloud the app passes its contents from st.secrets as `key_info`."""
         from dotenv import load_dotenv
         load_dotenv(root / ".env")
-        key_file, sheet_id = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"), os.getenv("TALLYABLE_SHEET_ID")
-        ledger_id = os.getenv("TALLYABLE_LEDGER_SHEET_ID")  # optional: a separate file for the General Ledger
-        if not sheet_id or not (key_file or key_info):
-            return None
-        import gspread
-        from gspread.http_client import BackOffHTTPClient  # waits and retries when Google rate-limits us
-        if key_info:
-            client = gspread.service_account_from_dict(dict(key_info), http_client=BackOffHTTPClient)
+        linked = linked or {}
+        if linked.get("book"):  # a linked book never mixes with .env: no ledger link = ledger in the same book
+            sheet_id, ledger_id = linked["book"], linked.get("ledger")
         else:
-            path = Path(key_file) if Path(key_file).is_absolute() else root / key_file
-            client = gspread.service_account(filename=str(path), http_client=BackOffHTTPClient)
+            sheet_id, ledger_id = os.getenv("TALLYABLE_SHEET_ID"), os.getenv("TALLYABLE_LEDGER_SHEET_ID")
+        if not sheet_id:
+            return None
+        client = bot_client(root, key_info)
+        if not client:
+            return None
         return cls(client.open_by_key(sheet_id), client.open_by_key(ledger_id) if ledger_id else None)
 
     @property
@@ -135,8 +168,9 @@ class GoogleSheetsSink:
         events = self._records(EVENTS, EVENT_FIELDS)
         tx = tx_ws.get_all_records()
         self._rewrite(BALANCE, render_balance_sheet(events, tx))
-        for title, grid in term_tabs(events, tx, event.calendar).items():
-            self._rewrite(title, grid)
+        for ws in self.book.worksheets():  # per-term tabs from older versions: one Balance Sheet holds it all
+            if ws.title.startswith(f"{BALANCE}: "):
+                self.book.del_worksheet(ws)
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
         self._rewrite(expense_tab_title(ev), render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())))
         reimb_ws = self._tab(REIMB, REIMB_FIELDS)

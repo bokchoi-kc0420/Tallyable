@@ -16,6 +16,7 @@ from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
+from ui import connect
 from ui.common import RUN_LOG, dec, get_sink, go, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
@@ -175,7 +176,7 @@ def show(event: EventInfo) -> None:
               key="summary-empty", to="1. Upload")
         return
     st.subheader("Income")
-    st.caption("Money that came in for this event. Expenses come from the receipts you approved.")
+    st.caption("Add what came in! What went out is already counted from your receipts.")
     income = income_box()
     metrics(receipts, income)
     with st.container(border=True):
@@ -193,7 +194,9 @@ def show(event: EventInfo) -> None:
     if err:
         st.error(err)
     if sink.label != "Google Sheets":
-        st.caption("Google Sheets isn't connected, so Push saves the books on this computer.")
+        with st.expander("Connect your Google Sheets (or Push saves the books on this computer)",
+                         icon=":material/link:", expanded=not err):
+            connect.box("summary")
     if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting), icon=":material/upload:"):
         push(sink, receipts, event, income)
     url = getattr(sink, "url", None)
