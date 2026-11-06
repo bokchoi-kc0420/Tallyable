@@ -66,14 +66,14 @@ def clear(path: Path) -> None:
 
 def past_events(folder: Path) -> list[dict]:
     """Every saved event in `folder` (one file per event id), newest event first.
-    Each entry: path, event_id, name, date, receipts."""
+    Each entry: path, event_id, name, date, receipts, color."""
     out = []
     for p in folder.glob("*.json") if folder.exists() else []:
         try:
             raw = json.loads(p.read_text())
             ev = raw["event"]
             out.append({"path": p, "event_id": ev["event_id"], "name": ev["name"], "date": ev["date"],
-                        "receipts": len(raw["receipts"])})
+                        "receipts": len(raw["receipts"]), "color": ev.get("color")})
         except (OSError, ValueError, KeyError, TypeError):
             continue  # a damaged file is skipped, not fatal
     return sorted(out, key=lambda e: e["date"], reverse=True)

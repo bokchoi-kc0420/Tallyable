@@ -238,7 +238,7 @@ def test_approve_moves_to_next_receipt_and_reopen_undoes():
 
 def test_needs_attention_filter_lists_only_flagged_receipts():
     at = drafted_app()
-    at.sidebar.selectbox[0].set_value("Needs attention").run()
+    at.sidebar.selectbox(key="review-filter").set_value("Needs attention").run()
     shown = {o.split(" ")[1] for o in at.sidebar.radio(key="review-pick").options}
     assert {"R02", "R06", "R13"} <= shown   # math errors (stub misreads and planted)
     assert "R01" not in shown
@@ -461,3 +461,15 @@ def test_a_forgotten_member_can_be_added_after_drafting():
     at.button(key="start-go").click().run()
     assert at.session_state["event"]["members"] == "Jamie Lee, Sam Park"
     assert at.session_state["event"]["event_id"] == event_id
+
+
+def test_each_new_event_gets_the_next_ticket_color():
+    from ui.tickets import NAMES, next_color, short_name
+    assert next_color(None) == NAMES[0] and next_color(NAMES[-1]) == NAMES[0]
+    assert next_color("Forest") != "Forest"
+    assert short_name("Fall Mentor Mixer (FAKE)") == "Mentor Mixer"
+    at = drafted_app()
+    first = at.session_state["event"].get("color")
+    at.sidebar.button(key="new-event").click().run()
+    at.button(key="confirm-new-yes").click().run()
+    assert at.session_state["event"]["color"] == next_color(first)
