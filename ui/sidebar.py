@@ -37,7 +37,7 @@ def start_new_event() -> None:
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
     ss.pop("last_draft", None)
     ss.pop("last_push", None)
-    ss.pop("ticket-color", None)  # the color chips show the new event's color, not the last one's
+    ss.pop("ticket-color", None)  # the color list shows the new event's color, not the last one's
     ss.started = time.time()
     session_store.clear(SESSION_FILE)
 
@@ -152,9 +152,9 @@ def show() -> tuple[str, EventInfo]:
         current = ss.event.get("color") or NAMES[0]
         st.markdown('<p class="tly-field-label">Ticket color</p>', unsafe_allow_html=True,
                     help="Picked for you so events in a row don't match. Change it anytime!")
-        with st.container(key="color-menu"), st.popover(current, width="stretch"):
-            color = st.pills("Ticket color", NAMES, default=current, key="ticket-color",
-                             label_visibility="collapsed") or current  # clicking the picked chip again unpicks it
+        with st.container(key="color-menu"), st.popover(current, width="stretch"), st.container(height=190, border=False):
+            color = st.radio("Ticket color", NAMES, index=NAMES.index(current), key="ticket-color",
+                             label_visibility="collapsed")
         start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
                                 step=10.0, format="%.2f", placeholder="0.00",
                                 help="What the club had before this year's first event. Type it once a year: "
@@ -171,7 +171,7 @@ def show() -> tuple[str, EventInfo]:
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
-    dots = "".join(f".st-key-ticket-color button:nth-of-type({n}) p::before {{ background: {c}; }}"
+    dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
     st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
