@@ -46,7 +46,7 @@ class LocalCsvSink:
         with open(self.path, newline="") as fh:
             return {(row["event_id"], row["receipt_id"]) for row in csv.DictReader(fh)}
 
-    label = "local CSV"
+    label = "this computer"  # shown to the treasurer: "Push to this computer"
 
     def post(self, receipts: list[Receipt], event=None, income=None) -> list[str]:
         """Write approved, not-yet-posted receipts. Returns the ids written."""
@@ -81,3 +81,14 @@ class LocalCsvSink:
             if new_file:
                 w.writeheader()
             w.writerow(r.row())
+
+    def undo_reimbursement(self, event_id: str) -> None:
+        """Delete this event's most recent payback (a misclicked Mark paid)."""
+        rows = self.reimbursements()
+        last = max((i for i, r in enumerate(rows) if r["event_id"] == event_id), default=None)
+        if last is None:
+            return
+        with open(self._reimb_path, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=REIMB_FIELDS)
+            w.writeheader()
+            w.writerows(rows[:last] + rows[last + 1:])

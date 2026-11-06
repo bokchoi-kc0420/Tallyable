@@ -14,7 +14,7 @@ from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validat
 from treasurer.sheets import EventInfo
 from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, saved_reimbursements, ss, step_bar, usd
 
-EXAMPLES = {"Example: UC Davis CFC": co.CFC, "Example: UC Davis ORG": co.ORG}
+EXAMPLES = {"Example: event grant (up to $2,500)": co.CFC, "Example: yearly grant ($250)": co.ORG}
 
 
 def save_payback(sink, payback: Reimbursement) -> bool:
@@ -26,7 +26,20 @@ def save_payback(sink, payback: Reimbursement) -> bool:
     return True
 
 
-def whos_owed(sink, done: list[Receipt], lines: list, event_id: str) -> None:
+def undo_last(sink, last: dict, event_id: str) -> None:
+    """Take back this event's latest payback, for a misclicked Mark paid."""
+    label = f"Undo last payback: {usd(dec(str(last['amount'])))} to {last['payer']}"
+    if not st.button(label, key="undo-paid", icon=":material/undo:", type="tertiary"):
+        return
+    try:
+        sink.undo_reimbursement(event_id)
+    except Exception as e:
+        st.error(f"Couldn't undo the payback: {e}. Try again.")
+        return
+    st.rerun()
+
+
+def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, last: dict | None) -> None:
     """One row per payer: initials, what they fronted, what's still owed, and Mark paid."""
     owing = [x for x in lines if x.owed > 0]
     st.subheader("Who's owed")
@@ -52,6 +65,8 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str) -> None:
             continue
         if save_payback(sink, Reimbursement(event_id, x.payer, date.today(), x.owed, quick, "")):
             st.rerun()
+    if last:
+        undo_last(sink, last, event_id)
 
 
 def payback_form(sink, owing: list, event_id: str) -> None:
@@ -103,7 +118,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     st.subheader("Funder rules")
     funder = st.selectbox("Funder", ["No funder", "My funder's rules", *EXAMPLES], key="funder",
                           help="Rules from whoever funds your event: student government, a department, a sponsor. "
-                               "The examples are one school's real rules, to show how it works.")
+                               "The examples are real rules from one student government, to show how it works.")
     if funder == "No funder":
         st.caption("No funder rules checked. Who is owed (above) and the books from Summary are all you need. "
                    "This event stays saved: reopen it anytime under Past events.")
@@ -136,7 +151,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
                 "When everyone is paid back, start the next event from the sidebar. This event stays saved: "
                 "reopen it anytime under **Past events**.")
     st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
-                       file_name=f"{info.event_id}_{pack.name.split()[-1]}_report.csv",
+                       file_name=f"{info.event_id}_funder_report.csv",
                        data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
                        mime="text/csv")
 
@@ -162,12 +177,13 @@ def show(event: EventInfo) -> None:
     sink, err = get_sink()
     if err:
         st.error(err)
-    reimbursed = totals_by_payer(saved_reimbursements(sink), event.event_id)
+    paybacks = [p for p in saved_reimbursements(sink) if str(p["event_id"]) == event.event_id]
+    reimbursed = totals_by_payer(paybacks, event.event_id)
     lines = co.payer_summary(done, reimbursed)
     owing = [x for x in lines if x.owed > 0]
     left, right = st.columns([5, 3], gap="medium")
     with left.container(border=True):
-        whos_owed(sink, done, lines, event.event_id)
+        whos_owed(sink, done, lines, event.event_id, paybacks[-1] if paybacks else None)
     with right.container(border=True):
         st.subheader("Money in vs out")
         money_panel(done, {k: dec(v) for k, v in ss.income.items()})

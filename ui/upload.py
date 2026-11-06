@@ -128,8 +128,8 @@ def show(event: EventInfo) -> None:
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
     else:
-        guide("Demo mode:", "I can only read the fake event's receipts (with a few planted misreads to catch). "
-              "Add ANTHROPIC_API_KEY to .env and restart to read real receipts with Claude.", key="demo", tip=True)
+        guide("Demo mode:", "I can only read the sample event's 14 receipts, with a few planted mistakes for you to "
+              "catch. Reading your own receipts needs the full version, with Claude turned on.", key="demo", tip=True)
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "mascot-empty.png"), width=190)

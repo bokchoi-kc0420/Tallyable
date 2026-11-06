@@ -36,6 +36,9 @@ class FakeWorksheet:
     def clear(self):
         self.cells = []
 
+    def delete_rows(self, n):
+        del self.cells[n - 1]
+
     def row_values(self, n):
         return list(self.cells[n - 1]) if len(self.cells) >= n else []
 
@@ -152,6 +155,9 @@ def test_reimbursement_lands_in_ledger_without_moving_balance(approved):
     assert last[1].startswith("Paid back Member A $31.07 via Zelle") and last[2] == last[3] == ""
     assert last[6] == before                                   # balance unchanged
     assert totals_by_payer(sink.reimbursements(), EVENT.event_id) == {"Member A": Decimal("31.07")}
+    sink.undo_reimbursement(EVENT.event_id)                    # a misclicked Mark paid
+    assert sink.reimbursements() == []
+    assert not any("Paid back" in str(c) for row in book.tabs[LEDGER].cells for c in row)
 
 
 def test_expense_report_tab_in_club_format(approved):

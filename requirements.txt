@@ -1,5 +1,6 @@
 pydantic>=2.6
 pillow>=10.0
+pillow-heif>=1.0  # iPhone photos (HEIC)
 pytest>=8.0
 streamlit>=1.50
 pandas>=2.0

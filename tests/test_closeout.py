@@ -92,7 +92,7 @@ def test_payer_summary_balances(approved):
 
 def test_funder_report_csv_has_items_flags_and_owed(approved):
     text = co.funder_report_csv(EVENT, approved, co.CFC, requested=Decimal("520"))
-    assert "UC Davis Club Finance Council" in text and "571.75" in text
+    assert "Example event grant" in text and "571.75" in text
     assert "club_share_too_low" in text and "R14" in text and "MISSING" in text
     assert "Member A" in text
 

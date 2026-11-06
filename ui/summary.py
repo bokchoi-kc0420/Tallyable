@@ -192,7 +192,7 @@ def show(event: EventInfo) -> None:
     if err:
         st.error(err)
     if sink.label != "Google Sheets":
-        st.caption("Google Sheets is not set up (see docs/google_sheets_setup.md), so Push writes a local CSV.")
+        st.caption("Google Sheets isn't connected, so Push saves the books on this computer.")
     if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting), icon=":material/upload:"):
         push(sink, receipts, event, income)
     url = getattr(sink, "url", None)

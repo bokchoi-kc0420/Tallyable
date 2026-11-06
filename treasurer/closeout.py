@@ -47,7 +47,7 @@ class RulePack:
 
 
 CFC = RulePack(
-    name="UC Davis Club Finance Council",
+    name="Example event grant",
     max_award=Decimal("2500"),
     food_cap_per_person_day=Decimal("12"),
     min_club_share=Decimal("0.10"),
@@ -57,7 +57,7 @@ CFC = RulePack(
 )
 
 ORG = RulePack(
-    name="UC Davis Operation Reimbursement Grant",
+    name="Example yearly grant",
     max_award=Decimal("250"),
     purchase_window_days=42,
     banned_categories=frozenset({"Food", "Drink"}),

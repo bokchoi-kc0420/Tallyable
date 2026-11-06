@@ -90,11 +90,12 @@ def go(step: str) -> None:
 
 
 def get_sink():
-    """Google Sheets if it is set up, else the local CSV. Returns (sink, error)."""
+    """Google Sheets if it is set up, else CSV files on this computer. Returns (sink, error)."""
     try:
         return GoogleSheetsSink.from_env(ROOT, GCP_KEY) or LocalCsvSink(OUT / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
-        return LocalCsvSink(OUT / "transactions.csv"), f"Could not open the Google Sheet, so using local CSV instead: {e}"
+        return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so the books are saved on "
+                                                        f"this computer for now. ({e})")
 
 
 def saved_reimbursements(sink) -> list[dict]:
