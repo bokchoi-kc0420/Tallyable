@@ -194,7 +194,7 @@ def show(event: EventInfo) -> None:
     left_out = [r for r in ss.receipts.values() if r.status is Status.REJECTED]
     if left_out:
         with st.expander(f"Left out of the books ({len(left_out)})"):
-            st.caption("Not counted anywhere: not in expenses, who's owed, or the funder report.")
+            st.caption("These don't count anywhere! Not in expenses, who's owed, or the funder report.")
             html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)",
                          "Total": usd(r.total), "Why": r.review_note or ""} for r in left_out], numeric=("Total",))
     if owing:

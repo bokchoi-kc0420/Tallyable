@@ -87,9 +87,10 @@ def edit_form(rid: str, flags: list) -> None:
     payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
     df = pd.DataFrame([{"category": i.category, "item": i.item, "unit": i.unit, "price": float(i.price),
                         "returned": i.returned} for i in r.items])
-    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch",
-                            column_config={"category": st.column_config.SelectboxColumn(options=["Food", "Drink", "Other"]),
-                                           "price": st.column_config.NumberColumn(format="%.2f")})
+    columns = {"category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"]),
+               "item": "Item", "unit": "Qty", "returned": "Returned",
+               "price": st.column_config.NumberColumn("Price", format="%.2f")}
+    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns)
     c1, c2, c3 = st.columns(3)
     tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
     tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
@@ -98,18 +99,18 @@ def edit_form(rid: str, flags: list) -> None:
     try:
         items = [LineItem(category=row.category, item=str(row.item), unit=int(row.unit),
                           price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned))
-                 for row in edited.itertuples() if str(row.item).strip()]
+                 for row in edited.itertuples() if pd.notna(row.item) and str(row.item).strip()]
         new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items,
                                        tax=dec(tax), tip=dec(tip), total=dec(total)))
-    except (ValueError, TypeError) as e:
-        st.error(f"Fix the line items: {e}")
+    except (ValueError, TypeError):
+        st.error("Something's off in the line items! Each line needs an item, a qty and a price.")
     else:
         if new != r:
             ss.edits += 1
             ss.receipts[rid] = new
             st.rerun()  # re-run checks on the edited values
 
-    st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · posts {usd(r.posted_amount)}"))
+    st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
     note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
                          placeholder="Why you're approving a red flag, or leaving this out (duplicate, personal...)",
                          help="Needed to approve a receipt with a red flag, and to leave one out. "
