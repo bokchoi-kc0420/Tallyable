@@ -122,13 +122,10 @@ def past_events_box() -> None:
             art = stub(d, e["name"], e.get("color")) if cols else ticket(d, e["name"], e["receipts"], e.get("color"))
             with slot.container(key=f"past-{n}"):
                 st.markdown(art, unsafe_allow_html=True)
-                if e["event_id"] == here:
-                    st.button("Reopen", key=f"open-past-{n}", on_click=reopen, icon=":material/undo:",
-                              type="tertiary", help="Back to Close out to change something.")
-                    continue
-                st.button("Reopen", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
-                          icon=":material/undo:", type="tertiary",
-                          help=f"Opens {e['name']}. Your current event is saved first.")
+                # The whole ticket or stub is the button: an invisible one laid over it (finish.css).
+                here_now = e["event_id"] == here
+                st.button("Reopen", key=f"open-past-{n}", on_click=reopen if here_now else open_past,
+                          args=() if here_now else (e["path"],), help=f"Reopen {e['name']}")
 
 
 def stepper_css(current: str) -> None:

@@ -38,3 +38,12 @@
 .st-key-past-tab button[aria-checked="true"] { background: var(--tly-forest) !important; border-color: var(--tly-forest) !important; color: #fff; }
 .st-key-past-tab button[aria-checked="true"] p { color: #fff; }
 .st-key-past-tab [role="group"], .st-key-past-tab [data-testid="stButtonGroup"] { gap: 6px; }
+/* Past events: click the ticket or stub itself to reopen it. Its Reopen button sits invisibly on top,
+   so keyboards and screen readers still reach it; hover lifts the art like the other buttons. */
+[class*="st-key-past-"] { position: relative; }
+[class*="st-key-past-"] [data-testid="stElementContainer"]:has(.stButton) { position: absolute; inset: 0; width: 100% !important; z-index: 2; }
+[class*="st-key-past-"] .stButton, [class*="st-key-past-"] .stButton div { position: static !important; }
+[class*="st-key-past-"] .stButton button { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+[class*="st-key-past-"] .stButton button:focus-visible { opacity: 1; background: transparent; outline: 3px solid var(--tly-sun); color: transparent; }
+[class*="st-key-past-"] .tly-stub, [class*="st-key-past-"] .tly-event { transition: transform .16s cubic-bezier(.2,.8,.2,1); }
+[class*="st-key-past-"]:hover .tly-stub, [class*="st-key-past-"]:hover .tly-event { transform: translateY(-3px); }
