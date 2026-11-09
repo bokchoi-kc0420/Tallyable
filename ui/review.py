@@ -18,8 +18,7 @@ FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "unusual_tax": (":material/percent:", "Tax looks high"),
              "returned_item": (":material/undo:", "Returned item"),
              "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
-FLAG_TONE = {Severity.BLOCK: ("block", "Fix this or add a note to approve"), Severity.WARN: ("warn", "Worth a second look"),
-             Severity.INFO: ("info", "Just so you know")}
+FLAG_TONE = {Severity.BLOCK: ("block", "Must fix"), Severity.WARN: ("warn", "Check"), Severity.INFO: ("info", "FYI")}
 
 
 def next_drafted(after: str) -> str | None:
@@ -78,7 +77,7 @@ def edit_form(rid: str, flags: list) -> None:
         icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
         tone, hint = FLAG_TONE[f.severity]
         with st.container(key=f"flag-{tone}-{rid}-{n}"):
-            st.markdown(f"{icon} **{title}** <span class='tly-flaghint'>· {hint}</span>\n\n"
+            st.markdown(f"{icon} **{title}** <span class='tly-flagpill'>{hint}</span>\n\n"
                         f"<span class='tly-flagmsg'>{html.escape(f.message)}</span>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     place = c1.text_input("Place", r.place, key=f"place-{rid}")

@@ -185,7 +185,7 @@
 .tly-nothumb { height: 110px; border-radius: 10px; background: #F2ECD3; display: grid; place-items: center;
   font-family: Fredoka, sans-serif; font-weight: 600; color: #1C5C36; }
 /* Check results as cards */
-[class*="st-key-flag-"] { border-radius: 14px; padding: 10px 16px; border-left: 6px solid; margin-bottom: .25rem; }
+[class*="st-key-flag-"] { border-radius: 14px; padding: 10px 16px; margin-bottom: .25rem; }
 /* Streamlit pulls markdown up by -1rem at the bottom, which pushed the message into the card's edge */
 [class*="st-key-flag-"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 [class*="st-key-flag-"] p { margin: 0; color: #1F2A22; line-height: 1.35; }
@@ -193,13 +193,17 @@
 [class*="st-key-flag-"] span[role="img"] { font-size: 1.15rem !important; vertical-align: -3px; margin-right: 6px; }
 [class*="st-key-flag-"] .tly-flagmsg { display: block; margin-top: 2px; font-size: .92rem; line-height: 1.45;
   color: #3B4237; padding-left: 30px; }
-.st-key-flag-block, [class*="st-key-flag-block-"] { background: #FBE4E0; border-color: #C44536; }
+.st-key-flag-block, [class*="st-key-flag-block-"] { background: #FBE4E0; }
 [class*="st-key-flag-block-"] span[role="img"] { color: #A8322A; }
-[class*="st-key-flag-warn-"] { background: #FDF1CC; border-color: #E0A526; }
+[class*="st-key-flag-warn-"] { background: #FDF1CC; }
 [class*="st-key-flag-warn-"] span[role="img"] { color: #8A6100; }
-[class*="st-key-flag-info-"] { background: #E6EFE3; border-color: #1C5C36; }
+[class*="st-key-flag-info-"] { background: #E6EFE3; }
 [class*="st-key-flag-info-"] span[role="img"] { color: #1C5C36; }
-.tly-flaghint { font-size: .85rem; color: #5B5E55; }
+.tly-flagpill { font-family: Fredoka, sans-serif; font-weight: 500; font-size: .75rem; color: #FFFFFF; border-radius: 99px;
+  padding: 2px 9px; margin-left: 6px; vertical-align: 1px; }
+[class*="st-key-flag-block-"] .tly-flagpill { background: #C44536; }
+[class*="st-key-flag-warn-"] .tly-flagpill { background: #E0A526; color: #3A2A00; }
+[class*="st-key-flag-info-"] .tly-flagpill { background: #1C5C36; }
 .tly-decided { border-radius: 12px; padding: 12px 16px; font-size: .95rem; line-height: 1.5; }
 .tly-decided small { font-size: .85rem; opacity: .85; }
 .st-key-leave-out button { background: #C44536; border-color: #C44536; color: #fff; }
