@@ -176,8 +176,7 @@ def show() -> tuple[str, EventInfo]:
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))
-    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color"), ss.event.get("finished")),
-                        unsafe_allow_html=True)
+    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"

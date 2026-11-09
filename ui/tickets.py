@@ -37,13 +37,11 @@ def _vars(color: str | None) -> str:
     return f"--tly-c: {bg}; --tly-ct: {fg};"
 
 
-def ticket(d: date, name: str, receipts: int, color: str | None = None, done: bool = False) -> str:
-    """An event as a ticket: a date stub in the event's color, then the name and receipt count.
-    A finished event gets a DONE stamp."""
-    stamp = '<em class="tly-done-stamp">DONE</em>' if done else ""
+def ticket(d: date, name: str, receipts: int, color: str | None = None) -> str:
+    """An event as a ticket: a date stub in the event's color, then the name and receipt count."""
     return (f'<div class="tly-event" style="{_vars(color)}"><div class="stub"><span>{d.strftime("%b").upper()}</span>'
             f'<b>{d.day}</b><span>{d.year}</span></div><div class="info"><b>{html.escape(name)}</b>'
-            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}{stamp}</small></div></div>')
+            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small></div></div>')
 
 
 def stub(d: date, name: str, color: str | None = None, done: bool = False) -> str:
