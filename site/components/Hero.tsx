@@ -50,7 +50,7 @@ export function Hero() {
         <p className="font-round text-sm font-semibold uppercase tracking-[0.18em] text-forest">
           For club treasurers
         </p>
-        <h1 className="mt-3 font-display text-5xl font-black leading-[1.05] text-ink sm:text-6xl lg:text-7xl">
+        <h1 className="mt-3 font-display text-5xl font-bold leading-[1.05] text-ink sm:text-6xl lg:text-7xl">
           Every receipt,
           <br />
           accounted for.
