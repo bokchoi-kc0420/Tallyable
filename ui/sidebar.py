@@ -109,7 +109,12 @@ def past_events_box() -> None:
         return
     past = [e for e in past if not e.get("finished")] + [e for e in past if e.get("finished")]
     with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
-        slots = [st.container() for e in past if not e.get("finished")]  # open tickets, full width, on top
+        n_open = sum(1 for e in past if not e.get("finished"))
+        if n_open:
+            st.markdown('<p class="tly-past-label">Still open</p>', unsafe_allow_html=True)
+        slots = [st.container() for _ in range(n_open)]  # open tickets, full width, on top
+        if n_open < len(past):
+            st.markdown('<p class="tly-past-label">Finished ✓</p>', unsafe_allow_html=True)
         cols = st.columns(2)
         slots += [cols[n % 2] for n in range(len(past) - len(slots))]  # then the stubs, two per row
         for n, (e, slot) in enumerate(zip(past, slots, strict=True)):

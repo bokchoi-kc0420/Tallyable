@@ -33,3 +33,4 @@
 /* A wider sidebar (Kevin, 2026-11-09): the ticket, steps, Edit event and Past events had too little room. */
 @media (min-width: 768px) { section[data-testid="stSidebar"] { width: 360px !important; min-width: 360px !important; } }
 [class*="st-key-past-"] .tly-event { margin-bottom: 10px; }  /* room for Reopen under an open event's ticket */
+.tly-past-label { font-family: Fredoka, sans-serif; font-weight: 600; font-size: .95rem; color: var(--tly-soft); margin: 4px 0 -4px; }
