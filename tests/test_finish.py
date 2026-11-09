@@ -47,6 +47,7 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     assert "is closed out!" in page and "Set your starting balance" in page  # never set: no made-up balance
     assert any("1 person still owed" in m.value for m in at.markdown)  # honest about Member A
     assert any(b.label == "Reopen" for b in at.sidebar.button)  # its stub sits in Past events
+    assert any('class="tly-stub"' in m.value for m in at.sidebar.markdown)  # finished = torn-off stub
     at.button(key="reopen-event").click().run()
     assert not at.session_state["event"]["finished"]
     assert at.sidebar.radio(key="step").value == "4. Close out"
@@ -76,3 +77,10 @@ def test_club_balance_adds_this_years_saved_events(tmp_path):
     session_store.save(tmp_path / "b.json", last_year)
     ev = EventInfo("EVT-C", "C", date(2026, 11, 14), 10, start_balance=Decimal("1000"))
     assert finish.club_balance(ev, Decimal("-20")) == Decimal("1030")
+
+
+def test_ticket_color_menu_shows_the_color_just_picked():
+    at = new_app().run()
+    at.sidebar.radio(key="ticket-color").set_value("Sage").run()
+    assert at.session_state["event"]["color"] == "Sage"
+    assert [p.proto.popover.label for p in at.sidebar.get("popover")] == ["Sage"]  # was one pick behind

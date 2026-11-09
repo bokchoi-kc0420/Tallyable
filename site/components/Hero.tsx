@@ -14,6 +14,11 @@ type StickerProps = {
   tilt?: number;
 };
 
+// The pop on hover and the snap back both use this spring. Only the slow bob uses the long
+// timing: before, leaving a sticker eased it back over ~4 seconds, so it couldn't pop again.
+const POP = { type: "spring", stiffness: 300, damping: 12 } as const;
+const bob = (seconds: number, delay = 0) => ({ y: { duration: seconds, repeat: Infinity, ease: "easeInOut", delay }, default: POP }) as const;
+
 // Each sticker bobs gently and pops on hover, like it's being peeled off the page.
 function Sticker({ src, alt, className, float = 8, delay = 0, tilt = 6 }: StickerProps) {
   return (
@@ -22,9 +27,9 @@ function Sticker({ src, alt, className, float = 8, delay = 0, tilt = 6 }: Sticke
       alt={alt}
       draggable={false}
       className={`absolute select-none ${className}`}
-      animate={{ y: [0, -float, 0] }}
-      transition={{ duration: 4 + delay, repeat: Infinity, ease: "easeInOut", delay }}
-      whileHover={{ scale: 1.12, rotate: tilt, transition: { type: "spring", stiffness: 300, damping: 12 } }}
+      animate={{ y: [0, -float, 0], scale: 1, rotate: 0 }}
+      transition={bob(4 + delay, delay)}
+      whileHover={{ scale: 1.12, rotate: tilt }}
     />
   );
 }
@@ -78,13 +83,15 @@ export function Hero() {
           onClick={() => setOpen(true)}
           aria-label="Tap the phone to peek inside the app"
           className="group absolute bottom-[14%] right-[0%] w-[30%] cursor-zoom-in"
-          animate={{ y: [0, -7, 0] }}
-          transition={{ duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ y: [0, -7, 0], scale: 1, rotate: 0 }}
+          transition={bob(4.6)}
           whileHover={{ scale: 1.12, rotate: 8 }}
         >
           <img src="/art/phone.png" alt="" draggable={false} className="w-full select-none" />
-          <span className="absolute -left-6 -top-3 rotate-[-8deg] rounded-full bg-sun px-2.5 py-1 font-round text-xs font-semibold text-ink shadow transition group-hover:scale-110">
-            Tap me!
+          {/* A speech bubble right above the phone, pointing at it, so it reads as "this phone opens". */}
+          <span className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-sun px-3 py-1 font-round text-sm font-semibold text-ink shadow transition group-hover:scale-110">
+            Peek inside the app
+            <span aria-hidden className="absolute left-1/2 top-full -translate-x-1/2 border-x-[7px] border-t-[8px] border-x-transparent border-t-sun" />
           </span>
         </motion.button>
       </div>

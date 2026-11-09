@@ -9,13 +9,6 @@
 .st-key-finish-row .tly-done-sub, .st-key-push-stale .tly-done-sub { margin: 0; }
 .st-key-books-in-buttons { gap: 12px; flex-wrap: wrap; }
 
-/* DONE stamp on the sidebar ticket, a check on the Past events stub */
-.tly-event { position: relative; }
-.tly-done-stamp { position: absolute; right: 8px; bottom: 7px; transform: rotate(-8deg); font-style: normal;
-  font-family: Fredoka, sans-serif; font-weight: 700; font-size: .78rem; letter-spacing: .06em; color: #1C5C36;
-  border: 2px solid #1C5C36; border-radius: 8px; padding: 1px 7px; background: #FFFFFF; }
-.tly-stub em { font-style: normal; font-size: .62rem; letter-spacing: .06em; margin-top: 5px; font-weight: 700; }
-
 /* F2 */
 .st-key-finish-page { padding: 28px 22px 26px; }
 .tly-finish { text-align: center; }
@@ -36,3 +29,21 @@
 .tly-open-item { font-family: Inter, sans-serif; margin: 0; color: #3B4237; }
 .st-key-finish-buttons { gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .st-key-push-stale p.tly-done-title { font-size: 1.3rem; }
+
+/* A wider sidebar (Kevin, 2026-11-09): the ticket, steps, Edit event and Past events had too little room. */
+@media (min-width: 768px) { section[data-testid="stSidebar"] { width: 360px !important; min-width: 360px !important; } }
+[class*="st-key-past-"] .tly-event { margin-bottom: 10px; }  /* room for Reopen under an open event's ticket */
+/* Past events tabs: Still open / Finished, the picked one solid green */
+.st-key-past-tab button { border-radius: 999px !important; } .st-key-past-tab button p { font-family: Fredoka, sans-serif; font-weight: 600; }
+.st-key-past-tab button[aria-checked="true"] { background: var(--tly-forest) !important; border-color: var(--tly-forest) !important; color: #fff; }
+.st-key-past-tab button[aria-checked="true"] p { color: #fff; }
+.st-key-past-tab [role="group"], .st-key-past-tab [data-testid="stButtonGroup"] { gap: 6px; }
+/* Past events: click the ticket or stub itself to reopen it. Its Reopen button sits invisibly on top,
+   so keyboards and screen readers still reach it; hover lifts the art like the other buttons. */
+[class*="st-key-past-"] { position: relative; }
+[class*="st-key-past-"] [data-testid="stElementContainer"]:has(.stButton) { position: absolute; inset: 0; width: 100% !important; z-index: 2; }
+[class*="st-key-past-"] .stButton, [class*="st-key-past-"] .stButton div { position: static !important; }
+[class*="st-key-past-"] .stButton button { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+[class*="st-key-past-"] .stButton button:focus-visible { opacity: 1; background: transparent; outline: 3px solid var(--tly-sun); color: transparent; }
+[class*="st-key-past-"] .tly-stub, [class*="st-key-past-"] .tly-event { transition: transform .16s cubic-bezier(.2,.8,.2,1); }
+[class*="st-key-past-"]:hover .tly-stub, [class*="st-key-past-"]:hover .tly-event { transform: translateY(-3px); }

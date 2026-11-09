@@ -100,6 +100,34 @@ def reopen() -> None:
     ss.step = "4. Close out"
 
 
+def past_events_box() -> None:
+    """Past events in two tabs: Still open (full tickets) and Finished (torn-off stubs)."""
+    here = ss.event["event_id"]  # the current event joins once it's finished, with Reopen
+    past = [e for e in session_store.past_events(PAST) if e["event_id"] != here or ss.event.get("finished")]
+    if not past:
+        return
+    groups = {"open": [e for e in past if not e.get("finished")], "done": [e for e in past if e.get("finished")]}
+    with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/confirmation_number:"):
+        names = {"open": f"Still open · {len(groups['open'])}", "done": f"Finished · {len(groups['done'])}"}
+        tab = st.segmented_control("Show", list(names), format_func=names.get, key="past-tab", width="stretch",
+                                   label_visibility="collapsed", default="open" if groups["open"] else "done")
+        shown = groups[tab or "open"]
+        if not shown:
+            st.caption("Nothing still open: every past event is finished!" if tab != "done" else
+                       "No finished events yet. Hit Finish event on Close out to tear off a stub!")
+        cols = st.columns(2) if tab == "done" else None
+        for n, e in enumerate(shown):
+            d = e["date"] if isinstance(e["date"], date) else date.fromisoformat(str(e["date"])[:10])
+            slot = cols[n % 2] if cols else st.container()
+            art = stub(d, e["name"], e.get("color")) if cols else ticket(d, e["name"], e["receipts"], e.get("color"))
+            with slot.container(key=f"past-{n}"):
+                st.markdown(art, unsafe_allow_html=True)
+                # The whole ticket or stub is the button: an invisible one laid over it (finish.css).
+                here_now = e["event_id"] == here
+                st.button("Reopen", key=f"open-past-{n}", on_click=reopen if here_now else open_past,
+                          args=() if here_now else (e["path"],), help=f"Reopen {e['name']}")
+
+
 def stepper_css(current: str) -> None:
     """Timeline stepper in the sidebar (prototype B). The radio's labels stay fixed so the widget
     keeps its state; this run's CSS adds each step's status line, the checks, and how far the
@@ -155,7 +183,9 @@ def show() -> tuple[str, EventInfo]:
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
-        current = ss.event.get("color") or NAMES[0]
+        # The radio's pick from this click, not the saved color: the label is drawn before the radio
+        # runs, so reading the saved color showed the previous pick (Sunflower while Sage was picked).
+        current = ss.get("ticket-color") or ss.event.get("color") or NAMES[0]
         st.markdown('<p class="tly-field-label">Ticket color</p>', unsafe_allow_html=True,
                     help="Picked for you so events in a row don't match. Change it anytime!")
         with st.container(key="color-menu"), st.popover(current, width="stretch"), st.container(height=190, border=False):
@@ -174,30 +204,14 @@ def show() -> tuple[str, EventInfo]:
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))
-    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color"), ss.event.get("finished")),
-                        unsafe_allow_html=True)
+    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
     st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
-    here = ss.event["event_id"]  # a finished event joins Past events, with Reopen on its stub
-    past = [e for e in session_store.past_events(PAST) if e["event_id"] != here or ss.event.get("finished")]
-    if past:
-        with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
-            cols = st.columns(2)
-            for n, e in enumerate(past):
-                d = e["date"] if isinstance(e["date"], date) else date.fromisoformat(str(e["date"])[:10])
-                with cols[n % 2].container(key=f"past-{n}"):
-                    st.markdown(stub(d, e["name"], e.get("color"), e.get("finished")), unsafe_allow_html=True)
-                    if e["event_id"] == here:
-                        st.button("Reopen", key=f"open-past-{n}", on_click=reopen, icon=":material/undo:",
-                                  type="tertiary", help="Back to Close out to change something.")
-                        continue
-                    st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
-                              icon=":material/open_in_new:", type="tertiary",
-                              help=f"Opens {e['name']}. Your current event is saved first.")
+    past_events_box()
     label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
     if st.sidebar.button(label, icon=":material/link:", type="tertiary", key="open-connect"):
         connect.dialog()
