@@ -24,7 +24,7 @@
 .tly-walk .dot.done { background: #1C5C36; border-color: #1C5C36; }
 .tly-walk .dot.now { border-color: #1C5C36; box-shadow: 0 0 0 4px rgba(247,190,63,.45); }
 .tly-walk .stops { position: relative; height: 1.6rem; margin-top: 10px; font-weight: 600; font-size: .92rem; }
-.tly-walk .stops span { position: absolute; white-space: nowrap; color: #8A877A; transform: translateX(-50%); }
+.tly-walk .stops span { position: absolute; white-space: nowrap; color: #6B6A60; transform: translateX(-50%); }
 .tly-walk .stops span.start { transform: translateX(-14px); } .tly-walk .stops span.end { transform: translateX(calc(-100% + 14px)); }
 .st-key-mascot-empty [data-testid="stImage"], .st-key-mascot-cheer [data-testid="stImage"] { margin: 0 auto; }
 .st-key-mascot-empty, .st-key-mascot-cheer { align-items: center; }
