@@ -76,3 +76,10 @@ def test_club_balance_adds_this_years_saved_events(tmp_path):
     session_store.save(tmp_path / "b.json", last_year)
     ev = EventInfo("EVT-C", "C", date(2026, 11, 14), 10, start_balance=Decimal("1000"))
     assert finish.club_balance(ev, Decimal("-20")) == Decimal("1030")
+
+
+def test_ticket_color_menu_shows_the_color_just_picked():
+    at = new_app().run()
+    at.sidebar.radio(key="ticket-color").set_value("Sage").run()
+    assert at.session_state["event"]["color"] == "Sage"
+    assert [p.proto.popover.label for p in at.sidebar.get("popover")] == ["Sage"]  # was one pick behind

@@ -10,10 +10,9 @@
 .st-key-books-in-buttons { gap: 12px; flex-wrap: wrap; }
 
 /* DONE stamp on the sidebar ticket, a check on the Past events stub */
-.tly-event { position: relative; }
-.tly-done-stamp { position: absolute; right: 8px; bottom: 7px; transform: rotate(-8deg); font-style: normal;
-  font-family: Fredoka, sans-serif; font-weight: 700; font-size: .78rem; letter-spacing: .06em; color: #1C5C36;
-  border: 2px solid #1C5C36; border-radius: 8px; padding: 1px 7px; background: #FFFFFF; }
+.tly-done-stamp { display: inline-block; margin-left: 8px; transform: rotate(-8deg); font-style: normal;
+  font-family: Fredoka, sans-serif; font-weight: 700; font-size: .78rem; letter-spacing: .06em; color: var(--tly-ct, #fff);
+  border: 2px solid var(--tly-ct, #fff); border-radius: 8px; padding: 1px 7px; }
 .tly-stub em { font-style: normal; font-size: .62rem; letter-spacing: .06em; margin-top: 5px; font-weight: 700; }
 
 /* F2 */

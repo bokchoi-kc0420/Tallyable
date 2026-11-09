@@ -155,7 +155,9 @@ def show() -> tuple[str, EventInfo]:
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
         target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
                                      help="The margin your club aims for. The Summary shows if an event hit it."))
-        current = ss.event.get("color") or NAMES[0]
+        # The radio's pick from this click, not the saved color: the label is drawn before the radio
+        # runs, so reading the saved color showed the previous pick (Sunflower while Sage was picked).
+        current = ss.get("ticket-color") or ss.event.get("color") or NAMES[0]
         st.markdown('<p class="tly-field-label">Ticket color</p>', unsafe_allow_html=True,
                     help="Picked for you so events in a row don't match. Change it anytime!")
         with st.container(key="color-menu"), st.popover(current, width="stretch"), st.container(height=190, border=False):
