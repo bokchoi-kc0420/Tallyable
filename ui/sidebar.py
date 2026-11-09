@@ -122,8 +122,8 @@ def past_events_box() -> None:
                     st.button("Reopen", key=f"open-past-{n}", on_click=reopen, icon=":material/undo:",
                               type="tertiary", help="Back to Close out to change something.")
                     continue
-                st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
-                          icon=":material/open_in_new:", type="tertiary",
+                st.button("Reopen", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
+                          icon=":material/undo:", type="tertiary",
                           help=f"Opens {e['name']}. Your current event is saved first.")
 
 
