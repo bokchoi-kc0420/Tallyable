@@ -30,13 +30,13 @@ def event_id_for(name: str, d: date) -> str:
 def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
     Club settings (members, income sources, starting balance) carry over."""
+    ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished")}
     ss.event = {**ss.event, "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color"))}
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
     ss.pop("last_draft", None)
-    ss.pop("last_push", None)
     ss.pop("ticket-color", None)  # the color list shows the new event's color, not the last one's
     ss.started = time.time()
     session_store.clear(SESSION_FILE)
@@ -90,9 +90,14 @@ def open_past(path: Path) -> None:
     ss.pop("ticket-color", None)
     ss.failed = {}
     ss.pop("last_draft", None)
-    ss.pop("last_push", None)
     ss.pop("_saved", None)
     ss.step = "4. Close out" if ss.receipts else STEPS[0]
+
+
+def reopen() -> None:
+    """Button callback: un-finish this event and go back to Close out."""
+    ss.event = {**ss.event, "finished": False}
+    ss.step = "4. Close out"
 
 
 def stepper_css(current: str) -> None:
@@ -104,7 +109,7 @@ def stepper_css(current: str) -> None:
     sub = {"1. Upload": f"{len(rs)} receipt{'s' if len(rs) != 1 else ''} in" if rs else "Photos, screenshots, PDFs",
            "2. Review": f"{checked} of {len(rs)} checked" if rs else "Check each one",
            "3. Summary": "In the books" if done["3. Summary"] else "Add income, push",
-           "4. Close out": "Who's owed, report"}
+           "4. Close out": "Finished!" if done["4. Close out"] else "Who's owed, report"}
     frac = STEPS.index(current) / (len(STEPS) - 1)
     if current == "2. Review" and rs:
         frac += checked / len(rs) / (len(STEPS) - 1) * 0.8
@@ -133,7 +138,8 @@ def show() -> tuple[str, EventInfo]:
     st.sidebar.caption("Close out a club event: receipts in, checked books out.")
     if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                          help="Starts a blank event. This one stays saved under Past events."):
-        if not ss.receipts and not ss.event.get("set_up"):  # nothing to lose
+        if ss.event.get("finished") or (not ss.receipts and not ss.event.get("set_up")):  # nothing to lose
+            save_session()
             start_new_event()
             st.rerun()
         ss.confirm_new = True
@@ -168,21 +174,27 @@ def show() -> tuple[str, EventInfo]:
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))
-    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
+    event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color"), ss.event.get("finished")),
+                        unsafe_allow_html=True)
     page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
     st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
-    past = [e for e in session_store.past_events(PAST) if e["event_id"] != ss.event["event_id"]]
+    here = ss.event["event_id"]  # a finished event joins Past events, with Reopen on its stub
+    past = [e for e in session_store.past_events(PAST) if e["event_id"] != here or ss.event.get("finished")]
     if past:
         with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
             cols = st.columns(2)
             for n, e in enumerate(past):
                 d = e["date"] if isinstance(e["date"], date) else date.fromisoformat(str(e["date"])[:10])
                 with cols[n % 2].container(key=f"past-{n}"):
-                    st.markdown(stub(d, e["name"], e.get("color")), unsafe_allow_html=True)
+                    st.markdown(stub(d, e["name"], e.get("color"), e.get("finished")), unsafe_allow_html=True)
+                    if e["event_id"] == here:
+                        st.button("Reopen", key=f"open-past-{n}", on_click=reopen, icon=":material/undo:",
+                                  type="tertiary", help="Back to Close out to change something.")
+                        continue
                     st.button("Open", key=f"open-past-{n}", on_click=open_past, args=(e["path"],),
                               icon=":material/open_in_new:", type="tertiary",
                               help=f"Opens {e['name']}. Your current event is saved first.")

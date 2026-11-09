@@ -294,7 +294,7 @@ def test_each_step_says_what_comes_next():
     assert any("Review" in m.value and "✓" in m.value for m in at.markdown)  # step bar marks review done
     next(b for b in at.button if b.label.startswith("Push to")).click().run()
     assert not at.exception
-    next(b for b in at.button if b.label == "Go to Close out →").click().run()
+    next(b for b in at.button if b.label == "Next: Close out").click().run()
     assert at.sidebar.radio(key="step").value == "4. Close out"
 
 

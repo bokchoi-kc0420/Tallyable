@@ -13,6 +13,7 @@ from treasurer.models import Receipt, Status
 from treasurer.photo_pdf import receipts_pdf
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.sheets import EventInfo
+from ui import finish
 from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, saved_reimbursements, ss, step_bar, usd
 
 EXAMPLES = {"Example: event grant (up to $2,500)": co.CFC, "Example: yearly grant ($250)": co.ORG}
@@ -149,8 +150,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
 
     st.divider()
     st.markdown("**Last step:** download the funder report and attach it to your reimbursement request. "
-                "When everyone is paid back, start the next event from the sidebar. This event stays saved: "
-                "reopen it anytime under **Past events**.")
+                "Then hit **Finish event** at the bottom!")
     st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
                        file_name=f"{info.event_id}_funder_report.csv",
                        data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
@@ -203,6 +203,7 @@ def show(event: EventInfo) -> None:
         st.success("Everyone has been paid back.")
     funder_rules(event, done, reimbursed)
     photos(event, done, lines)
+    finish.finish_button(lines)
 
 
 def photos(event: EventInfo, done: list[Receipt], lines) -> None:

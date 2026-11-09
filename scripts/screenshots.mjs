@@ -93,6 +93,18 @@ try {
 
   await page.getByRole("button", { name: /Approve the \d+ with no flags/ }).click();
   await idle();
+  for (let n = 0; n < 15; n++) {  // approve the flagged ones too, with a note, so Push opens up
+    const left = page.locator('[data-testid="stSidebar"] label').filter({ hasText: "⏳" });
+    if (!(await left.count())) break;
+    await left.first().click();
+    await idle();
+    const why = page.getByPlaceholder(/Why you're approving/);
+    await why.fill("Checked against the photo");
+    await why.press("Enter");
+    await idle();
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
+    await idle();
+  }
   await step("Summary");
   const firstAmount = page.locator('.st-key-income-box input[placeholder="0.00"]').first();
   await firstAmount.fill("500");
@@ -100,6 +112,15 @@ try {
   await shot("3-summary");
   const panel = page.locator(".tly-money").first();
   await shot("3-summary-money", panel);
+  await page.getByRole("button", { name: /Push to/ }).click();
+  await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
+  await shot("3-summary-done-card", page.locator(".st-key-books-in"));
+  await firstAmount.fill("520");  // an edit after Push: the card asks to push again
+  await firstAmount.press("Enter");
+  await page.locator(".st-key-push-stale").waitFor({ timeout: 30000 });
+  await shot("3-summary-stale", page.locator(".st-key-push-stale"));
+  await page.getByRole("button", { name: "Push again" }).click();
+  await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
 
   await step("Close out");
   await shot("4-close-out");
@@ -112,6 +133,14 @@ try {
   await page.getByRole("combobox", { name: /^Funder/ }).click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: join(OUT, "4-close-out-funders.png") });
+  await page.keyboard.press("Escape");
+  await shot("4-close-out-finish-button", page.locator(".st-key-finish-row"));
+  await page.getByRole("button", { name: "Finish event" }).click();
+  await page.locator(".st-key-finish-page").waitFor({ timeout: 30000 });
+  await shot("5-finish");
+  await shot("5-finish-card", page.locator(".st-key-finish-page"));
+  await page.getByText(/Past events/).click();
+  await shot("5-finish-sidebar", page.locator('[data-testid="stSidebar"]'));
 } finally {
   await browser.close();
   app.kill();
