@@ -272,3 +272,10 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-live p { text-align: center; color: var(--tly-soft); font-size: .85rem; margin: 22px 0 0; }
 [class*="st-key-rm-member-"] button::before { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: inline-grid;
   place-items: center; font: 600 .68rem Fredoka, sans-serif; margin: 0 8px 0 -8px; }
+
+/* Phones: keep each income row (icon, source, amount, remove) on one line instead of stacking */
+@media (max-width: 640px) {
+  .st-key-income-box [data-testid="stHorizontalBlock"] { flex-wrap: nowrap; gap: .4rem; }
+  .st-key-income-box [data-testid="stColumn"] { min-width: 0 !important; width: auto !important; }
+  .st-key-income-box [data-testid="stColumn"]:is(:first-child, :last-child) { flex: 0 0 auto !important; }
+}
