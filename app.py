@@ -1,6 +1,6 @@
 """Streamlit app: Upload -> Review -> Summary -> Close out. Run with `streamlit run app.py`.
 
-Theme lives in .streamlit/config.toml, the rest of the look in ui/style.css. Reads receipts
+Theme lives in .streamlit/config.toml, the rest of the look in ui/*.css. Reads receipts
 with Claude when ANTHROPIC_API_KEY is in .env, otherwise with the stub (fake answer key plus
 planted misreads). Each step's screen is its own file in ui/.
 """
@@ -13,11 +13,12 @@ import time
 import streamlit as st
 
 from treasurer import session_store
-from ui import close_out, review, sidebar, start, summary, upload
+from ui import close_out, finish, review, sidebar, start, summary, upload
 from ui.common import ART, ROOT, SESSION_FILE, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
-st.markdown(f"<style>{(ROOT / 'ui' / 'style.css').read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+st.markdown("<style>" + "".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "ui").glob("*.css")))
+            + "</style>", unsafe_allow_html=True)
 
 # Password gate. Only on when APP_PASSWORD is set (always set it before deploying:
 # the app can spend API credit). compare_digest avoids leaking the password by timing.
@@ -52,6 +53,8 @@ elif page == "2. Review":
     review.show()
 elif page == "3. Summary":
     summary.show(event)
+elif ss.event.get("finished"):
+    finish.show(event)
 else:
     close_out.show(event)
 sidebar.save_session()

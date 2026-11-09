@@ -153,7 +153,7 @@ def step_status() -> tuple[dict[str, bool], dict[str, str]]:
     posted = bool(rs) and all(r.status in (Status.POSTED, Status.REJECTED) for r in rs) \
         and any(r.status is Status.POSTED for r in rs)
     done = {"1. Upload": bool(rs), "2. Review": bool(rs) and checked == len(rs), "3. Summary": posted,
-            "4. Close out": False}
+            "4. Close out": bool(ss.event.get("finished"))}
     return done, {"2. Review": f" · {checked}/{len(rs)}" if rs else ""}
 
 

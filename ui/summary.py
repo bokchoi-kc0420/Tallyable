@@ -16,8 +16,8 @@ from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
-from ui import connect
-from ui.common import RUN_LOG, dec, get_sink, go, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
+from ui import connect, done_card
+from ui.common import RUN_LOG, dec, get_sink, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
                   "Grants and funding", "Donations", "Fundraiser", "Other"]
@@ -140,23 +140,24 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
             "minutes_draft_to_push": minutes(ss.drafted_at, now),
             "minutes_review_to_push": minutes(ss.review_started, now),
         })
-    ss.last_push = (f"**Pushed {len(written)} receipts to {sink.label}!**" if written
-                    else "**Already up to date.** Every approved receipt is in the books.")
+    done_card.mark_pushed()
     st.rerun()  # redraw the table and step bar with the posted status
 
 
 def downloads(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal]) -> None:
     """The books as one Excel file, or one CSV per report."""
     on_sheets = sink.label == "Google Sheets"
-    # With Google Sheets connected the books are already there, so the Excel copy is tucked away:
-    # it must never look like the next step after Push.
-    with st.expander("Download a copy instead (Excel)") if on_sheets else st.container():
-        if not on_sheets:
+    # With Google Sheets connected (or once the done card offers the book) the Excel copy is
+    # tucked away: it must never look like the next step after Push.
+    tucked = on_sheets or bool(ss.event.get("pushed_at"))
+    with st.expander("Download a copy instead (Excel)" if on_sheets else "Download a copy (Excel)") if tucked \
+            else st.container():
+        if not tucked:
             st.subheader("Download the books")
         st.caption("Every report in one formatted Excel file, for approved receipts. Open it in Excel, or bring "
                    "it into your own Google Sheet with File > Import. No sharing needed.")
         views = local_views(receipts, event, income, saved_reimbursements(sink))
-        st.download_button("Download the whole book (Excel)", type="secondary" if on_sheets else "primary",
+        st.download_button("Download the whole book (Excel)", type="secondary" if tucked else "primary",
                            icon=":material/download:", data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
                            file_name=f"{event.event_id}_books.xlsx", key="dl-xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -199,18 +200,7 @@ def show(event: EventInfo) -> None:
             connect.box("summary")
     if st.button(f"Push to {sink.label}", type="primary", disabled=bool(waiting), icon=":material/upload:"):
         push(sink, receipts, event, income)
-    url = getattr(sink, "url", None)
-    if ss.get("last_push") and not any(r.status is Status.APPROVED for r in ss.receipts.values()):
-        with st.container(border=True, key="after-push"):
-            c = st.columns([2.6, 1.3, 1.4], vertical_alignment="center")
-            c[0].markdown(md(ss.last_push + " Next, see who's owed money and check the funder's rules."))
-            if url:
-                c[1].link_button("Open the sheet", url, icon=":material/open_in_new:", width="stretch")
-            c[2].button("Go to Close out →", type="primary", on_click=go, args=("4. Close out",), key="to-closeout",
-                        width="stretch")
-        if ss.get("format_errors"):
-            st.warning(md("Your numbers are in the sheet, but Google wouldn't apply the colors and layout on: "
-                          + "; ".join(ss.format_errors) + ". Send this to whoever set up Tallyable."))
+    done_card.show(sink, receipts, event, income, lambda: push(sink, receipts, event, income))
 
     if any(r.counts for r in receipts):
         downloads(sink, receipts, event, income)

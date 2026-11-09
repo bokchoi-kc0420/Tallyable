@@ -66,14 +66,34 @@ def clear(path: Path) -> None:
 
 def past_events(folder: Path) -> list[dict]:
     """Every saved event in `folder` (one file per event id), newest event first.
-    Each entry: path, event_id, name, date, receipts, color."""
+    Each entry: path, event_id, name, date, receipts, color, finished."""
     out = []
     for p in folder.glob("*.json") if folder.exists() else []:
         try:
             raw = json.loads(p.read_text())
             ev = raw["event"]
             out.append({"path": p, "event_id": ev["event_id"], "name": ev["name"], "date": ev["date"],
-                        "receipts": len(raw["receipts"]), "color": ev.get("color")})
+                        "receipts": len(raw["receipts"]), "color": ev.get("color"),
+                        "finished": bool(ev.get("finished"))})
         except (OSError, ValueError, KeyError, TypeError):
             continue  # a damaged file is skipped, not fatal
     return sorted(out, key=lambda e: e["date"], reverse=True)
+
+
+def past_nets(folder: Path) -> list[dict]:
+    """Every saved event's money: event_id, date, and net (income minus counted receipts),
+    for the club balance on the finish page. Photos aren't decoded, so this stays quick."""
+    from decimal import Decimal
+
+    from .models import cell_decimal
+    out = []
+    for p in folder.glob("*.json") if folder.exists() else []:
+        try:
+            raw = json.loads(p.read_text())
+            receipts = [Receipt.model_validate(v) for v in raw["receipts"].values()]
+            spent = sum((r.posted_amount for r in receipts if r.counts), Decimal("0"))
+            got = sum((cell_decimal(v or 0) for v in (raw.get("income") or {}).values()), Decimal("0"))
+            out.append({"event_id": raw["event"]["event_id"], "date": raw["event"]["date"], "net": got - spent})
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return out
