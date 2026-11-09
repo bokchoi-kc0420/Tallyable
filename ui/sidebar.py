@@ -101,26 +101,25 @@ def reopen() -> None:
 
 
 def past_events_box() -> None:
-    """Past events: still-open events as full tickets on top, finished ones as torn-off stubs.
-    The shape says the status, so there's no DONE label."""
+    """Past events in two tabs: Still open (full tickets) and Finished (torn-off stubs)."""
     here = ss.event["event_id"]  # the current event joins once it's finished, with Reopen
     past = [e for e in session_store.past_events(PAST) if e["event_id"] != here or ss.event.get("finished")]
     if not past:
         return
-    past = [e for e in past if not e.get("finished")] + [e for e in past if e.get("finished")]
-    with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/history:"):
-        n_open = sum(1 for e in past if not e.get("finished"))
-        if n_open:
-            st.markdown('<p class="tly-past-label">Still open</p>', unsafe_allow_html=True)
-        slots = [st.container() for _ in range(n_open)]  # open tickets, full width, on top
-        if n_open < len(past):
-            st.markdown('<p class="tly-past-label">Finished ✓</p>', unsafe_allow_html=True)
-        cols = st.columns(2)
-        slots += [cols[n % 2] for n in range(len(past) - len(slots))]  # then the stubs, two per row
-        for n, (e, slot) in enumerate(zip(past, slots, strict=True)):
+    groups = {"open": [e for e in past if not e.get("finished")], "done": [e for e in past if e.get("finished")]}
+    with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/confirmation_number:"):
+        names = {"open": f"Still open · {len(groups['open'])}", "done": f"Finished · {len(groups['done'])}"}
+        tab = st.segmented_control("Show", list(names), format_func=names.get, key="past-tab", width="stretch",
+                                   label_visibility="collapsed", default="open" if groups["open"] else "done")
+        shown = groups[tab or "open"]
+        if not shown:
+            st.caption("Nothing still open: every past event is finished!" if tab != "done" else
+                       "No finished events yet. Hit Finish event on Close out to tear off a stub!")
+        cols = st.columns(2) if tab == "done" else None
+        for n, e in enumerate(shown):
             d = e["date"] if isinstance(e["date"], date) else date.fromisoformat(str(e["date"])[:10])
-            art = stub(d, e["name"], e.get("color")) if e.get("finished") else \
-                ticket(d, e["name"], e["receipts"], e.get("color"))
+            slot = cols[n % 2] if cols else st.container()
+            art = stub(d, e["name"], e.get("color")) if cols else ticket(d, e["name"], e["receipts"], e.get("color"))
             with slot.container(key=f"past-{n}"):
                 st.markdown(art, unsafe_allow_html=True)
                 if e["event_id"] == here:
