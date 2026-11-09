@@ -23,7 +23,7 @@ CANNED = {"picnic": "Ooh, a picnic! 🧺", "bbq": "BBQ time! 🔥", "barbecue": 
 
 def canned(name: str) -> str:
     low = name.lower()
-    return next((line for word, line in CANNED.items() if word in low), "Ooh, a new event! Let's go! 🎉")
+    return next((line for word, line in CANNED.items() if word in low), "Got it! Let's set it up.")  # neutral fallback
 
 
 def react(name: str) -> str:

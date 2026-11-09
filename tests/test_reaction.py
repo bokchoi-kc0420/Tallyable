@@ -7,4 +7,4 @@ def test_reaction_falls_back_to_a_canned_line(monkeypatch):
     monkeypatch.setenv("TALLYABLE_EXTRACTOR", "claude")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-not-a-real-key")
     monkeypatch.setattr("anthropic.Anthropic", lambda **_: (_ for _ in ()).throw(RuntimeError("offline")))
-    assert reaction.react("Board Meeting") == "Ooh, a new event! Let's go! 🎉"
+    assert reaction.react("Board Meeting") == "Got it! Let's set it up."
