@@ -1,6 +1,7 @@
 """Events drawn as tickets. Each event gets a color, picked automatically so two events in a
-row never match (changeable in Edit event). Past events show as torn-off stubs: date plus a
-short name, all the same size, so the row reads like a ticket collection."""
+row never match (changeable in Edit event). An event still open is a whole ticket; a finished
+one is its torn-off stub: date plus a short name, all the same size, so finished events read
+like a ticket collection."""
 from __future__ import annotations
 
 import html
@@ -44,8 +45,7 @@ def ticket(d: date, name: str, receipts: int, color: str | None = None) -> str:
             f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small></div></div>')
 
 
-def stub(d: date, name: str, color: str | None = None, done: bool = False) -> str:
-    """A past event as its torn-off stub, a check on finished ones. Hover shows the full name."""
+def stub(d: date, name: str, color: str | None = None) -> str:
+    """A finished event as its torn-off stub. Hover shows the full name."""
     return (f'<div class="tly-stub" style="{_vars(color)}" title="{html.escape(name)} · {d:%b %d, %Y}">'
-            f'<span>{d.strftime("%b").upper()}</span><b>{d.day:02d}</b><i>{html.escape(short_name(name))}</i>'
-            f'{"<em>✓ DONE</em>" if done else ""}</div>')
+            f'<span>{d.strftime("%b").upper()}</span><b>{d.day:02d}</b><i>{html.escape(short_name(name))}</i></div>')

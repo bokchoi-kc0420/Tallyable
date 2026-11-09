@@ -9,9 +9,6 @@
 .st-key-finish-row .tly-done-sub, .st-key-push-stale .tly-done-sub { margin: 0; }
 .st-key-books-in-buttons { gap: 12px; flex-wrap: wrap; }
 
-/* A check on finished events' Past events stubs */
-.tly-stub em { font-style: normal; font-size: .62rem; letter-spacing: .06em; margin-top: 5px; font-weight: 700; }
-
 /* F2 */
 .st-key-finish-page { padding: 28px 22px 26px; }
 .tly-finish { text-align: center; }
@@ -32,3 +29,6 @@
 .tly-open-item { font-family: Inter, sans-serif; margin: 0; color: #3B4237; }
 .st-key-finish-buttons { gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .st-key-push-stale p.tly-done-title { font-size: 1.3rem; }
+
+/* A wider sidebar (Kevin, 2026-11-09): the ticket, steps, Edit event and Past events had too little room. */
+@media (min-width: 768px) { section[data-testid="stSidebar"] { width: 360px !important; min-width: 360px !important; } }
