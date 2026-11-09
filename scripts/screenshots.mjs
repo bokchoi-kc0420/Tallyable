@@ -137,10 +137,16 @@ try {
   await shot("4-close-out-finish-button", page.locator(".st-key-finish-row"));
   await page.getByRole("button", { name: "Finish event" }).click();
   await page.locator(".st-key-finish-page").waitFor({ timeout: 30000 });
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: join(OUT, "5-finish-confetti.png") });  // mid-fall, so no idle wait
+  await page.waitForTimeout(4500);
   await shot("5-finish");
   await shot("5-finish-card", page.locator(".st-key-finish-page"));
   await page.getByText(/Past events/).click();
   await shot("5-finish-sidebar", page.locator('[data-testid="stSidebar"]'));
+  await page.locator('[data-testid="stSidebarCollapseButton"] button').click();
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: join(OUT, "6-sidebar-collapsed.png") });
 } finally {
   await browser.close();
   app.kill();

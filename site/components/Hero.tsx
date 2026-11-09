@@ -16,7 +16,7 @@ type StickerProps = {
 
 // The pop on hover and the snap back both use this spring. Only the slow bob uses the long
 // timing: before, leaving a sticker eased it back over ~4 seconds, so it couldn't pop again.
-const POP = { type: "spring", stiffness: 300, damping: 12 } as const;
+const POP = { type: "spring", stiffness: 750, damping: 24 } as const; // snappy: up and back in ~0.25s
 const bob = (seconds: number, delay = 0) => ({ y: { duration: seconds, repeat: Infinity, ease: "easeInOut", delay }, default: POP }) as const;
 
 // Each sticker bobs gently and pops on hover, like it's being peeled off the page.

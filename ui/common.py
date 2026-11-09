@@ -89,11 +89,19 @@ def go(step: str) -> None:
     ss.step = step
 
 
+@st.cache_resource(show_spinner=False)
+def sheets_sink(book: str | None, ledger: str | None):
+    """Signing in and opening the sheets takes a few round trips to Google, so it happens once per
+    linked pair, not on every click (a Mark paid used to redo it twice). Errors aren't cached."""
+    return GoogleSheetsSink.from_env(ROOT, GCP_KEY, {"book": book, "ledger": ledger} if book else None)
+
+
 def get_sink():
     """Google Sheets if it is set up, else CSV files on this computer. Returns (sink, error)."""
     try:
         from ui.connect import linked
-        return GoogleSheetsSink.from_env(ROOT, GCP_KEY, linked()) or LocalCsvSink(OUT / "transactions.csv"), None
+        link = linked() or {}
+        return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(OUT / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
         return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so the books are saved on "
                                                         f"this computer for now. ({e})")

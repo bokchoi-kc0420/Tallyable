@@ -52,9 +52,9 @@ def show() -> None:
     with st.container(border=True, key="event-box"):
         st.markdown("**What's the event?**")
         c = st.columns([3, 2, 1])
-        locked = bool(ss.receipts)  # receipts carry the event id, so name and date stay put
-        name = c[0].text_input("Event name", ss.event["name"], key="start-name", disabled=locked)
-        d = c[1].date_input("Date", ss.event["date"], key="start-date", disabled=locked)
+        locked = bool(ss.receipts)  # receipts carry the event id, so it stays put (name and date can change)
+        name = c[0].text_input("Event name", ss.event["name"], key="start-name")
+        d = c[1].date_input("Date", ss.event["date"], key="start-date")
         people = int(c[2].number_input("Attendees", min_value=1, value=ss.event["attendees"], key="start-people"))
     members_box()
     ready = bool(payers()[1:])
