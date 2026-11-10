@@ -32,21 +32,12 @@
   .tly-walk .stops span.now { transform: translateX(-50%); } .tly-walk .stops span.now.start { transform: translateX(-14px); }
   .tly-walk .stops span.now.end { transform: translateX(calc(-100% + 14px)); } }
 .tly-walk .stops .done { color: #1C5C36; } .tly-walk .stops .now { color: #1F2A22; font-weight: 700; }
-.tly-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: .2rem 0 1rem; font-size: .9rem; }
-.tly-step { display: inline-flex; align-items: center; gap: 6px; color: #6B6A60; font-weight: 500; }
-.tly-step b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
-  border: 2px solid #C9C2A6; font-size: .78rem; }
-.tly-step.done { color: #1C5C36; } .tly-step.done b { background: #DDEBD9; border-color: #1C5C36; }
-.tly-step.now { color: #1F2A22; font-weight: 700; } .tly-step.now b { background: #1C5C36; border-color: #1C5C36; color: #fff; }
-.tly-rule { width: 28px; border-top: 2px dotted #C9C2A6; margin: 0 4px; }
 .tly-cheer { text-align: center; font-family: Fredoka, sans-serif; font-size: 1.5rem; font-weight: 600;
   color: #1C5C36; margin: .4rem 0 .6rem; }
 .tly-hint { text-align: center; font-weight: 600; margin: .25rem 0 .5rem; }
 .tly-owed { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tly-avatar { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
   background: #FCE7A8; font-family: Fredoka, sans-serif; font-weight: 600; color: #1F2A22; }
-.tly-bar { height: 12px; border-radius: 999px; background: #E3D9B6; overflow: hidden; }
-.tly-bar > div { height: 100%; border-radius: 999px; background: #1C5C36; }
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: the event's ticket. Its date stub has the same torn zigzag edge as the Past events stubs. */
