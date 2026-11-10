@@ -10,7 +10,7 @@ import streamlit as st
 
 from treasurer.extract import ExtractionError
 from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
-from treasurer.models import LineItem, Receipt
+from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
@@ -122,6 +122,14 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
         ss.last_draft += f" (Skipped {len(skipped)} I'd already read.)"
 
 
+def retag(names: list[str]) -> None:
+    """Callback: a payer picked on Upload after drafting also goes on the drafted receipt,
+    so Review stops saying "No payer tagged". Posted receipts stay as they are."""
+    for rid, r in ss.receipts.items():
+        if r.image_file in names and r.status is not Status.POSTED:
+            ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{r.image_file}") or None})
+
+
 def tagged_with() -> None:
     """The members picked on the Start page, with a way back there to change them."""
     c = st.columns([5, 1], vertical_alignment="center")
@@ -159,9 +167,10 @@ def show(event: EventInfo) -> None:
         if c[1].button("Apply to all"):
             for name, _ in sources:
                 ss[f"payer-{name}"] = everyone
+            retag([name for name, _ in sources])
             st.rerun()
-        if c[2].button("Draft rows", type="primary", disabled=len(payers()) < 2,
-                       help=None if len(payers()) > 1 else "Add at least one member first"):
+        if c[2].button("Draft rows", type="primary", disabled=untagged > 0,
+                       help="Tag who paid for every receipt first" if untagged else None):
             draft(sources, ex, reader, event.event_id)
     if ss.get("last_draft") and ss.receipts:
         next_step(ss.last_draft, "Go to Review →", "2. Review", "to-review")
@@ -177,7 +186,7 @@ def show(event: EventInfo) -> None:
                     st.image(pic, width="stretch")
                 else:
                     st.markdown('<div class="tly-nothumb">PDF</div>', unsafe_allow_html=True)
-                st.selectbox(name, payers(), key=f"payer-{name}")
+                st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],))
 
     for name, (data, reason) in list(ss.failed.items()):
         st.error(md(f"{name}: {reason}"))

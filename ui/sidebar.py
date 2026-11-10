@@ -67,6 +67,31 @@ def confirm_new_event() -> None:
         st.rerun()
 
 
+def close_delete() -> None:
+    ss.confirm_delete = False
+
+
+@st.dialog("Delete this event?", on_dismiss=close_delete)
+def confirm_delete() -> None:
+    """Delete the open event for good: its saved file and the screen. The sheet isn't touched."""
+    n = len(ss.receipts)
+    st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n, ss.event.get("color"))}</div>',
+                unsafe_allow_html=True)
+    pushed = "<br><small>What you already pushed stays in your sheet.</small>" if ss.event.get("pushed_at") else ""
+    st.markdown(f'<p class="tly-confirm-note"><b style="color: #B0413E">This can\'t be undone!</b> Its receipts, photos and notes '
+                f"go away for good.{pushed}</p>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if c[0].button("Keep it", key="delete-no", width="stretch"):
+        close_delete()
+        st.rerun()
+    if c[1].button("Yes, delete it", type="primary", key="delete-yes", width="stretch"):
+        close_delete()
+        session_store.clear(PAST / f"{ss.event['event_id']}.json")
+        start_new_event()
+        ss.pop("_saved", None)
+        st.rerun()
+
+
 def save_session() -> None:
     """Write the session to disk when it changed since the last save. An event counts once
     it's set up, even before any receipts, so starting a new one never loses it."""
@@ -174,6 +199,8 @@ def show() -> tuple[str, EventInfo]:
         ss.confirm_new = True
     if ss.get("confirm_new"):
         confirm_new_event()
+    if ss.get("confirm_delete"):
+        confirm_delete()
     event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
     event_card = event_group.empty()  # filled below, once the event fields are read
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
@@ -202,6 +229,8 @@ def show() -> tuple[str, EventInfo]:
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
             st.caption("Name and date are locked once the books are pushed.")
+        st.button("Delete event", icon=":material/delete:", key="delete-event", width="stretch",
+                  on_click=lambda: ss.update(confirm_delete=True))
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))

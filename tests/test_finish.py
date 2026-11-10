@@ -2,7 +2,7 @@
 from datetime import date
 from decimal import Decimal
 
-from test_app import new_app
+from test_app import draft, new_app
 
 from treasurer.models import Status
 
@@ -15,7 +15,7 @@ def pushed_app():
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value("Member A")
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     for rid in list(at.session_state["receipts"]):
         at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
