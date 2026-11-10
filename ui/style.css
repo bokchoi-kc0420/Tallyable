@@ -259,7 +259,7 @@ div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-famil
 .st-key-ticket-color [data-testid="stRadioOption"] { min-height: 0; padding: 4px 10px; margin-bottom: 0 !important; }
 /* Start page A: the live ticket (Kevin's pick, round 22) */
 p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: var(--tly-soft); margin: -8px 0 6px; }
-.tly-live { position: relative; padding-top: 84px; }
+.tly-live { position: relative; padding-top: 84px; max-width: 460px; margin: 0 auto; }  /* keeps its size when the sidebar folds */
 .tly-live img { position: absolute; right: 0; top: 0; width: 104px; transform: rotate(8deg); }
 .tly-live .bubble { position: absolute; left: 0; top: 12px; max-width: calc(100% - 120px); background: var(--tly-card);
   border: 2px solid #1F2A22; border-radius: 16px; padding: 8px 14px; font: 600 1rem Fredoka, sans-serif; color: #1F2A22; }
