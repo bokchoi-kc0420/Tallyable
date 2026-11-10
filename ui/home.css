@@ -22,7 +22,7 @@
 .st-key-home-hero { border-radius: 30px; overflow: hidden; box-shadow: 0 18px 40px rgba(31,42,34,.15); flex-wrap: nowrap; margin-top: -1.5rem; }
 .st-key-hero-money, .st-key-hero-next { position: relative; min-height: 320px; padding: 30px 34px; }
 .st-key-hero-money { flex: 1.25 1 0; background: var(--tly-forest) radial-gradient(rgba(255,255,255,.07) 1.5px, transparent 1.5px) 0 0 / 18px 18px; color: var(--tly-white); }
-.st-key-hero-next { flex: 1 1 0; background: var(--tly-sun); }
+.st-key-hero-next { flex: 1 1 0; background: var(--tly-sage); }  /* sage, so Tally and the yellow sparkles stand out (Kevin, 2026-11-10) */
 .tly-hero-id { display: flex; gap: 14px; align-items: center; }
 .tly-hero-id b { font-family: var(--tly-head); font-weight: 600; font-size: 1.6rem; display: block; line-height: 1.15; }
 .tly-hero-id small { opacity: .8; }
