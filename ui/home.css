@@ -35,9 +35,10 @@
 .st-key-hero-money [data-testid="stWidgetLabel"] p { color: var(--tly-white); }
 .tly-kick { font-family: var(--tly-head); font-weight: 600; font-size: .85rem; letter-spacing: .08em; margin: 6px 0 0; }
 .tly-next-title { font-family: var(--tly-head); font-weight: 700; font-size: 1.9rem; line-height: 1.15; margin: 6px 0 4px; color: var(--tly-ink); max-width: 75%; }
-.tly-checks { list-style: none; padding: 0; margin: 12px 0 8px; display: grid; gap: 6px; font-weight: 500; position: relative; z-index: 1; }
+.tly-checks { list-style: none; padding: 0 !important; margin: 12px 0 8px; display: grid; gap: 6px; font-weight: 500; position: relative; z-index: 1; }
+.tly-checks li { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; }  /* circle and text on one line */
 .tly-checks li::before { content: ""; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  margin-right: 8px; vertical-align: -5px; box-sizing: border-box; border: 2px solid var(--tly-ink); background: var(--tly-white); font-size: .75rem; }
+  flex: none; box-sizing: border-box; border: 2px solid var(--tly-ink); background: var(--tly-white); font-size: .75rem; }
 .tly-checks li.done::before { content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); color: var(--tly-white); }
 .tly-hero-clip { position: absolute; right: -26px; top: 70px; height: 200px; }
 .st-key-home-go button { border: 3px solid var(--tly-ink) !important; box-shadow: 4px 4px 0 var(--tly-ink); padding: 10px 22px; }
