@@ -68,8 +68,8 @@ def finish_button(lines: list) -> None:
     """Bottom of Close out, same spot every time."""
     items = open_items(lines)
     note = ("Everything's wrapped up!" if not items else
-            "1 thing still open. You can still finish: it stays listed on the event." if len(items) == 1 else
-            f"{len(items)} things still open. You can still finish: they stay listed on the event.")
+            "1 thing's still open, but you can finish anyway! It stays listed on the event." if len(items) == 1 else
+            f"{len(items)} things are still open, but you can finish anyway! They stay listed on the event.")
     with st.container(border=True, key="finish-row"):
         c = st.columns([1.3, 4], vertical_alignment="center")
         c[0].button("Finish event", type="primary", icon=":material/check:", icon_position="right", key="finish-event",
