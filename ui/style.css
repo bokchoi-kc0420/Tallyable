@@ -35,9 +35,22 @@
 .tly-cheer { text-align: center; font-family: Fredoka, sans-serif; font-size: 1.5rem; font-weight: 600;
   color: #1C5C36; margin: .4rem 0 .6rem; }
 .tly-hint { text-align: center; font-weight: 600; margin: .25rem 0 .5rem; }
-.tly-owed { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tly-avatar { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-  background: #FCE7A8; font-family: Fredoka, sans-serif; font-weight: 600; color: #1F2A22; }
+/* Who's owed: the payback ledger */
+.tly-led { margin: 0; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.tly-led.num { text-align: right; } .tly-led b { font-family: Fredoka, sans-serif; font-weight: 600; }
+.tly-led.head { font-family: Fredoka, sans-serif; font-weight: 600; font-size: .9rem; color: var(--tly-soft); }
+.tly-led.total { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1rem; }
+.tly-led.soft { color: var(--tly-soft); font-size: .88rem; }
+.tly-led.paid { font-family: Fredoka, sans-serif; font-weight: 600; color: var(--tly-forest); text-align: center; }
+/* Every amount and count in one font, so the columns read the same; bold is only weight */
+.tly-led.num:not(.head), .tly-led.num b { font-family: Inter, sans-serif; font-size: .95rem; } .tly-led.num b, .tly-led.total.num { font-weight: 700; }
+.st-key-whos-owed [data-testid="stMarkdownContainer"]:has(> .tly-led) { margin-bottom: 0; }
+.st-key-whos-owed { gap: 0; }  /* rows own their spacing, so text sits in the middle between the lines */
+.st-key-whos-owed [data-testid="stLayoutWrapper"] { border-top: 1px solid var(--tly-line); padding: .6rem 0; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) { border-top: none; border-bottom: 2px solid #1F2A22; padding: .4rem 0; }
+.st-key-whos-owed [data-testid="stCaption"], .st-key-whos-owed .stButton { margin-top: .4rem; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) + [data-testid="stLayoutWrapper"] { border-top: none; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.total) { border-top: 2px solid #1F2A22; }
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: the event's ticket. Its date stub has the same torn zigzag edge as the Past events stubs. */
@@ -122,6 +135,9 @@
   color: #1F2A22; line-height: 1.25; }
 [class*="st-key-guide-"] { margin: .25rem 0 .5rem; }
 [class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: #FFFFFF !important; font-weight: 600; }
+
+/* No link icon next to headers: it only jumps to the same page */
+[data-testid="stHeaderActionElements"] { display: none !important; }
 
 /* Fredoka for labels, buttons, tabs and names; Inter stays for sentences and typed values */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: Fredoka, sans-serif !important;
