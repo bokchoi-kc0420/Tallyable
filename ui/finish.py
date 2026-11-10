@@ -93,7 +93,7 @@ def confetti() -> str:
     rng = random.Random(7)
     colors = ["#1C5C36", "#3F8A5A", "#F7BE3F", "#C44536", "#8FB38A", "#6B4E8A"]
     bits = "".join(f'<i style="left:{rng.uniform(0, 100):.1f}%;background:{rng.choice(colors)};'
-                   f'--d:{rng.uniform(2.2, 3.8):.2f}s;--w:{rng.uniform(0, 0.9):.2f}s;--r:{rng.choice([-1, 1]) * 540}deg"></i>'
+                   f'--d:{rng.uniform(2.2, 3.8):.2f}s;--w:{rng.uniform(0.3, 1.2):.2f}s;--r:{rng.choice([-1, 1]) * 540}deg"></i>'
                    for _ in range(90))
     return f'<div class="tly-confetti" aria-hidden="true">{bits}</div>'
 
@@ -112,8 +112,6 @@ def tiles(t: dict, balance: Decimal | None) -> str:
 
 
 def show(event: EventInfo) -> None:
-    if ss.pop("confetti", False):
-        st.html(confetti())
     sink, err = get_sink()
     if err:
         st.error(err)
@@ -156,3 +154,5 @@ def show(event: EventInfo) -> None:
                                file_name=f"{event.event_id}_receipt_photos.pdf", data=receipts_pdf(done, ss.images, state))
     st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
               on_click=set_finished, args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
+    if ss.pop("confetti", False):  # last, so it falls once the whole page (and its slow downloads) is built
+        st.html(confetti())

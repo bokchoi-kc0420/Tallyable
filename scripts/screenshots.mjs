@@ -123,6 +123,7 @@ try {
   await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
 
   await step("Close out");
+  await page.getByRole("heading", { name: "Who's owed" }).hover();  // header link icon must stay hidden
   await shot("4-close-out");
   await page.getByText(/Left out of the books/).click();
   await shot("4-close-out-left-out");
@@ -136,8 +137,8 @@ try {
   await page.keyboard.press("Escape");
   await shot("4-close-out-finish-button", page.locator(".st-key-finish-row"));
   await page.getByRole("button", { name: "Finish event" }).click();
-  await page.locator(".st-key-finish-page").waitFor({ timeout: 30000 });
-  await page.waitForTimeout(700);
+  await page.locator(".tly-confetti").waitFor({ timeout: 30000 });  // added last, once the page is built
+  await page.waitForTimeout(1400);
   await page.screenshot({ path: join(OUT, "5-finish-confetti.png") });  // mid-fall, so no idle wait
   await page.waitForTimeout(4500);
   await shot("5-finish");

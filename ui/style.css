@@ -123,6 +123,9 @@
 [class*="st-key-guide-"] { margin: .25rem 0 .5rem; }
 [class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: #FFFFFF !important; font-weight: 600; }
 
+/* No link icon next to headers: it only jumps to the same page */
+[data-testid="stHeaderActionElements"] { display: none !important; }
+
 /* Fredoka for labels, buttons, tabs and names; Inter stays for sentences and typed values */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: Fredoka, sans-serif !important;
   font-weight: 500 !important; font-size: 1rem !important; color: #1F2A22; }
