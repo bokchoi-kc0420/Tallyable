@@ -50,11 +50,10 @@ try {
   await page.getByText("What's your club called?").waitFor({ timeout: 60000 });
   await shot("0-club-name");
   await page.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Sunrise Hiking Club");
-  await page.getByPlaceholder("e.g. Sunrise Hiking Club").press("Enter");
-  await idle();
   const startBalance = page.getByPlaceholder("0.00").first();
   await startBalance.fill("1000");
-  await startBalance.press("Enter");
+  await startBalance.press("Tab");
+  await page.getByRole("button", { name: "Add club" }).click();
   await idle();
   await shot("0-club-home-empty");
   await page.getByRole("button", { name: "New event" }).click();
@@ -164,11 +163,27 @@ try {
   await page.getByRole("button", { name: "Club home", exact: true }).click();
   await idle();
   await shot("7-club-home");
+  await page.getByRole("button", { name: "Club settings" }).click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "7-club-settings.png") });
+  await page.keyboard.press("Escape");
   await clubMenu.click();
-  await page.getByPlaceholder("New club name").fill("Chess & Coffee");
-  await page.getByPlaceholder("New club name").press("Enter");
+  await page.getByRole("button", { name: "New club" }).click();
+  await page.getByText("Start a new club").waitFor({ timeout: 30000 });
+  const dialog = page.getByRole("dialog");
+  await dialog.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Chess & Coffee");
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(OUT, "7-new-club-popup.png") });
+  await dialog.getByRole("button", { name: "Add club" }).click();
   await idle();
   await shot("7-club-home-new-club");
+  await page.locator('[data-testid="stSidebar"] .st-key-steps label').filter({ hasText: "Upload" }).first().click();
+  await idle();
+  await shot("7-step-from-club-home");  // must leave Club home
+  await clubMenu.click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "7-club-menu-two-clubs.png") });
+  await page.keyboard.press("Escape");
   await page.goto(`http://localhost:${PORT}`);  // a new tab with two clubs asks which one
   await page.getByText("Which club are you doing the books for?").waitFor({ timeout: 60000 });
   await shot("8-which-club");

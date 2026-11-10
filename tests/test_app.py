@@ -447,6 +447,7 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert at.header[0].value == "What's your club called?"  # the club comes first
     at.text_input(key="club-first-name").set_value("Sunrise Hiking Club").run()
+    at.button(key="club-first-add").click().run()
     at.sidebar.button(key="new-event").click().run()
     assert at.header[0].value == "Start a new event"
     assert at.button(key="start-go").disabled  # nobody in yet
@@ -534,7 +535,7 @@ def test_club_members_fill_each_new_event_and_settings_hold_the_year():
     at = new_app("Kevin, Mitch Lee").run()  # an older event: the club list starts from it
     at.button(key="club-home").click().run()
     at.text_input(key="club-new").set_value("Sam Cho").run()
-    at.number_input(key="home-start").set_value(420.0).run()
+    next(n for n in at.number_input if n.label == "Starting balance ($)").set_value(420.0).run()  # Club settings
     at.sidebar.button(key="new-event").click().run()
     at.button(key="confirm-new-yes").click().run()
     assert at.session_state["event"]["members"] == "Kevin, Mitch Lee, Sam Cho"
@@ -547,7 +548,9 @@ def test_each_club_keeps_its_own_members_events_and_balance():
     at = new_app("Kevin, Mitch Lee").run()  # an older event becomes "My club"
     at.sidebar.button(key="new-event").click().run()
     at.button(key="confirm-new-yes").click().run()  # the older event is saved under My club
-    at.text_input(key="club-menu-new").set_value("Chess Club").run()
+    at.button(key="club-menu-new").click().run()  # the New club pop-up
+    at.text_input(key="new-club-name").set_value("Chess Club").run()
+    at.button(key="new-club-add").click().run()
     assert at.session_state["event"]["members"] == ""  # a new club starts empty, on Club home
     assert any("Chess Club" in h.value for h in at.html)
     at.text_input(key="club-new").set_value("Dana Cho").run()
@@ -559,3 +562,23 @@ def test_each_club_keeps_its_own_members_events_and_balance():
     assert at.session_state["event"]["name"] == "Fall Mentor Mixer (FAKE)"  # back to My club's open event
     fresh = AppTest.from_file(APP, default_timeout=30).run()  # a new tab with two clubs asks which one
     assert fresh.header[0].value == "Which club are you doing the books for?"
+
+
+def test_club_home_steps_open_the_event_and_clubs_can_be_deleted():
+    at = new_app().run()
+    at.button(key="club-home").click().run()
+    at.sidebar.radio(key="step-home").set_value("1. Upload").run()  # the event's own step: used to do nothing
+    assert at.session_state["view"] == "event"
+    at.button(key="club-menu-new").click().run()
+    at.text_input(key="new-club-name").set_value("Chess Club").run()
+    at.button(key="new-club-add").click().run()
+    at.button(key="club-menu-new").click().run()  # the same name again opens it, no second Chess Club
+    at.text_input(key="new-club-name").set_value("chess club").run()
+    at.button(key="new-club-add").click().run()
+    from ui import club
+    assert [c["name"] for c in club.clubs().values()] == ["My club", "Chess Club"]
+    at.button(key="delete-club").click().run()
+    at.button(key="club-delete-yes").click().run()
+    assert not at.exception
+    assert [c["name"] for c in club.clubs().values()] == ["My club"]
+    assert club.current() == "my-club"

@@ -28,7 +28,7 @@
 .tly-open-title { font-family: var(--tly-head); font-weight: 600; color: var(--tly-sun-ink); margin: 0; }
 .tly-open-item { font-family: var(--tly-body); margin: 0; color: var(--tly-ink-2); }
 .st-key-finish-buttons { gap: 16px; flex-wrap: wrap; margin-top: 8px; }
-.st-key-push-stale p.tly-done-title { font-size: var(--tly-t-lg); }
+.st-key-push-stale p.tly-done-title, .st-key-finish-row p.tly-done-title { font-size: var(--tly-t-lg); }
 
 /* A wider sidebar (Kevin, 2026-11-09): the ticket, steps, Edit event and Past events had too little room. */
 @media (min-width: 768px) { section[data-testid="stSidebar"][data-collapsed="false"] { width: 360px !important; min-width: 360px !important; } }
