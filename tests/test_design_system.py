@@ -7,8 +7,13 @@ CSS = {p.name: p.read_text(encoding="utf-8") for p in UI.glob("*.css")}
 TOKENS = re.compile(r":root\s*{[^}]*}")
 
 
+HAND_TUNED = {"home.css"}  # Club home: Kevin kept its own sizes, corners and shadow
+
+
 def values(prop: str):
     for name, css in CSS.items():
+        if name in HAND_TUNED:
+            continue
         for v in re.findall(rf"(?<![-\w]){prop}:\s*([^;}}]+)", TOKENS.sub("", css)):
             yield name, v.replace("!important", "").strip()
 

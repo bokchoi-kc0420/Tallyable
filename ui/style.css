@@ -115,8 +115,7 @@
 .tly-net.bad { background: var(--tly-berry-tint); color: var(--tly-berry-deep); }
 .tly-net b { font-family: var(--tly-head); font-size: var(--tly-t-lg); }
 /* Summary: tinted metric tiles */
-.st-key-sum-metrics [data-testid="stMetric"] { border-width: 2px !important; height: 100%; }  /* all four tiles one height */
-.st-key-sum-metrics [data-testid="stColumn"] > div, .st-key-sum-metrics [data-testid="stElementContainer"] { height: 100%; }
+.st-key-sum-metrics [data-testid="stMetric"] { border-width: 2px !important; }
 .st-key-sum-metrics [data-testid="stColumn"]:nth-child(1) [data-testid="stMetric"] {
     background: var(--tly-green-tint); border-color: var(--tly-green-line) !important; }
 .st-key-sum-metrics [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"] {
