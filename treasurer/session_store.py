@@ -95,7 +95,7 @@ def past_nets(folder: Path) -> list[dict]:
             got = sum((cell_decimal(v or 0) for v in (raw.get("income") or {}).values()), Decimal("0"))
             ev = raw["event"]
             out.append({"event_id": ev["event_id"], "name": ev["name"], "date": ev["date"], "net": got - spent,
-                        "finished": bool(ev.get("finished")), "club": ev.get("club")})
+                        "color": ev.get("color"), "finished": bool(ev.get("finished")), "club": ev.get("club")})
         except (OSError, ValueError, KeyError, TypeError):
             continue
     return out

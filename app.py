@@ -13,7 +13,7 @@ import time
 import streamlit as st
 
 from treasurer import session_store
-from ui import close_out, club, finish, home, review, sidebar, start, summary, upload
+from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, upload
 from ui.common import ART, ROOT, SESSION_FILE, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
@@ -53,7 +53,7 @@ if home.needs_picking():
 home.menu()
 page, event = sidebar.show()
 if ss.get("view") == "club":
-    home.show()
+    club_home.show()
 elif page == "1. Upload" and start.needed():
     start.show()
 elif page == "1. Upload":

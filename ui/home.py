@@ -1,5 +1,5 @@
-"""The club comes first: the club menu at the top of the sidebar, the Club home page (balance,
-this year's events, members, settings) and the "Which club?" page when there's more than one."""
+"""The club comes first: the club menu at the top of the sidebar, switching and adding clubs, the
+club's balance, and the "Which club?" page when there's more than one. The page itself is club_home.py."""
 from __future__ import annotations
 
 import html
@@ -10,7 +10,7 @@ import streamlit as st
 
 from treasurer import session_store
 from treasurer.ledger_view import school_year
-from ui import club, connect
+from ui import club
 from ui.common import PAST, ss, usd
 from ui.sidebar import DEFAULT_EVENT, open_past, save_session, start_new_event
 
@@ -113,91 +113,3 @@ def picker() -> None:
                       label_visibility="collapsed", on_change=add_club, args=("club-first-name",))
         st.button("Add club", icon=":material/add:", key="club-first-add", type="primary" if not have else "secondary",
                   width="stretch", on_click=add_club, args=("club-first-name",))
-
-
-def members_card() -> None:
-    names = club.load()["members"]
-    with st.container(border=True, key="home-members"):
-        st.markdown(f"**Members ({len(names)})**")
-        st.caption("New events start with everyone here.")
-        c = st.columns([3, 1], vertical_alignment="bottom")
-        c[0].text_input("Name", key="club-new", placeholder="e.g. Jamie Lee", label_visibility="collapsed",
-                        on_change=club.add_member, args=("club-new",))
-        c[1].button("Add", icon=":material/add:", key="club-add", width="stretch", on_click=club.add_member,
-                    args=("club-new",))
-        with st.container(horizontal=True, key="club-chips"):
-            for n, name in enumerate(names):
-                st.button(name, icon=":material/close:", icon_position="right", key=f"club-rm-{n}",
-                          help=f"Remove {name} from the club", on_click=club.save,
-                          kwargs={"members": [x for x in names if x != name]})
-        club.chip_style("club-rm", names)
-
-
-def save_from(field: str, key: str) -> None:
-    """Edit callback: save one club setting (a blank name keeps the old one)."""
-    value = ss[key].strip() if isinstance(ss[key], str) else ss[key]
-    if value != "":
-        club.save(**{field: int(value) if field == "target" else value})
-
-
-def settings_card() -> None:
-    me = club.load()
-    start = "not set" if me["start_balance"] is None else usd(Decimal(str(me["start_balance"])))
-    books = "Google Sheets" if connect.linked() else "this computer"
-    with st.container(border=True, key="home-settings"):
-        st.markdown("**Club settings**")
-        st.markdown(f'<p class="tly-home-line">Starting balance <b>{start}</b> · Profit target <b>{me["target"]}%</b>'
-                    f" · Books go to <b>{books}</b></p>", unsafe_allow_html=True)
-        with st.popover("Edit", icon=":material/edit:"):
-            # Keys carry the saved value, so a change made elsewhere (or another club) redraws them fresh.
-            k = f"{club.current()}-{me['name']}-{me['start_balance']}-{me['target']}"
-            st.text_input("Club name", me["name"], key=f"club-name-{k}", on_change=save_from, args=("name", f"club-name-{k}"))
-            st.number_input("Starting balance this school year ($)", value=me["start_balance"], step=10.0, format="%.2f",
-                            placeholder="0.00", key=f"club-start-{k}", on_change=save_from,
-                            args=("start_balance", f"club-start-{k}"),
-                            help="What the club had before this year's first event. The General Ledger starts from it.")
-            st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(me["target"]), key=f"club-target-{k}",
-                            on_change=save_from, args=("target", f"club-target-{k}"),
-                            help="The Summary shows if an event hit it.")
-            label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
-            if st.button(label, icon=":material/table_chart:", key="open-connect", width="stretch"):
-                connect.dialog()
-
-
-def events_table(events: list[dict]) -> str:
-    if not events:
-        return '<p class="tly-home-line">No events this school year yet. Hit New event to start one!</p>'
-    status = {True: ("ok", "Finished"), False: ("wait", "In progress")}
-    rows = "".join(
-        f'<tr><td>{html.escape(e["name"])}</td><td>{date.fromisoformat(str(e["date"])[:10]):%b %d}</td>'
-        '<td><span class="tly-status {}">{}</span></td>'.format(*status[e["finished"]]) +
-        f'<td class="num{" neg" if e["net"] < 0 else ""}">{usd(e["net"])}</td></tr>' for e in events)
-    return ('<table class="tly-table"><thead><tr><th>Event</th><th>Date</th><th>Status</th><th class="num">Net</th>'
-            f"</tr></thead><tbody>{rows}</tbody></table>")
-
-
-def show() -> None:
-    """Club home: the club's name, its money this year, its members and its settings."""
-    me = club.load()
-    events = year_events()
-    money = balance(events)
-    st.html(f'<div class="tly-home-head">{badge(me["name"], "huge")}<h1>{html.escape(me["name"])}</h1></div>')
-    left, right = st.columns([1.15, 1], gap="medium")
-    with left.container(border=True, key="home-money"):
-        st.markdown("**Club balance**")
-        finished = sum(e["finished"] for e in events)
-        if money is None:
-            st.caption("Type what the club had before this year's first event, and Tally keeps the balance from there.")
-            begin = st.number_input("Starting balance this school year ($)", value=None, step=10.0, format="%.2f",
-                                    placeholder="0.00", key="home-start")
-            if begin is not None:
-                club.save(start_balance=begin)
-                st.rerun()
-        else:
-            st.html(f'<p class="tly-home-money{" neg" if money < 0 else ""}">{usd(money)}</p>'
-                    f'<p class="tly-home-line">Started the year at {usd(Decimal(str(me["start_balance"])))} · '
-                    f'{finished} event{"s" if finished != 1 else ""} finished</p>')
-        st.html(events_table(events))
-    with right:
-        members_card()
-        settings_card()
