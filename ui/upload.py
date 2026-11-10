@@ -148,7 +148,7 @@ def show(event: EventInfo) -> None:
               "Your own receipts need the full version.", key="demo", tip=True)
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
-            st.image(str(ART / "mascot-empty.png"), width=190)
+            st.image(str(ART / "mascot-empty.png"), width=190, alt="")
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
     files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
     if st.button("Use the fake event's 14 receipts instead"):
@@ -183,7 +183,7 @@ def show(event: EventInfo) -> None:
             with grid[n % 4].container(border=True, key=f"who-{n}"):
                 pic = thumbnail(data, name)
                 if pic:
-                    st.image(pic, width="stretch")
+                    st.image(pic, width="stretch", alt=f"Receipt photo {name}")
                 else:
                     st.markdown('<div class="tly-nothumb">PDF</div>', unsafe_allow_html=True)
                 st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],))
@@ -192,7 +192,7 @@ def show(event: EventInfo) -> None:
         st.error(md(f"{name}: {reason}"))
         with st.expander(f"Enter {name} by hand"):
             if data and data[1].startswith("image/"):
-                st.image(data[0], width=360)
+                st.image(data[0], width=360, alt=f"Receipt photo {name}")
             manual_form(f"manual-{name}", event, image_file=name, data=data)
 
     with st.expander("Add a purchase with no photo (cash, lost receipt)"):

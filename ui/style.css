@@ -276,6 +276,11 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 }
 
 /* Delete event: red outline in Edit event, solid red to confirm */
-.st-key-delete-event button { color: #B0413E; border-color: #E8B4B2; }
-.st-key-delete-event button:hover { color: #fff; background: #B0413E; border-color: #B0413E; }
-.st-key-delete-yes button { background: #B0413E; border-color: #B0413E; }
+.st-key-delete-event button { color: var(--tly-berry); border-color: #EFAFA6; }
+.st-key-delete-event button:hover { color: #fff; background: var(--tly-berry); border-color: var(--tly-berry); }
+.st-key-delete-yes button { background: var(--tly-berry); border-color: var(--tly-berry); }
+.st-key-delete-yes button:hover { background: #A8322A; border-color: #A8322A; }
+
+/* Accessibility (round 24 audit): helper text at 4.5:1+, picked name pills get a check, so the state is not color alone */
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--tly-soft); opacity: 1; }
+.st-key-roster button[aria-pressed="true"] p::before { content: "✓ "; }

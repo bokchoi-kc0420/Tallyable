@@ -78,8 +78,8 @@ def confirm_delete() -> None:
     st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n, ss.event.get("color"))}</div>',
                 unsafe_allow_html=True)
     pushed = "<br><small>What you already pushed stays in your sheet.</small>" if ss.event.get("pushed_at") else ""
-    st.markdown(f'<p class="tly-confirm-note"><b style="color: #B0413E">This can\'t be undone!</b> Its receipts, photos and notes '
-                f"go away for good.{pushed}</p>", unsafe_allow_html=True)
+    st.markdown(f'<p class="tly-confirm-note"><b style="color: var(--tly-berry)">This can\'t be undone!</b> '
+                f"Its receipts, photos and notes go away for good.{pushed}</p>", unsafe_allow_html=True)
     c = st.columns(2)
     if c[0].button("Keep it", key="delete-no", width="stretch"):
         close_delete()
