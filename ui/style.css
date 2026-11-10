@@ -274,7 +274,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-live .who span { flex: none; width: 28px; height: 28px; margin-right: -6px; border: 2px solid #fff; border-radius: 50%; color: #fff;
   display: grid; place-items: center; font: 600 .7rem Fredoka, sans-serif; }
 .tly-live p { text-align: center; color: var(--tly-soft); font-size: .85rem; margin: 22px 0 0; }
-[class*="st-key-rm-member-"] button::before { flex: none; width: 24px; height: 24px; border-radius: 50%; color: #fff; display: inline-grid;
+[class*="st-key-club-rm-"] button::before { flex: none; width: 24px; height: 24px; border-radius: 50%; color: #fff; display: inline-grid;
   place-items: center; font: 600 .68rem Fredoka, sans-serif; margin: 0 8px 0 -8px; }
 
 /* Phones: keep each income row (icon, source, amount, remove) on one line instead of stacking */

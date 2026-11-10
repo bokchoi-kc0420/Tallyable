@@ -457,7 +457,7 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
     assert at.session_state["event"]["event_id"] == f"EVT-{date.today().isoformat()}-SPRINGPICNIC"  # blank start: today
     at.button(key="edit-members").click().run()  # back to change who's in
     assert at.header[0].value == "Start a new event"
-    at.button(key="rm-member-0").click().run()
+    at.pills(key="roster").unselect("Jamie Lee").run()  # tap to leave someone out
     assert at.session_state["event"]["members"] == ""
 
 
@@ -527,3 +527,15 @@ def test_delete_event_removes_it_for_good():
     assert not at.exception
     assert at.session_state["receipts"] == {}
     assert not any("Fall Mentor Mixer" in m.value for m in at.sidebar.markdown)
+
+
+def test_club_members_fill_each_new_event_and_settings_hold_the_year():
+    at = new_app("Kevin, Mitch Lee").run()  # an older event: the club list starts from it
+    at.sidebar.text_input(key="club-new").set_value("Sam Cho").run()
+    at.sidebar.number_input(key="club-start").set_value(420.0).run()
+    at.sidebar.button(key="new-event").click().run()
+    at.button(key="confirm-new-yes").click().run()
+    assert at.session_state["event"]["members"] == "Kevin, Mitch Lee, Sam Cho"
+    assert at.session_state["event"]["start_balance"] == 420.0
+    at.pills(key="roster").unselect("Mitch Lee").run()
+    assert at.session_state["event"]["members"] == "Kevin, Sam Cho"
