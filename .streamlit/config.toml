@@ -11,8 +11,8 @@ base = "light"
 font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
 headingFont = "Fredoka:https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap, sans-serif"
 headingFontWeights = [700, 600, 600, 600, 600, 600]
-baseRadius = "0.9rem"
-buttonRadius = "full"
+baseRadius = "1rem"
+buttonRadius = "1rem"
 showWidgetBorder = true
 primaryColor = "#1C5C36"
 backgroundColor = "#FFFCF1"

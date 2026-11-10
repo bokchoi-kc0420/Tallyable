@@ -91,8 +91,10 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
     loading(bar, "Tally is reading your receipts", f"Starting on {len(sources)} receipts...", 0.0)
     seen = {hashlib.sha256(b).hexdigest() for b, _ in ss.images.values()}
     skipped = []
+    done: list[str] = []  # the last few read show as lines, the ones still waiting as skeleton lines
     for n, (name, data) in enumerate(sources):
-        loading(bar, "Tally is reading your receipts", f"{name} · {n + 1} of {len(sources)}", n / len(sources))
+        rows = done[-3:] + [None] * min(len(sources) - n, 3)
+        loading(bar, "Tally is reading your receipts", f"{name} · {n + 1} of {len(sources)}", n / len(sources), rows)
         try:
             f = prepare(data, name)
         except UnsupportedFile as e:
@@ -108,6 +110,7 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
             ss.failed[name] = ((f.data, f.media_type), f"{e} You can type it in by hand below.")
             continue
         ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
+        done.append(f"{rid} · {r.place} · ${r.total:,.2f}")
         ss.images[rid] = (f.data, f.media_type)
         notes = f.warnings + ([f"Reader's note: {r.review_note}"] if r.review_note else [])
         if notes:

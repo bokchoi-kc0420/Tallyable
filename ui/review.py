@@ -10,7 +10,7 @@ import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
-from ui.common import ICON, STATUS_CHIP, dec, guide, md, next_step, payers, reviewed, ss, step_bar, usd
+from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, md, next_step, payers, reviewed, ss, step_bar, usd
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
@@ -160,14 +160,15 @@ def show() -> None:
     if not ids:
         st.success("Nothing left in this view.")
         return
-    labels = {x: f"{ICON[ss.receipts[x].status].split()[0]} {x} · {ss.receipts[x].place}" + (" ⚠️" if attention(x) else "")
+    labels = {x: f"{ICON[ss.receipts[x].status]} {x} · {ss.receipts[x].place}" + (f" {FLAG_ICON}" if attention(x) else "")
               for x in ids}
     if ss.get("next_pick") in ids:  # set by "Approve" so the next receipt opens by itself
         ss["review-pick"] = ss.pop("next_pick")
     elif ss.get("review-pick") not in ids:
         ss["review-pick"] = ids[0]
     rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
-                           help="⏳ to review · ✅ approved · ➖ left out · 📤 posted · ⚠️ has a flag")
+                           help=f"{ICON[Status.DRAFTED]} to review · {ICON[Status.APPROVED]} approved · "
+                                f"{ICON[Status.REJECTED]} left out · {ICON[Status.POSTED]} posted · {FLAG_ICON} has a flag")
     left, right = st.columns([2, 3])
     with left:
         photo(rid)

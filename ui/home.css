@@ -1,57 +1,57 @@
 /* Club menu (top of the sidebar) and Club home. Fredoka for names, labels and money; Inter for sentences. */
 .st-key-club-menu [data-testid="stPopoverButton"] { justify-content: flex-start; border: 2px solid var(--tly-line);
-  border-radius: 16px; background: var(--tly-card); padding: 10px 12px; min-height: 66px; }
+  border-radius: var(--tly-r); background: var(--tly-card); padding: 8px 16px; min-height: 66px; }
 .st-key-club-menu [data-testid="stPopoverButton"] > div { width: 100%; justify-content: space-between; }
 .st-key-club-menu [data-testid="stPopoverButton"] > div > div:first-child { flex: 1; display: flex; justify-content: flex-start; }
-.st-key-club-menu [data-testid="stPopoverButton"] p { display: grid; grid-template-columns: 42px 1fr; column-gap: 12px;
-  align-items: center; text-align: left; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.1rem; line-height: 1.2; }
-.st-key-club-menu [data-testid="stPopoverButton"] p::before { grid-row: span 2; width: 42px; height: 42px; border-radius: 12px;
-  background: var(--tly-forest); color: #fff; display: grid; place-items: center; font-size: 1rem; }
-.st-key-club-menu [data-testid="stPopoverButton"] p::after { font-family: Inter, sans-serif; font-weight: 400; font-size: .85rem;
+.st-key-club-menu [data-testid="stPopoverButton"] p { display: grid; grid-template-columns: 42px 1fr; column-gap: 16px;
+  align-items: center; text-align: left; font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg); line-height: 1.2; }
+.st-key-club-menu [data-testid="stPopoverButton"] p::before { grid-row: span 2; width: 42px; height: 42px; border-radius: var(--tly-r);
+  background: var(--tly-forest); color: var(--tly-white); display: grid; place-items: center; font-size: var(--tly-t-md); }
+.st-key-club-menu [data-testid="stPopoverButton"] p::after { font-family: var(--tly-body); font-weight: 400; font-size: var(--tly-t-sm);
   color: var(--tly-soft); }
-.tly-club-badge { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; flex: none;
-  background: var(--tly-forest); color: #fff; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.1rem; }
-.tly-club-badge.big { width: 56px; height: 56px; border-radius: 16px; font-size: 1.3rem; }
-.tly-club-badge.huge { width: 62px; height: 62px; border-radius: 18px; font-size: 1.5rem; }
-.tly-club-badge.sun { width: 50px; height: 50px; background: var(--tly-sun); color: #1F2A22; }
-.tly-home-line, [data-testid="stMarkdownContainer"] p.tly-home-line { color: var(--tly-soft); margin: 2px 0 8px; }
-.tly-home-line b { color: #1F2A22; }
+.tly-club-badge { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: var(--tly-r); flex: none;
+  background: var(--tly-forest); color: var(--tly-white); font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg); }
+.tly-club-badge.big { width: 56px; height: 56px; border-radius: var(--tly-r); font-size: var(--tly-t-lg); }
+.tly-club-badge.huge { width: 62px; height: 62px; border-radius: var(--tly-r); font-size: var(--tly-t-xl); }
+.tly-club-badge.sun { width: 50px; height: 50px; background: var(--tly-sun); color: var(--tly-ink); }
+.tly-home-line, [data-testid="stMarkdownContainer"] p.tly-home-line { color: var(--tly-soft); margin: 4px 0 8px; }
+.tly-home-line b { color: var(--tly-ink); }
 /* Club home hero (pick C): money on green, the next step on sunny yellow. */
-.st-key-home-hero { border-radius: 30px; overflow: hidden; box-shadow: 0 18px 40px rgba(31,42,34,.15); flex-wrap: nowrap; margin-top: -1.5rem; }
-.st-key-hero-money, .st-key-hero-next { position: relative; min-height: 320px; padding: 30px 34px; }
-.st-key-hero-money { flex: 1.25 1 0; background: var(--tly-forest) radial-gradient(rgba(255,255,255,.07) 1.5px, transparent 1.5px) 0 0 / 18px 18px; color: #fff; }
+.st-key-home-hero { border-radius: var(--tly-r); overflow: hidden; box-shadow: var(--tly-shadow); flex-wrap: nowrap; margin-top: -24px; }
+.st-key-hero-money, .st-key-hero-next { position: relative; min-height: 320px; padding: 32px 32px; }
+.st-key-hero-money { flex: 1.25 1 0; background: var(--tly-forest) radial-gradient(rgba(255,255,255,.07) 1.5px, transparent 1.5px) 0 0 / 18px 18px; color: var(--tly-white); }
 .st-key-hero-next { flex: 1 1 0; background: var(--tly-sun); }
-.tly-hero-id { display: flex; gap: 14px; align-items: center; }
-.tly-hero-id b { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.6rem; display: block; line-height: 1.15; }
+.tly-hero-id { display: flex; gap: 16px; align-items: center; }
+.tly-hero-id b { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-xl); display: block; line-height: 1.15; }
 .tly-hero-id small { opacity: .8; }
-.tly-hero-money { font-family: Fredoka, sans-serif; font-weight: 700; font-size: 4.4rem; line-height: 1; margin: 26px 0 4px;
+.tly-hero-money { font-family: var(--tly-head); font-weight: 700; font-size: var(--tly-t-hero); line-height: 1; margin: 24px 0 4px;
   font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
-.tly-hero-sub { opacity: .85; margin: 0 0 14px; }
-.tly-delta { display: inline-block; font-family: Fredoka, sans-serif; font-weight: 600; background: var(--tly-sun); color: #1F2A22;
-  border-radius: 999px; padding: 4px 14px; } .tly-delta.down { background: #F2A196; }
+.tly-hero-sub { opacity: .85; margin: 0 0 16px; }
+.tly-delta { display: inline-block; font-family: var(--tly-head); font-weight: 600; background: var(--tly-sun); color: var(--tly-ink);
+  border-radius: 999px; padding: 4px 16px; } .tly-delta.down { background: var(--tly-berry-soft); }
 .tly-hero-jar { position: absolute; right: -6px; top: 150px; height: 135px; }
-.st-key-hero-money [data-testid="stWidgetLabel"] p { color: #fff; }
-.tly-kick { font-family: Fredoka, sans-serif; font-weight: 600; font-size: .85rem; letter-spacing: .08em; margin: 6px 0 0; }
-.tly-next-title { font-family: Fredoka, sans-serif; font-weight: 700; font-size: 1.9rem; line-height: 1.15; margin: 6px 0 4px; color: #1F2A22; max-width: 75%; }
-.tly-checks { list-style: none; padding: 0; margin: 12px 0 8px; display: grid; gap: 6px; font-weight: 500; position: relative; z-index: 1; }
+.st-key-hero-money [data-testid="stWidgetLabel"] p { color: var(--tly-white); }
+.tly-kick { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); letter-spacing: .08em; margin: 8px 0 0; }
+.tly-next-title { font-family: var(--tly-head); font-weight: 700; font-size: var(--tly-t-2xl); line-height: 1.15; margin: 8px 0 4px; color: var(--tly-ink); max-width: 75%; }
+.tly-checks { list-style: none; padding: 0; margin: 16px 0 8px; display: grid; gap: 8px; font-weight: 500; position: relative; z-index: 1; }
 .tly-checks li::before { content: ""; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  margin-right: 8px; vertical-align: -5px; box-sizing: border-box; border: 2px solid #1F2A22; background: #fff; font-size: .75rem; }
-.tly-checks li.done::before { content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); color: #fff; }
+  margin-right: 8px; vertical-align: -5px; box-sizing: border-box; border: 2px solid var(--tly-ink); background: var(--tly-white); font-size: var(--tly-t-xs); }
+.tly-checks li.done::before { content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); color: var(--tly-white); }
 .tly-hero-clip { position: absolute; right: -26px; top: 70px; height: 200px; }
-.st-key-home-go button { border: 3px solid #1F2A22 !important; box-shadow: 4px 4px 0 #1F2A22; padding: 10px 22px; }
-.st-key-home-go button p { font-size: 1.05rem; }
+.st-key-home-go button { border: 3px solid var(--tly-ink) !important; box-shadow: var(--tly-shadow); padding: 8px 24px; }
+.st-key-home-go button p { font-size: var(--tly-t-md); }
 /* Ticket strip and crew cards, each with its own Tally in the corner */
-.st-key-home-tickets, .st-key-home-crew { background: var(--tly-card); padding: 20px 22px; position: relative; margin-top: 8px; min-height: 150px; }
-.tly-card-title { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.1rem; margin: 0 0 12px; }
+.st-key-home-tickets, .st-key-home-crew { background: var(--tly-card); padding: 16px 24px; position: relative; margin-top: 8px; min-height: 150px; }
+.tly-card-title { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg); margin: 0 0 16px; }
 .tly-card-tally { position: absolute; right: 22px; top: 8px; height: 118px; pointer-events: none; }
 .st-key-home-crew .tly-card-tally { height: 100px; top: 14px; }
 .st-key-home-crew [data-testid="stHorizontalBlock"], .st-key-club-chips, .st-key-home-crew .tly-home-line { max-width: calc(100% - 200px); }
-.tly-strip { display: flex; gap: 14px; flex-wrap: wrap; max-width: calc(100% - 160px); }
+.tly-strip { display: flex; gap: 16px; flex-wrap: wrap; max-width: calc(100% - 160px); }
 .tly-strip .tly-event { width: 205px; margin: 0; }
-.tly-strip .info span { font-family: Fredoka, sans-serif; font-weight: 600; }
+.tly-strip .info span { font-family: var(--tly-head); font-weight: 600; }
 .tly-strip .pos { color: var(--tly-forest); } .tly-strip .neg { color: var(--tly-berry); } .tly-strip .open { color: var(--tly-soft); }
-.tly-pick-name { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.2rem; margin: 10px 0 0; color: #1F2A22; }
-.tly-pick-sub { color: var(--tly-soft); margin: 0; font-size: .92rem; }
-[class*="st-key-pick-club-"] { background: var(--tly-card); padding: 20px; }
+.tly-pick-name { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg); margin: 8px 0 0; color: var(--tly-ink); }
+.tly-pick-sub { color: var(--tly-soft); margin: 0; font-size: var(--tly-t-md); }
+[class*="st-key-pick-club-"] { background: var(--tly-card); padding: 16px; }
 .st-key-pick-club-new { border-style: dashed !important; }
 .st-key-club-pop [data-testid="stBaseButton-tertiary"]:disabled { color: var(--tly-forest); opacity: 1; }
