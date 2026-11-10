@@ -182,15 +182,15 @@ def stepper_css(current: str) -> None:
         rules.append(f'{row} p::after {{ content: "{sub[name]}"; }}')
         if name != current:
             rules.append(f'{row}::before {{ content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); '
-                         "color: #fff; }" if done[name] else f'{row}::before {{ content: "{n}"; }}')
+                         "color: var(--tly-white); }" if done[name] else f'{row}::before {{ content: "{n}"; }}')
             continue
         rules.append(f'{row}::before {{ content: "{n}"; border-color: var(--tly-forest); color: var(--tly-forest); '
-                     "box-shadow: 0 0 0 4px rgba(247,190,63,.5); }" f" {row} p {{ font-weight: 700; }}")
+                     "box-shadow: var(--tly-ring); }" f" {row} p {{ font-weight: 700; }}")
         if name == "2. Review" and rs:
             pct = checked / len(rs) * 100
             rules.append(f'{row}::after {{ content: ""; position: absolute; left: 52px; right: 12px; bottom: 4px; '
-                         f"height: 6px; border-radius: 9px; background: linear-gradient(90deg, var(--tly-sun) {pct:.0f}%, "
-                         f"#E6DEC0 {pct:.0f}%); }}")
+                         f"height: 6px; border-radius: 999px; background: linear-gradient(90deg, var(--tly-sun) {pct:.0f}%, "
+                         f"var(--tly-line) {pct:.0f}%); }}")
     st.html("<style>" + "\n".join(rules) + "</style>")
 
 

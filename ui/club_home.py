@@ -51,9 +51,9 @@ def hero(me: dict, events: list[dict]) -> None:
             amount = usd(money) if money is not None else "$ —"
             up = None if money is None else money - Decimal(str(start))
             delta = ("" if not up else
-                     f'<span class="tly-delta{" down" if up < 0 else ""}">{"▲" if up >= 0 else "▼"} '
+                     f'<span class="tly-delta{" down" if up < 0 else ""}"><b>{"▲" if up >= 0 else "▼"}</b> '
                      f'{usd(abs(up))} since the year started</span>')
-            st.html(f'<div class="tly-hero-id">{badge(me["name"], "sun")}<div><b>{html.escape(me["name"])}</b>'
+            st.html(f'<div class="tly-hero-id">{badge(me["name"], "mid")}<div><b>{html.escape(me["name"])}</b>'
                     f'<small>{n} member{"s" if n != 1 else ""} · {school_year(date.today()).replace("-", "–")}</small></div></div>'
                     f'<p class="tly-hero-money">{amount}</p><p class="tly-hero-sub">in the club bank</p>{delta}'
                     f'<img class="tly-hero-jar" src="{mascot_uri("tally-coin-jar.png")}" alt="">')

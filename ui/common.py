@@ -22,8 +22,10 @@ RUN_LOG = OUT / "run_log.csv"
 SESSION_FILE = OUT / "session.json"
 PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
-ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "➖ left out",
-        Status.POSTED: "📤 posted"}
+# Drawn (Material) icons, never emoji: they match the rest of the UI and take the theme colors.
+ICON = {Status.DRAFTED: ":material/schedule:", Status.APPROVED: ":green[:material/check_circle:]",
+        Status.REJECTED: ":gray[:material/remove_circle:]", Status.POSTED: ":green[:material/cloud_done:]"}
+FLAG_ICON = ":orange[:material/flag:]"
 STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved", "ok"),
                Status.REJECTED: ("left out", "no"), Status.POSTED: ("in the books", "post")}
 # Tally's pose on the walker bar for each step (Kevin's picks). Close out keeps the original.
@@ -138,13 +140,15 @@ def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None 
     return bubble
 
 
-def loading(slot, title: str, detail: str, frac: float | None) -> None:
-    """Tally's loading card, drawn into an st.empty() slot. frac None = a bar that just runs."""
+def loading(slot, title: str, detail: str, frac: float | None, rows: list[str | None] = ()) -> None:
+    """Tally's loading card, drawn into an st.empty() slot. frac None = a bar that just runs.
+    rows: one line per item being read, a finished one as text and a waiting one (None) as a skeleton."""
     bar = (f'<div class="bar"><i style="width:{max(frac, 0.04) * 100:.0f}%"></i></div>' if frac is not None
            else '<div class="bar run"><i></i></div>')
+    lines = "".join(f"<li>{html.escape(r)}</li>" if r else '<li class="sk"></li>' for r in rows)
     slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri("tally-review-small.png")}" alt="">'
-                  f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}</div></div>',
-                  unsafe_allow_html=True)
+                  f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}'
+                  f'{f"<ul>{lines}</ul>" if lines else ""}</div></div>', unsafe_allow_html=True)
 
 
 def next_step(message: str, label: str, target: str, key: str) -> None:

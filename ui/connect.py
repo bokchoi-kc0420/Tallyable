@@ -63,5 +63,5 @@ def box(key: str) -> None:
         st.error(problem + f" Share it with {email} as Editor, then hit Connect again.")
         return
     club.save(sheets=ids)
-    st.toast("Connected! Push sends your books there now.", icon="🎉")
+    st.toast("Connected! Push sends your books there now.", icon=":material/celebration:")
     st.rerun()

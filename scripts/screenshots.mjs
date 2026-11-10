@@ -105,7 +105,7 @@ try {
   await page.getByRole("button", { name: /Approve the \d+ with no flags/ }).click();
   await idle();
   for (let n = 0; n < 15; n++) {  // approve the flagged ones too, with a note, so Push opens up
-    const left = page.locator('[data-testid="stSidebar"] label').filter({ hasText: "⏳" });
+    const left = page.locator('[data-testid="stSidebar"] label').filter({ hasText: "schedule" });  // the drafted icon (Material "schedule")
     if (!(await left.count())) break;
     await left.first().click();
     await idle();
