@@ -42,6 +42,8 @@
 .tly-led.total { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1rem; }
 .tly-led.soft { color: var(--tly-soft); font-size: .88rem; }
 .tly-led.paid { font-family: Fredoka, sans-serif; font-weight: 600; color: var(--tly-forest); text-align: center; }
+/* Every amount and count in one font, so the columns read the same; bold is only weight */
+.tly-led.num:not(.head), .tly-led.num b { font-family: Inter, sans-serif; font-size: .95rem; } .tly-led.num b, .tly-led.total.num { font-weight: 700; }
 .st-key-whos-owed [data-testid="stMarkdownContainer"]:has(> .tly-led) { margin-bottom: 0; }
 .st-key-whos-owed { gap: 0; }  /* rows own their spacing, so text sits in the middle between the lines */
 .st-key-whos-owed [data-testid="stLayoutWrapper"] { border-top: 1px solid var(--tly-line); padding: .6rem 0; }
