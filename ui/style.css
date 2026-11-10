@@ -47,7 +47,7 @@
   background: #FCE7A8; font-family: Fredoka, sans-serif; font-weight: 600; color: #1F2A22; }
 .tly-bar { height: 12px; border-radius: 999px; background: #E3D9B6; overflow: hidden; }
 .tly-bar > div { height: 100%; border-radius: 999px; background: #1C5C36; }
-:root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
+:root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536; --tly-danger: #B0413E;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: the event's ticket. Its date stub has the same torn zigzag edge as the Past events stubs. */
 .tly-event { display: grid; grid-template-columns: 70px 1fr; margin: 4px 0 0; border: 2px solid var(--tly-c, var(--tly-forest));
@@ -285,6 +285,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 }
 
 /* Delete event: red outline in Edit event, solid red to confirm */
-.st-key-delete-event button { color: #B0413E; border-color: #E8B4B2; }
-.st-key-delete-event button:hover { color: #fff; background: #B0413E; border-color: #B0413E; }
-.st-key-delete-yes button { background: #B0413E; border-color: #B0413E; }
+.st-key-delete-event button { color: var(--tly-danger); border-color: #E8B4B2; }
+.st-key-delete-event button:hover { color: #fff; background: var(--tly-danger); border-color: var(--tly-danger); }
+.st-key-delete-yes button { background: var(--tly-danger); border-color: var(--tly-danger); }
+.tly-confirm-note b.danger { color: var(--tly-danger); }

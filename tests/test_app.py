@@ -21,10 +21,12 @@ def new_app(members: str = MEMBERS) -> AppTest:
     return at
 
 
-def draft(at) -> None:
-    """Click Draft rows, tagging every untagged receipt with the first member first (Draft waits for tags)."""
-    if next(b for b in at.button if b.label == "Draft rows").disabled:
-        next(b for b in at.button if b.label == "Apply to all").click().run()
+def upload_and_draft(at, payer: str | None = None) -> None:
+    """Load the fake event's receipts, tag them all with one payer (the first member by default), and draft."""
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    if payer:
+        next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value(payer)
+    next(b for b in at.button if b.label == "Apply to all").click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
 
 
@@ -39,12 +41,7 @@ def owed_table(at) -> list[dict]:
 
 def test_draft_approve_and_fix():
     at = new_app().run()
-    at.button[0].click().run()  # use the fake event's receipts
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member A")
-    at.run()
-    draft(at)
+    upload_and_draft(at)
     assert "R15" in at.session_state["receipts"]  # ids follow file names
 
     at.sidebar.radio[0].set_value("2. Review").run()
@@ -60,12 +57,7 @@ def test_draft_approve_and_fix():
 
 def test_push_logs_time_and_close_out_shows_owed_and_report():
     at = new_app().run()
-    at.button[0].click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member A")
-    at.run()
-    draft(at)
+    upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     next(b for b in at.button if b.label == "Approve").click().run()  # R01
 
@@ -95,12 +87,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
 
 def test_one_click_mark_paid_uses_chosen_method():
     at = new_app().run()
-    at.button[0].click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member C")
-    at.run()
-    draft(at)
+    upload_and_draft(at, "Member C")
     r = at.session_state["receipts"]["R01"]
     at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED})
     at.sidebar.radio[0].set_value("4. Close out").run()
@@ -118,12 +105,7 @@ def test_one_click_mark_paid_uses_chosen_method():
 
 def test_mark_paid_back_updates_owed():
     at = new_app().run()
-    at.button[0].click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member B")
-    at.run()
-    draft(at)
+    upload_and_draft(at, "Member B")
     r = at.session_state["receipts"]["R01"]
     at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED, "payer": "Member B"})
     at.sidebar.radio[0].set_value("4. Close out").run()
@@ -172,8 +154,7 @@ def test_event_setup_and_start_new_event():
     name = next(t for t in at.sidebar.text_input if t.label == "Event name")
     name.set_value("Winter Social (FAKE)").run()
     assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-WINTER")
-    at.button[0].click().run()
-    draft(at)
+    upload_and_draft(at)
     at.run()
     next(t for t in at.sidebar.text_input if t.label == "Event name").set_value("Winter Gala (FAKE)").run()
     assert at.session_state["event"]["name"] == "Winter Gala (FAKE)"  # renaming is fine before Push...
@@ -201,12 +182,7 @@ def test_an_event_set_up_but_not_drafted_survives_a_new_event():
 
 def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member A")
-    at.run()
-    draft(at)
+    upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     next(b for b in at.button if b.label == "Approve").click().run()
 
@@ -227,12 +203,7 @@ def test_corrupt_session_file_is_ignored():
 
 def drafted_app(payer="Member A"):
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value(payer)
-    at.run()
-    draft(at)
+    upload_and_draft(at, payer)
     at.sidebar.radio[0].set_value("2. Review").run()
     return at
 
@@ -277,19 +248,19 @@ def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     assert any("14 receipts in" in i.value and "14 still need a payer" in i.value for i in at.markdown)
+    assert next(b for b in at.button if b.label == "Draft rows").disabled  # Draft waits for every payer
     next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
     assert any("Everyone's tagged" in i.value for i in at.markdown)
-    draft(at)
+    next(b for b in at.button if b.label == "Draft rows").click().run()
     assert not at.exception
     assert {r.payer for r in at.session_state["receipts"].values()} == {"Member C"}
 
 
 def test_each_step_says_what_comes_next():
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    draft(at)
+    upload_and_draft(at)
     next(b for b in at.button if b.label == "Go to Review →").click().run()
     assert at.sidebar.radio(key="step").value == "2. Review"
     assert not any(b.label == "Go to Summary →" for b in at.button)
@@ -312,8 +283,7 @@ def test_each_step_says_what_comes_next():
 def test_drafting_the_same_photos_twice_reads_them_once():
     at = new_app().run()
     for _ in range(2):
-        next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-        draft(at)
+        upload_and_draft(at)
     assert len(at.session_state["receipts"]) == 14
     assert "Skipped 14 I'd already read" in at.session_state["last_draft"]
 
@@ -351,8 +321,7 @@ def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
 
 def test_summary_warns_about_junk_and_negative_income():
     at = new_app().run()
-    at.button[0].click().run()
-    draft(at)
+    upload_and_draft(at)
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.button(key="add-source").click().run()  # Zelle
     at.button(key="add-source").click().run()  # Venmo
@@ -375,8 +344,7 @@ def test_empty_review_guide_button_goes_to_upload():
 
 def test_income_sources_can_be_added_renamed_and_removed():
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    draft(at)
+    upload_and_draft(at)
     at.sidebar.radio[0].set_value("3. Summary").run()
     assert at.session_state["event"]["sources"] == "Cash"  # a new event starts with Cash only
     at.button(key="add-source").click().run()
@@ -400,9 +368,7 @@ def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch,
 
     monkeypatch.setattr(sheets.GoogleSheetsSink, "from_env", classmethod(lambda cls, *a: FakeSheet(tmp_path / "t.csv")))
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    next(b for b in at.button if b.label == "Apply to all").click().run()
-    draft(at)
+    upload_and_draft(at)
     for rid in list(at.session_state["receipts"]):
         at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
@@ -415,9 +381,7 @@ def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch,
 
 def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    next(b for b in at.button if b.label == "Apply to all").click().run()
-    draft(at)
+    upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     at.button(key="approve-clean").click().run()
     rs = at.session_state["receipts"]
@@ -431,9 +395,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
 
 def test_my_funder_rules():
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    next(b for b in at.button if b.label == "Apply to all").click().run()
-    draft(at)
+    upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     at.button(key="approve-clean").click().run()
     at.sidebar.radio[0].set_value("4. Close out").run()
@@ -463,8 +425,7 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
 
 def test_a_forgotten_member_can_be_added_after_drafting():
     at = new_app("Jamie Lee").run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    draft(at)
+    upload_and_draft(at)
     event_id = at.session_state["event"]["event_id"]
     at.button(key="edit-members").click().run()
     at.text_input(key="start-name").set_value("Fall Mixer, renamed")  # renaming is fine: the id stays
@@ -510,14 +471,6 @@ def test_connect_catches_a_viewer_only_share(monkeypatch):
     assert "Editor, not Viewer" in connect.check({"book": "x"})
     monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True))
     assert connect.check({"book": "x"}) is None
-
-
-def test_draft_rows_waits_for_every_payer():
-    at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert next(b for b in at.button if b.label == "Draft rows").disabled
-    next(b for b in at.button if b.label == "Apply to all").click().run()
-    assert not next(b for b in at.button if b.label == "Draft rows").disabled
 
 
 def test_delete_event_removes_it_for_good():

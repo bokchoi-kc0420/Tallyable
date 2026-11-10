@@ -2,7 +2,7 @@
 from datetime import date
 from decimal import Decimal
 
-from test_app import draft, new_app
+from test_app import new_app, upload_and_draft
 
 from treasurer.models import Status
 
@@ -10,12 +10,7 @@ from treasurer.models import Status
 def pushed_app():
     """Fake event with R01 approved (Member A paid), the rest left out, $100 cash in, pushed."""
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member A")
-    at.run()
-    draft(at)
+    upload_and_draft(at)
     for rid in list(at.session_state["receipts"]):
         at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
