@@ -83,7 +83,7 @@ def test_ticket_color_menu_shows_the_color_just_picked():
     at = new_app().run()
     at.sidebar.radio(key="ticket-color").set_value("Sage").run()
     assert at.session_state["event"]["color"] == "Sage"
-    assert [p.proto.popover.label for p in at.sidebar.get("popover")] == ["Sage"]  # was one pick behind
+    assert [p.proto.popover.label for p in at.sidebar.get("popover")] [-1:] == ["Sage"]  # was one pick behind
 
 
 def test_new_event_from_the_sidebar_opens_on_the_first_step():

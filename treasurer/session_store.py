@@ -66,7 +66,7 @@ def clear(path: Path) -> None:
 
 def past_events(folder: Path) -> list[dict]:
     """Every saved event in `folder` (one file per event id), newest event first.
-    Each entry: path, event_id, name, date, receipts, color, finished."""
+    Each entry: path, event_id, name, date, receipts, color, finished, club."""
     out = []
     for p in folder.glob("*.json") if folder.exists() else []:
         try:
@@ -74,15 +74,15 @@ def past_events(folder: Path) -> list[dict]:
             ev = raw["event"]
             out.append({"path": p, "event_id": ev["event_id"], "name": ev["name"], "date": ev["date"],
                         "receipts": len(raw["receipts"]), "color": ev.get("color"),
-                        "finished": bool(ev.get("finished"))})
+                        "finished": bool(ev.get("finished")), "club": ev.get("club")})
         except (OSError, ValueError, KeyError, TypeError):
             continue  # a damaged file is skipped, not fatal
     return sorted(out, key=lambda e: e["date"], reverse=True)
 
 
 def past_nets(folder: Path) -> list[dict]:
-    """Every saved event's money: event_id, date, and net (income minus counted receipts),
-    for the club balance on the finish page. Photos aren't decoded, so this stays quick."""
+    """Every saved event's money: event_id, name, date, finished, club, and net (income minus
+    counted receipts), for the club balance. Photos aren't decoded, so this stays quick."""
     from decimal import Decimal
 
     from .models import cell_decimal
@@ -93,7 +93,9 @@ def past_nets(folder: Path) -> list[dict]:
             receipts = [Receipt.model_validate(v) for v in raw["receipts"].values()]
             spent = sum((r.posted_amount for r in receipts if r.counts), Decimal("0"))
             got = sum((cell_decimal(v or 0) for v in (raw.get("income") or {}).values()), Decimal("0"))
-            out.append({"event_id": raw["event"]["event_id"], "date": raw["event"]["date"], "net": got - spent})
+            ev = raw["event"]
+            out.append({"event_id": ev["event_id"], "name": ev["name"], "date": ev["date"], "net": got - spent,
+                        "finished": bool(ev.get("finished")), "club": ev.get("club")})
         except (OSError, ValueError, KeyError, TypeError):
             continue
     return out

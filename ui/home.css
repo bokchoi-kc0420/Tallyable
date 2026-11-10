@@ -1,0 +1,28 @@
+/* Club menu (top of the sidebar) and Club home. Fredoka for names, labels and money; Inter for sentences. */
+.st-key-club-menu [data-testid="stPopoverButton"] { justify-content: flex-start; border: 2px solid var(--tly-line);
+  border-radius: 16px; background: var(--tly-card); padding: 10px 12px; min-height: 66px; }
+.st-key-club-menu [data-testid="stPopoverButton"] > div { width: 100%; justify-content: space-between; }
+.st-key-club-menu [data-testid="stPopoverButton"] > div > div:first-child { flex: 1; display: flex; justify-content: flex-start; }
+.st-key-club-menu [data-testid="stPopoverButton"] p { display: grid; grid-template-columns: 42px 1fr; column-gap: 12px;
+  align-items: center; text-align: left; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.1rem; line-height: 1.2; }
+.st-key-club-menu [data-testid="stPopoverButton"] p::before { grid-row: span 2; width: 42px; height: 42px; border-radius: 12px;
+  background: var(--tly-forest); color: #fff; display: grid; place-items: center; font-size: 1rem; }
+.st-key-club-menu [data-testid="stPopoverButton"] p::after { font-family: Inter, sans-serif; font-weight: 400; font-size: .85rem;
+  color: var(--tly-soft); }
+.tly-club-badge { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; flex: none;
+  background: var(--tly-forest); color: #fff; font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.1rem; }
+.tly-club-badge.big { width: 56px; height: 56px; border-radius: 16px; font-size: 1.3rem; }
+.tly-club-badge.huge { width: 62px; height: 62px; border-radius: 18px; font-size: 1.5rem; }
+.tly-home-head { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.tly-home-head h1 { font-family: Fredoka, sans-serif; font-weight: 700; font-size: 2.4rem; margin: 0; padding: 0; color: #1F2A22; }
+.tly-home-money { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 2.6rem; color: var(--tly-forest);
+  margin: 0; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tly-home-money.neg, .tly-table td.neg { color: var(--tly-berry); }
+.tly-home-line, [data-testid="stMarkdownContainer"] p.tly-home-line { color: var(--tly-soft); margin: 2px 0 12px; }
+.tly-home-line b { color: #1F2A22; }
+.st-key-home-money, .st-key-home-members, .st-key-home-settings { background: var(--tly-card); padding: 20px 22px; }
+.tly-pick-name { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1.2rem; margin: 10px 0 0; color: #1F2A22; }
+.tly-pick-sub { color: var(--tly-soft); margin: 0; font-size: .92rem; }
+[class*="st-key-pick-club-"] { background: var(--tly-card); padding: 20px; }
+.st-key-pick-club-new { border-style: dashed !important; }
+.st-key-club-pop [data-testid="stBaseButton-tertiary"]:disabled { color: var(--tly-forest); opacity: 1; }

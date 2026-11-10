@@ -1,38 +1,97 @@
-"""Club settings: what stays the same all year (members, starting balance, profit target, where
-the books go). Saved on this computer (output/club.json), so every new event starts from them."""
+"""Clubs: what stays the same all year (name, members, starting balance, profit target, where the
+books go). Saved on this computer (output/clubs.json). One club is open at a time; every event
+belongs to the club that was open when it started."""
 from __future__ import annotations
 
 import html
 import json
+import re
 
 import streamlit as st
 
-from ui import connect
 from ui.common import OUT, ss
 
-CLUB = OUT / "club.json"
-DEFAULT = {"members": [], "start_balance": None, "target": 10, "books": None}  # books: None (not asked) or "local"
+CLUBS = OUT / "clubs.json"
+OLD = OUT / "club.json"  # one unnamed club, from before clubs had names
+DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "books": None, "sheets": {}}
 AVATARS = ["#1C5C36", "#B0413E", "#6B4E8A", "#2F4B7C", "#C8673C", "#1F7A73"]
 
 
-def load() -> dict:
+def _read() -> dict:
     try:
-        return {**DEFAULT, **json.loads(CLUB.read_text())}
+        return json.loads(CLUBS.read_text())
     except (OSError, ValueError):
-        return dict(DEFAULT)
+        pass
+    try:  # the old single club becomes "My club", with its linked sheets
+        old = json.loads(OLD.read_text())
+    except (OSError, ValueError):
+        return {"current": None, "clubs": {}}
+    try:
+        old["sheets"] = json.loads((OUT / "sheets.json").read_text())
+    except (OSError, ValueError):
+        pass
+    return {"current": "my-club", "clubs": {"my-club": {**DEFAULT, **old}}}
+
+
+def _write(data: dict) -> None:
+    CLUBS.parent.mkdir(parents=True, exist_ok=True)
+    CLUBS.write_text(json.dumps(data))
+
+
+def clubs() -> dict[str, dict]:
+    """Every club by id, in the order they were added."""
+    return {k: {**DEFAULT, **v} for k, v in _read()["clubs"].items()}
+
+
+def current() -> str | None:
+    return _read()["current"]
+
+
+def load() -> dict:
+    """The open club's settings (defaults when there is no club yet)."""
+    return clubs().get(current(), dict(DEFAULT))
 
 
 def save(**changes) -> None:
-    CLUB.parent.mkdir(parents=True, exist_ok=True)
-    CLUB.write_text(json.dumps({**load(), **changes}))
+    """Change the open club's settings."""
+    data = _read()
+    cid = data["current"]
+    data["clubs"][cid] = {**data["clubs"].get(cid, DEFAULT), **changes}
+    _write(data)
+
+
+def set_current(cid: str) -> None:
+    _write({**_read(), "current": cid})
+
+
+def add(name: str) -> str | None:
+    """A new club, opened right away. Returns its id, or None for a blank name."""
+    name = name.strip()
+    if not name:
+        return None
+    data = _read()
+    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "club"
+    cid, n = base, 2
+    while cid in data["clubs"]:
+        cid, n = f"{base}-{n}", n + 1
+    data["clubs"][cid] = {**DEFAULT, "name": name}
+    _write({**data, "current": cid})
+    return cid
+
+
+def owns(event: dict) -> bool:
+    """Is this saved event the open club's? Events from before clubs had names belong to the first club."""
+    ids = list(_read()["clubs"])
+    return (event.get("club") or (ids[0] if ids else None)) == current()
 
 
 def seed(event: dict) -> None:
-    """Saved events from before Club settings existed: start the club from the open event."""
-    if CLUB.exists() or not event.get("members"):
+    """Saved events from before clubs existed: start a club from the open event's members."""
+    if _read()["clubs"] or not event.get("members"):
         return
-    save(members=[m.strip() for m in event["members"].split(",") if m.strip()],
-         start_balance=event.get("start_balance"), target=event.get("target", 10))
+    _write({"current": "my-club", "clubs": {"my-club": {
+        **DEFAULT, "members": [m.strip() for m in event["members"].split(",") if m.strip()],
+        "start_balance": event.get("start_balance"), "target": event.get("target", 10)}}})
 
 
 def add_member(key: str) -> str | None:
@@ -54,34 +113,3 @@ def chip_style(prefix: str, names: list[str]) -> None:
     rules = "".join(f'.st-key-{prefix}-{n} button::before {{ content: "{html.escape(initials(name))}"; '
                     f"background: {AVATARS[n % len(AVATARS)]}; }}" for n, name in enumerate(names))
     st.html(f"<style>{rules}</style>")
-
-
-def settings() -> None:
-    """The Club settings dropdown in the sidebar."""
-    club = load()
-    with st.sidebar.expander("Club settings", icon=":material/settings:"):
-        st.markdown("**Club members**")
-        st.caption("Everyone who might pay for club stuff. New events start with all of them.")
-        c = st.columns([2, 1.4], vertical_alignment="bottom")
-        c[0].text_input("Name", key="club-new", placeholder="Name", label_visibility="collapsed",
-                        on_change=add_member, args=("club-new",))
-        c[1].button("Add", icon=":material/add:", key="club-add", width="stretch", on_click=add_member, args=("club-new",))
-        names = club["members"]
-        with st.container(horizontal=True, key="club-chips"):
-            for n, name in enumerate(names):
-                st.button(name, icon=":material/close:", icon_position="right", key=f"club-rm-{n}",
-                          help=f"Remove {name} from the club list", on_click=save,
-                          kwargs={"members": [x for x in names if x != name]})
-        chip_style("club-rm", names)
-        start = st.number_input("Starting balance this school year ($)", value=club["start_balance"],
-                                step=10.0, format="%.2f", placeholder="0.00", key="club-start",
-                                help="What the club had before this year's first event. Type it once a year: "
-                                     "the General Ledger starts from it.")
-        target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(club["target"]),
-                                     help="The margin your club aims for. The Summary shows if an event hit it."))
-        if (start, target) != (club["start_balance"], club["target"]):
-            save(start_balance=start, target=target)
-        st.markdown("**Google Sheets**")
-        label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
-        if st.button(label, icon=":material/link:", key="open-connect", width="stretch"):
-            connect.dialog()

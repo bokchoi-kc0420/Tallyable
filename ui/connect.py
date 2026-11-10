@@ -1,22 +1,16 @@
 """Connect your own Google Sheets: paste the link, share it with Tallyable's bot, done.
-The links are saved on this computer (output/sheets.json), so it's a one-time thing."""
+The links are saved with the open club (output/clubs.json), so each club has its own books."""
 from __future__ import annotations
-
-import json
 
 import streamlit as st
 
 from treasurer.sheets import bot_client, bot_email, sheet_id
-from ui.common import GCP_KEY, OUT, ROOT
-
-LINKED = OUT / "sheets.json"
+from ui import club
+from ui.common import GCP_KEY, ROOT
 
 
 def linked() -> dict:
-    try:
-        return json.loads(LINKED.read_text())
-    except (OSError, ValueError):
-        return {}
+    return club.load()["sheets"]
 
 
 def check(ids: dict) -> str | None:
@@ -68,7 +62,6 @@ def box(key: str) -> None:
     if problem:
         st.error(problem + f" Share it with {email} as Editor, then hit Connect again.")
         return
-    LINKED.parent.mkdir(parents=True, exist_ok=True)
-    LINKED.write_text(json.dumps(ids))
+    club.save(sheets=ids)
     st.toast("Connected! Push sends your books there now.", icon="🎉")
     st.rerun()

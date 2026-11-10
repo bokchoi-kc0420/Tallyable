@@ -47,6 +47,17 @@ try {
     try { await page.goto(`http://localhost:${PORT}`); break; } catch (e) { if (i > 60) throw e; }
     await page.waitForTimeout(500);
   }
+  await page.getByText("What's your club called?").waitFor({ timeout: 60000 });
+  await shot("0-club-name");
+  await page.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Sunrise Hiking Club");
+  await page.getByPlaceholder("e.g. Sunrise Hiking Club").press("Enter");
+  await idle();
+  const startBalance = page.getByPlaceholder("0.00").first();
+  await startBalance.fill("1000");
+  await startBalance.press("Enter");
+  await idle();
+  await shot("0-club-home-empty");
+  await page.getByRole("button", { name: "New event" }).click();
   await page.getByText("Start a new event").waitFor({ timeout: 60000 });
   await shot("0-start-empty");
   for (const name of ["Jamie Lee", "Sam Park"]) {  // Continue waits for at least one member
@@ -144,6 +155,23 @@ try {
   await shot("5-finish-card", page.locator(".st-key-finish-page"));
   await page.getByText(/Past events/).click();
   await shot("5-finish-sidebar", page.locator('[data-testid="stSidebar"]'));
+  const clubMenu = page.locator('.st-key-club-menu [data-testid="stPopoverButton"]');
+  await clubMenu.click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "7-club-menu.png") });
+  await page.getByRole("button", { name: "Club home", exact: true }).click();
+  await idle();
+  await shot("7-club-home");
+  await clubMenu.click();
+  await page.getByPlaceholder("New club name").fill("Chess & Coffee");
+  await page.getByPlaceholder("New club name").press("Enter");
+  await idle();
+  await shot("7-club-home-new-club");
+  await page.goto(`http://localhost:${PORT}`);  // a new tab with two clubs asks which one
+  await page.getByText("Which club are you doing the books for?").waitFor({ timeout: 60000 });
+  await shot("8-which-club");
+  await page.getByRole("button", { name: "Open Sunrise Hiking Club" }).click();
+  await idle();
   await page.locator('[data-testid="stSidebarCollapseButton"] button').click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: join(OUT, "6-sidebar-collapsed.png") });

@@ -13,7 +13,7 @@ import time
 import streamlit as st
 
 from treasurer import session_store
-from ui import close_out, finish, review, sidebar, start, summary, upload
+from ui import close_out, club, finish, home, review, sidebar, start, summary, upload
 from ui.common import ART, ROOT, SESSION_FILE, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
@@ -44,8 +44,17 @@ ss.setdefault("drafted_at", None)    # first Draft click, for the run log
 ss.setdefault("review_started", None)
 ss.setdefault("income", {})
 
+st.logo(str(ART / "logo.png"), size="large", link=sidebar.HOME_URL)
+if "event" in ss:
+    club.seed(ss.event)  # events from before clubs existed start "My club"
+if home.needs_picking():
+    home.picker()
+    st.stop()
+home.menu()
 page, event = sidebar.show()
-if page == "1. Upload" and start.needed():
+if ss.get("view") == "club":
+    home.show()
+elif page == "1. Upload" and start.needed():
     start.show()
 elif page == "1. Upload":
     upload.show(event)

@@ -1,4 +1,4 @@
-"""The sidebar: New event, the event ticket with the step timeline, Edit event and Past events.
+"""The sidebar (under the club menu): New event, the event ticket with the step timeline, Edit event and Past events.
 Also saving the session, and opening a past event."""
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
 from ui import club
-from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
+from ui.common import PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
 from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
 # A first visit starts from zero: no name, no members. The fake event is one click away on Upload.
@@ -32,7 +32,8 @@ def start_new_event() -> None:
     Income sources carry over; who's in starts as the whole club list."""
     ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished")}
     ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": date.today(), "set_up": False,
-                "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color"))}
+                "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color")),
+                "club": club.current()}
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
@@ -40,6 +41,7 @@ def start_new_event() -> None:
     ss.pop("ticket-color", None)  # the color list shows the new event's color, not the last one's
     ss.started = time.time()
     ss.step = STEPS[0]  # the new event opens on its first step, not where the last one ended
+    ss.view = "event"
     session_store.clear(SESSION_FILE)
 
 
@@ -118,18 +120,21 @@ def open_past(path: Path) -> None:
     ss.pop("last_draft", None)
     ss.pop("_saved", None)
     ss.step = "4. Close out" if ss.receipts else STEPS[0]
+    ss.view = "event"
 
 
 def reopen() -> None:
     """Button callback: un-finish this event and go back to Close out."""
     ss.event = {**ss.event, "finished": False}
     ss.step = "4. Close out"
+    ss.view = "event"
 
 
 def past_events_box() -> None:
     """Past events in two tabs: Still open (full tickets) and Finished (torn-off stubs)."""
     here = ss.event["event_id"]  # the current event joins once it's finished, with Reopen
-    past = [e for e in session_store.past_events(PAST) if e["event_id"] != here or ss.event.get("finished")]
+    past = [e for e in session_store.past_events(PAST)
+            if club.owns(e) and (e["event_id"] != here or ss.event.get("finished"))]
     if not past:
         return
     groups = {"open": [e for e in past if not e.get("finished")], "done": [e for e in past if e.get("finished")]}
@@ -152,6 +157,10 @@ def past_events_box() -> None:
                 here_now = e["event_id"] == here
                 st.button("Reopen", key=f"open-past-{n}", on_click=reopen if here_now else open_past,
                           args=() if here_now else (e["path"],), help=f"Reopen {e['name']}")
+
+
+def go_event() -> None:
+    ss.view = "event"
 
 
 def stepper_css(current: str) -> None:
@@ -188,9 +197,7 @@ def stepper_css(current: str) -> None:
 def show() -> tuple[str, EventInfo]:
     """Draw the sidebar. Returns the step to show and the event being closed out."""
     ss.setdefault("event", dict(DEFAULT_EVENT))
-    club.seed(ss.event)
-    st.logo(str(ART / "logo.png"), size="large", link=HOME_URL)
-    st.sidebar.caption("Close out a club event: receipts in, checked books out.")
+    ss.event.setdefault("club", club.current())
     if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
                          help="Starts a blank event. This one stays saved under Past events."):
         if ss.event.get("finished") or (not ss.receipts and not ss.event.get("set_up")):  # nothing to lose
@@ -231,14 +238,15 @@ def show() -> tuple[str, EventInfo]:
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
-    page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label)
+    # On Club home no step is picked, so clicking any step (even the last one) goes back to the event.
+    page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label, on_change=go_event)
+    page = page or ss.get("last_step") or STEPS[0]
     stepper_css(page)
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
     st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
     past_events_box()
-    club.settings()
     if ss.get("past_error"):
         st.sidebar.error(ss.pop("past_error"))
     return page, event
