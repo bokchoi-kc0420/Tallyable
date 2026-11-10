@@ -16,9 +16,9 @@ from ui import connect
 from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
 from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
-DEFAULT_EVENT = {"event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)", "date": date(2026, 11, 14),
-                 "attendees": 45, "members": "",  # added on Upload; nobody can be tagged until there is one
-                 "sources": ", ".join(DEFAULT_SOURCES)}
+# A first visit starts from zero: no name, no members. The fake event is one click away on Upload.
+DEFAULT_EVENT = {"event_id": "EVT-NEW", "name": "New event", "date": date.today(), "attendees": 30,
+                 "members": "", "sources": ", ".join(DEFAULT_SOURCES)}
 HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the landing page start.bat serves
 
 
@@ -39,6 +39,7 @@ def start_new_event() -> None:
     ss.pop("last_draft", None)
     ss.pop("ticket-color", None)  # the color list shows the new event's color, not the last one's
     ss.started = time.time()
+    ss.step = STEPS[0]  # the new event opens on its first step, not where the last one ended
     session_store.clear(SESSION_FILE)
 
 
@@ -177,7 +178,7 @@ def show() -> tuple[str, EventInfo]:
     event_card = event_group.empty()  # filled below, once the event fields are read
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
     with event_group.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:"):
-        locked = bool(ss.receipts)
+        locked = bool(ss.event.get("pushed_at"))  # the sheet's tabs are named after the event
         name = st.text_input("Event name", ss.event["name"], disabled=locked)
         d = st.date_input("Event date", ss.event["date"], disabled=locked)
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
@@ -195,12 +196,12 @@ def show() -> tuple[str, EventInfo]:
                                 step=10.0, format="%.2f", placeholder="0.00",
                                 help="What the club had before this year's first event. Type it once a year: "
                                      "the General Ledger starts from it.")
-        changed = name != ss.event["name"] or d != ss.event["date"]
+        changed = (name != ss.event["name"] or d != ss.event["date"]) and not ss.receipts  # receipts carry the id
         ss.event.update(target=target, start_balance=start, color=color)
         ss.event.update(name=name, date=d, attendees=attendees,
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
-            st.caption("Name and date are locked once receipts are drafted.")
+            st.caption("Name and date are locked once the books are pushed.")
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))

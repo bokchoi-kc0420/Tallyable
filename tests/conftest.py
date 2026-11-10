@@ -19,3 +19,5 @@ def fresh_output_dir(tmp_path, monkeypatch):
     monkeypatch.setenv("TALLYABLE_OUTPUT_DIR", str(tmp_path / "output"))
     for name in [m for m in sys.modules if m == "ui" or m.startswith("ui.")]:
         del sys.modules[name]  # ui.common reads the folder on import, so import it fresh
+    import streamlit as st
+    st.cache_resource.clear()  # the Google Sheets connection is cached; a fake one must not leak

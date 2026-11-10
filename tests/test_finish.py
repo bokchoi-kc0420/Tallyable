@@ -84,3 +84,12 @@ def test_ticket_color_menu_shows_the_color_just_picked():
     at.sidebar.radio(key="ticket-color").set_value("Sage").run()
     assert at.session_state["event"]["color"] == "Sage"
     assert [p.proto.popover.label for p in at.sidebar.get("popover")] == ["Sage"]  # was one pick behind
+
+
+def test_new_event_from_the_sidebar_opens_on_the_first_step():
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    at.sidebar.button(key="new-event").click().run()  # a finished event needs no confirm
+    assert at.sidebar.radio(key="step").value == "1. Upload"  # was stuck on Close out
+    assert at.header[0].value == "Start a new event"

@@ -71,7 +71,7 @@ export default function Home() {
                 ["0 rows", "reach your sheet before you approve them"],
               ].map(([big, small]) => (
                 <div key={big} className="lift rounded-2xl border-2 border-forest bg-white p-5">
-                  <dt className="font-display text-3xl font-black text-forest">{big}</dt>
+                  <dt className="font-display text-3xl font-bold text-forest">{big}</dt>
                   <dd className="mt-1 text-sm text-ink-soft">{small}</dd>
                 </div>
               ))}
@@ -129,7 +129,7 @@ export default function Home() {
           <div className="relative mx-auto flex max-w-5xl flex-col items-center gap-5 overflow-hidden rounded-[2rem] bg-forest px-6 py-12 text-center text-white sm:flex-row sm:text-left">
             <img src="/art/mascot-empty.png" alt="" className="w-52 shrink-0 transition hover:rotate-6 hover:scale-110" />
             <div className="flex-1">
-              <h2 className="font-display text-3xl font-black sm:text-4xl">Close out your next event tonight.</h2>
+              <h2 className="font-display text-3xl font-bold sm:text-4xl">Close out your next event tonight.</h2>
               <p className="mt-2 text-white/80">Bring the receipts. Tallyable does the adding up.</p>
             </div>
             <a href={APP_URL} className="btn bg-sun text-ink shadow-[0_4px_0_#B88A1F] hover:-translate-y-0.5 hover:bg-[#FFCB52]">

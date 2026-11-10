@@ -1,6 +1,7 @@
 """Headless run of the Streamlit app: draft the fake event, approve, fix a math error."""
 import csv
 import os
+from datetime import date
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -15,7 +16,8 @@ def new_app(members: str = MEMBERS) -> AppTest:
     """The app with the club's members already added, as a treasurer would on Upload."""
     from ui.sidebar import DEFAULT_EVENT
     at = AppTest.from_file(APP, default_timeout=30)
-    at.session_state["event"] = {**DEFAULT_EVENT, "members": members, "set_up": True}
+    at.session_state["event"] = {**DEFAULT_EVENT, "event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)",
+                                 "date": date(2026, 11, 14), "attendees": 45, "members": members, "set_up": True}
     return at
 
 
@@ -166,7 +168,9 @@ def test_event_setup_and_start_new_event():
     at.button[0].click().run()
     next(b for b in at.button if b.label == "Draft rows").click().run()
     at.run()
-    assert next(t for t in at.sidebar.text_input if t.label == "Event name").disabled
+    next(t for t in at.sidebar.text_input if t.label == "Event name").set_value("Winter Gala (FAKE)").run()
+    assert at.session_state["event"]["name"] == "Winter Gala (FAKE)"  # renaming is fine before Push...
+    assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-WINTER")  # ...the id stays put
     assert all(r.event_id.startswith("EVT-2026-11-14-WINTER") for r in at.session_state["receipts"].values())
     at.sidebar.button(key="new-event").click().run()
     assert at.session_state["receipts"]  # nothing cleared until the treasurer confirms
@@ -443,7 +447,7 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
     at.button(key="start-go").click().run()
     assert at.header[0].value == "Upload receipts"
     assert at.session_state["event"]["members"] == "Jamie Lee"
-    assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-SPRINGPICNIC")
+    assert at.session_state["event"]["event_id"] == f"EVT-{date.today().isoformat()}-SPRINGPICNIC"  # blank start: today
     at.button(key="edit-members").click().run()  # back to change who's in
     assert at.header[0].value == "Start a new event"
     at.button(key="rm-member-0").click().run()
@@ -456,7 +460,7 @@ def test_a_forgotten_member_can_be_added_after_drafting():
     next(b for b in at.button if b.label == "Draft rows").click().run()
     event_id = at.session_state["event"]["event_id"]
     at.button(key="edit-members").click().run()
-    assert at.text_input(key="start-name").disabled  # the receipts carry this event's id
+    at.text_input(key="start-name").set_value("Fall Mixer, renamed")  # renaming is fine: the id stays
     at.text_input(key="new-member").set_value("Sam Park").run()
     at.button(key="start-go").click().run()
     assert at.session_state["event"]["members"] == "Jamie Lee, Sam Park"

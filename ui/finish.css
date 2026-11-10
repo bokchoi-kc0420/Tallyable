@@ -31,7 +31,7 @@
 .st-key-push-stale p.tly-done-title { font-size: 1.3rem; }
 
 /* A wider sidebar (Kevin, 2026-11-09): the ticket, steps, Edit event and Past events had too little room. */
-@media (min-width: 768px) { section[data-testid="stSidebar"] { width: 360px !important; min-width: 360px !important; } }
+@media (min-width: 768px) { section[data-testid="stSidebar"][data-collapsed="false"] { width: 360px !important; min-width: 360px !important; } }
 [class*="st-key-past-"] .tly-event { margin-bottom: 10px; }  /* room for Reopen under an open event's ticket */
 /* Past events tabs: Still open / Finished, the picked one solid green */
 .st-key-past-tab button { border-radius: 999px !important; } .st-key-past-tab button p { font-family: Fredoka, sans-serif; font-weight: 600; }
@@ -47,3 +47,12 @@
 [class*="st-key-past-"] .stButton button:focus-visible { opacity: 1; background: transparent; outline: 3px solid var(--tly-sun); color: transparent; }
 [class*="st-key-past-"] .tly-stub, [class*="st-key-past-"] .tly-event { transition: transform .16s cubic-bezier(.2,.8,.2,1); }
 [class*="st-key-past-"]:hover .tly-stub, [class*="st-key-past-"]:hover .tly-event { transform: translateY(-3px); }
+.tly-warn { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%;
+  border: 2px solid #E0A526; color: #8A6100; font: 700 .75rem/1 Fredoka, sans-serif; font-style: normal; vertical-align: 1px; }
+/* Confetti when an event is finished */
+.tly-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 999999; overflow: hidden; }
+.tly-confetti i { position: absolute; top: -16px; width: 8px; height: 13px; border-radius: 2px; opacity: 0;
+  animation: tly-fall var(--d) cubic-bezier(.25,.6,.45,1) var(--w) forwards; }
+@keyframes tly-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); }
+  85% { opacity: 1; } 100% { opacity: 0; transform: translateY(105vh) rotate(var(--r)); } }
+@media (prefers-reduced-motion: reduce) { .tly-confetti { display: none; } }
