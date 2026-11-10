@@ -56,7 +56,7 @@ def photo(rid: str) -> None:
         st.warning("No photo for this receipt.")
         return
     if image[1] != "application/pdf":
-        st.image(image[0], width="stretch")
+        st.image(image[0], width="stretch", alt=f"Receipt photo for {rid}")
         return
     st.info("PDF receipt.")
     st.download_button("Open the PDF", image[0], file_name=f"{rid}.pdf", mime="application/pdf")

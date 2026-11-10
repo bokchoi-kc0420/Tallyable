@@ -12,7 +12,7 @@ import streamlit as st
 
 from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
-from ui import connect
+from ui import club
 from ui.common import ART, PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
 from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
@@ -29,9 +29,9 @@ def event_id_for(name: str, d: date) -> str:
 
 def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
-    Club settings (members, income sources, starting balance) carry over."""
+    Income sources carry over; who's in starts as the whole club list."""
     ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished")}
-    ss.event = {**ss.event, "name": "New event", "date": date.today(), "set_up": False,
+    ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color"))}
     for k in ("receipts", "images", "notes", "failed"):
         ss[k] = {}
@@ -78,8 +78,8 @@ def confirm_delete() -> None:
     st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n, ss.event.get("color"))}</div>',
                 unsafe_allow_html=True)
     pushed = "<br><small>What you already pushed stays in your sheet.</small>" if ss.event.get("pushed_at") else ""
-    st.markdown(f'<p class="tly-confirm-note"><b style="color: #B0413E">This can\'t be undone!</b> Its receipts, photos and notes '
-                f"go away for good.{pushed}</p>", unsafe_allow_html=True)
+    st.markdown(f'<p class="tly-confirm-note"><b style="color: var(--tly-berry)">This can\'t be undone!</b> '
+                f"Its receipts, photos and notes go away for good.{pushed}</p>", unsafe_allow_html=True)
     c = st.columns(2)
     if c[0].button("Keep it", key="delete-no", width="stretch"):
         close_delete()
@@ -188,6 +188,7 @@ def stepper_css(current: str) -> None:
 def show() -> tuple[str, EventInfo]:
     """Draw the sidebar. Returns the step to show and the event being closed out."""
     ss.setdefault("event", dict(DEFAULT_EVENT))
+    club.seed(ss.event)
     st.logo(str(ART / "logo.png"), size="large", link=HOME_URL)
     st.sidebar.caption("Close out a club event: receipts in, checked books out.")
     if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
@@ -209,8 +210,6 @@ def show() -> tuple[str, EventInfo]:
         name = st.text_input("Event name", ss.event["name"], disabled=locked)
         d = st.date_input("Event date", ss.event["date"], disabled=locked)
         attendees = int(st.number_input("Attendees", min_value=1, value=ss.event["attendees"]))
-        target = int(st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(ss.event.get("target", 10)),
-                                     help="The margin your club aims for. The Summary shows if an event hit it."))
         # The radio's pick from this click, not the saved color: the label is drawn before the radio
         # runs, so reading the saved color showed the previous pick (Sunflower while Sage was picked).
         current = ss.get("ticket-color") or ss.event.get("color") or NAMES[0]
@@ -219,12 +218,9 @@ def show() -> tuple[str, EventInfo]:
         with st.container(key="color-menu"), st.popover(current, width="stretch"), st.container(height=190, border=False):
             color = st.radio("Ticket color", NAMES, index=NAMES.index(current), key="ticket-color",
                              label_visibility="collapsed")
-        start = st.number_input("Starting balance this school year ($)", value=ss.event.get("start_balance"),
-                                step=10.0, format="%.2f", placeholder="0.00",
-                                help="What the club had before this year's first event. Type it once a year: "
-                                     "the General Ledger starts from it.")
         changed = (name != ss.event["name"] or d != ss.event["date"]) and not ss.receipts  # receipts carry the id
-        ss.event.update(target=target, start_balance=start, color=color)
+        settings = club.load()
+        ss.event.update(target=settings["target"], start_balance=settings["start_balance"], color=color)
         ss.event.update(name=name, date=d, attendees=attendees,
                         event_id=event_id_for(name, d) if changed else ss.event["event_id"])
         if locked:
@@ -242,9 +238,7 @@ def show() -> tuple[str, EventInfo]:
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
     st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
     past_events_box()
-    label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
-    if st.sidebar.button(label, icon=":material/link:", type="tertiary", key="open-connect"):
-        connect.dialog()
+    club.settings()
     if ss.get("past_error"):
         st.sidebar.error(ss.pop("past_error"))
     return page, event
