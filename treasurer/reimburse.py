@@ -16,7 +16,7 @@ from decimal import Decimal, InvalidOperation
 from .models import cell_decimal, money
 
 REIMB_FIELDS = ["event_id", "payer", "date", "amount", "method", "note"]
-METHODS = ["Zelle", "Venmo", "Cash", "Check"]
+METHODS = ["Zelle", "Venmo", "Cash", "Check", "PayPal", "Cash App", "Apple Pay", "Bank transfer", "Other"]
 
 
 @dataclass(frozen=True)

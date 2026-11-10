@@ -125,11 +125,12 @@ try {
   await step("Close out");
   await page.getByRole("heading", { name: "Who's owed" }).hover();  // header link icon must stay hidden
   await shot("4-close-out");
+  await shot("4-whos-owed", page.locator(".st-key-whos-owed"));
   await page.getByText(/Left out of the books/).click();
   await shot("4-close-out-left-out");
   await page.getByRole("button", { name: "Mark paid" }).first().click();
   await idle();
-  await shot("4-close-out-undo", page.locator(".st-key-undo-paid").locator("xpath=../../..").first());
+  await shot("4-close-out-undo", page.locator(".st-key-whos-owed"));
   await page.getByRole("combobox", { name: /^Funder/ }).scrollIntoViewIfNeeded();
   await page.getByRole("combobox", { name: /^Funder/ }).click();
   await page.waitForTimeout(500);

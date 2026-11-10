@@ -29,12 +29,10 @@ def draft(at) -> None:
 
 
 def owed_table(at) -> list[dict]:
-    """Rows of the Payback details table, read back from its HTML."""
+    """Still owed per payer, read back from the Who's owed ledger."""
     import re
-    page = next(m.value for m in at.markdown if "<th" in m.value and ">Owed<" in m.value)
-    heads = re.findall(r"<th(?: [^>]*)?>(.*?)</th>", page)
-    rows = re.findall(r"<tr>(.*?)</tr>", page.split("<tbody>")[1])
-    return [dict(zip(heads, re.findall(r"<td(?: [^>]*)?>(.*?)</td>", r), strict=True)) for r in rows]
+    cells = [re.search(r'data-payer="(.*?)">(.*?)<', m.value) for m in at.markdown]
+    return [{"Payer": c[1], "Owed": c[2]} for c in cells if c]
 
 
 def test_draft_approve_and_fix():
@@ -104,7 +102,7 @@ def test_one_click_mark_paid_uses_chosen_method():
     r = at.session_state["receipts"]["R01"]
     at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED})
     at.sidebar.radio[0].set_value("4. Close out").run()
-    at.selectbox(key="quick-method").set_value("Venmo").run()
+    at.selectbox(key="method-Member C").set_value("Venmo").run()
     at.button(key="paid-Member C").click().run()
     assert not at.exception
     assert owed_table(at)[0]["Owed"] == "$0.00"

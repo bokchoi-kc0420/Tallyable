@@ -35,9 +35,19 @@
 .tly-cheer { text-align: center; font-family: Fredoka, sans-serif; font-size: 1.5rem; font-weight: 600;
   color: #1C5C36; margin: .4rem 0 .6rem; }
 .tly-hint { text-align: center; font-weight: 600; margin: .25rem 0 .5rem; }
-.tly-owed { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tly-avatar { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-  background: #FCE7A8; font-family: Fredoka, sans-serif; font-weight: 600; color: #1F2A22; }
+/* Who's owed: the payback ledger */
+.tly-led { margin: 0; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.tly-led.num { text-align: right; } .tly-led b { font-family: Fredoka, sans-serif; font-weight: 600; }
+.tly-led.head { font-family: Fredoka, sans-serif; font-weight: 600; font-size: .9rem; color: var(--tly-soft); }
+.tly-led.total { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 1rem; }
+.tly-led.soft { color: var(--tly-soft); font-size: .88rem; }
+.tly-led.paid { font-family: Fredoka, sans-serif; font-weight: 600; color: var(--tly-forest); text-align: center; }
+.st-key-whos-owed [data-testid="stMarkdownContainer"]:has(> .tly-led) { margin-bottom: 0; }
+.st-key-whos-owed { gap: .5rem; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"] { border-top: 1px solid var(--tly-line); padding-top: .5rem; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) { border-top: none; border-bottom: 2px solid #1F2A22; padding: 0 0 .4rem; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) + [data-testid="stLayoutWrapper"] { border-top: none; }
+.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.total) { border-top: 2px solid #1F2A22; }
 :root { --tly-forest: #1C5C36; --tly-done: #DDEBD9; --tly-sun: #F7BE3F; --tly-sun-soft: #FCE7A8; --tly-berry: #C44536;
   --tly-card: #FFFFFF; --tly-line: #E3D9B6; --tly-soft: #6B6A60; }
 /* Sidebar: the event's ticket. Its date stub has the same torn zigzag edge as the Past events stubs. */
