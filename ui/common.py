@@ -118,6 +118,11 @@ def saved_reimbursements(sink) -> list[dict]:
 
 
 @st.cache_data
+def plural(n: int, word: str) -> str:
+    """'1 receipt', '14 receipts'."""
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
 def mascot_uri(file: str = "mascot-small.png") -> str:
     return "data:image/png;base64," + base64.b64encode((ART / file).read_bytes()).decode()
 
@@ -255,4 +260,4 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
                 f'<div class="tly-legend">{in_leg}</div><div class="tly-legend">{out_leg}</div></div>',
                 unsafe_allow_html=True)
     if t["income"] <= 0:
-        st.caption("No income entered yet. Add it on the Summary step.")
+        st.caption("No income yet. You can add it on Summary.")

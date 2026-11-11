@@ -145,16 +145,18 @@ def show(event: EventInfo) -> None:
                 st.link_button("Open General Ledger", ledger, icon=":material/arrow_outward:", icon_position="right")
             else:
                 income = {k: dec(v) for k, v in ss.income.items()}
-                views = local_views(list(ss.receipts.values()), event, income, saved_reimbursements(sink))
-                st.download_button("Download the whole book (Excel)", key="dl-xlsx-finish",
-                                   data=book_xlsx(views, local_transactions(list(ss.receipts.values())), TX_FIELDS),
+                receipts = list(ss.receipts.values())
+                views = local_views(receipts, event, income, saved_reimbursements(sink))
+                st.download_button("Download the whole book (Excel)", key="dl-xlsx-finish", on_click="ignore",
+                                   data=lambda: book_xlsx(views, local_transactions(receipts), TX_FIELDS),
                                    file_name=f"{event.event_id}_books.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             owed = {x.payer: x.owed for x in lines}
             state = {r.receipt_id: ("Not yet" if owed.get(r.payer, 0) > 0 else "Yes") if r.payer else "" for r in done}
-            st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf",
-                               file_name=f"{event.event_id}_receipt_photos.pdf", data=receipts_pdf(done, ss.images, state))
+            images = ss.images
+            st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf", on_click="ignore",
+                               file_name=f"{event.event_id}_receipt_photos.pdf", data=lambda: receipts_pdf(done, images, state))
     st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
               on_click=set_finished, args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
-    if ss.pop("confetti", False):  # last, so it falls once the whole page (and its slow downloads) is built
+    if ss.pop("confetti", False):  # last, so it falls once the whole page is built
         st.html(confetti())

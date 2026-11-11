@@ -51,7 +51,8 @@ def box(key: str) -> None:
     ledger = st.text_input("General Ledger (optional: leave blank to keep it in the same sheet)", key=f"{key}-ledger",
                            value=f"https://docs.google.com/spreadsheets/d/{saved['ledger']}" if saved.get("ledger") else "",
                            placeholder="https://docs.google.com/spreadsheets/d/...")
-    if not st.button("Connect!", type="primary", icon=":material/link:", key=f"{key}-go"):
+    if not st.button("Connect!", type="primary" if key == "dialog" else "secondary", icon=":material/link:",
+                     key=f"{key}-go"):  # on Summary, Push stays the one filled button
         return
     ids = {"book": sheet_id(book), "ledger": sheet_id(ledger)} if ledger.strip() else {"book": sheet_id(book)}
     if not all(ids.values()):

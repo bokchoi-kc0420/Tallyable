@@ -6,9 +6,8 @@ import html
 import streamlit as st
 
 from treasurer.reaction import react
-from treasurer.sheets import bot_email
-from ui import club, connect
-from ui.common import GCP_KEY, ROOT, mascot_uri, payers, ss
+from ui import club
+from ui.common import mascot_uri, payers, ss
 from ui.sidebar import event_id_for
 from ui.tickets import ticket
 
@@ -43,7 +42,7 @@ def members_box() -> None:
     """Who might have paid, picked from the club list. Receipts are tagged with these names."""
     with st.container(border=True, key="members-box"):
         st.markdown("**Who's in on this tally?**")
-        st.caption("Tap a name to leave them out of this event. New names join your club list too.")
+        st.caption("Tap a name to leave them out. Anyone new gets added to your club list too.")
         c = st.columns([3, 1], vertical_alignment="bottom")
         c[0].text_input("Name", key="new-member", placeholder="e.g. Jamie Lee", label_visibility="collapsed",
                         on_change=add_member)
@@ -56,34 +55,6 @@ def members_box() -> None:
         ss.roster = names  # the widget shows this event's members, even right after an Add
         st.pills("Who's in", options, selection_mode="multi", key="roster", label_visibility="collapsed",
                  on_change=pick_members, args=(options,))
-
-
-def books_box() -> None:
-    """Where the books go: asked until the treasurer picks, then one line. Hidden when this copy
-    of Tallyable has no Google bot set up (the books can only save on this computer then)."""
-    if not bot_email(ROOT, GCP_KEY):
-        return
-    if connect.linked():
-        st.caption(":material/check_circle: Your books go to your Google Sheets.")
-        return
-    if club.load()["books"] == "local":
-        st.caption(":material/computer: Your books save on this computer.")
-        if st.button("Connect Google Sheets instead", icon=":material/link:", type="tertiary", key="start-connect"):
-            connect.dialog()
-        return
-    with st.container(border=True, key="books-box"):
-        st.markdown("**Where should the books go?**")
-        c = st.columns(2)
-        with c[0].container(border=True, key="pick-sheets"):
-            st.markdown(":material/table_chart: **Google Sheets** :green-badge[Best]")
-            st.caption("Your club can open them anytime.")
-            if st.button("Connect", icon=":material/link:", type="primary", key="start-connect", width="stretch"):
-                connect.dialog()
-        with c[1].container(border=True, key="pick-local"):
-            st.markdown(":material/computer: **Just this computer**")
-            st.caption("Download an Excel file at the end.")
-            st.button("Use this computer", key="start-local", width="stretch", on_click=club.save,
-                      kwargs={"books": "local"})
 
 
 @st.cache_data(show_spinner=False, max_entries=200)
@@ -118,7 +89,6 @@ def show() -> None:
             d = c[1].date_input("Date", ss.event["date"], key="start-date")
             people = int(c[2].number_input("People", min_value=1, value=ss.event["attendees"], key="start-people"))
         members_box()
-        books_box()
         names = payers()[1:]
         if not names:
             st.caption(":red[Add at least one member to keep going.]")

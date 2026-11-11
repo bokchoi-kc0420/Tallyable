@@ -34,7 +34,7 @@ def start_new_event() -> None:
     ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color")),
                 "club": club.current()}
-    for k in ("receipts", "images", "notes", "failed"):
+    for k in ("receipts", "images", "notes", "failed", "skipped"):
         ss[k] = {}
     ss.edits, ss.drafted_at, ss.review_started, ss.income = 0, None, None, {}
     ss.pop("last_draft", None)
@@ -104,9 +104,11 @@ def save_session() -> None:
     text = session_store.dump(state)
     if text == ss.get("_saved"):
         return
-    session_store.save(SESSION_FILE, state)
-    session_store.save(PAST / f"{ss.event['event_id']}.json", state)
-    ss._saved = text
+    photos = (ss.event["event_id"], list(ss.images))  # photos rarely change: rewrite them only when they do
+    fresh = photos != ss.get("_saved_photos")
+    session_store.save(SESSION_FILE, state, photos=fresh)
+    session_store.save(PAST / f"{ss.event['event_id']}.json", state, photos=fresh)
+    ss._saved, ss._saved_photos = text, photos
 
 
 def open_past(path: Path) -> None:
@@ -117,9 +119,10 @@ def open_past(path: Path) -> None:
         return
     ss.update(saved)
     ss.pop("ticket-color", None)
-    ss.failed = {}
+    ss.failed, ss.skipped = {}, {}
     ss.pop("last_draft", None)
     ss.pop("_saved", None)
+    ss.pop("_saved_photos", None)
     ss.step = "4. Close out" if ss.receipts else STEPS[0]
     ss.view = "event"
 
@@ -201,7 +204,7 @@ def show() -> tuple[str, EventInfo]:
     """Draw the sidebar. Returns the step to show and the event being closed out."""
     ss.setdefault("event", dict(DEFAULT_EVENT))
     ss.event.setdefault("club", club.current())
-    if st.sidebar.button("New event", icon=":material/add:", key="new-event", type="primary", width="stretch",
+    if st.sidebar.button("New event", icon=":material/add:", key="new-event", width="stretch",
                          help="Starts a blank event. This one stays saved under Past events."):
         if ss.event.get("finished") or (not ss.receipts and not ss.event.get("set_up")):  # nothing to lose
             save_session()

@@ -72,7 +72,7 @@ try {
   await idle();
   await page.getByRole("button", { name: "Apply to all" }).click();
   await idle();
-  await page.getByRole("button", { name: "Draft rows" }).click();
+  await page.getByRole("button", { name: /^Read \d+ receipts?$/ }).click();
   await page.getByRole("button", { name: /Go to Review/ }).waitFor({ timeout: 60000 });
   await shot("1-upload-drafted");
 
@@ -101,7 +101,7 @@ try {
   await idle();
   await shot("2-review-R11-left-out");
 
-  await page.getByRole("button", { name: /Approve the \d+ with no flags/ }).click();
+  await page.getByRole("button", { name: /Approve all \d+/ }).click();
   await idle();
   for (let n = 0; n < 15; n++) {  // approve the flagged ones too, with a note, so Push opens up
     const left = page.locator('[data-testid="stSidebar"] label').filter({ hasText: "schedule" });  // the drafted icon (Material "schedule")

@@ -68,7 +68,7 @@ def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
             elif not on_sheets:
                 views = local_views(receipts, event, income, saved_reimbursements(sink))
                 st.download_button("Download the whole book (Excel)", icon=":material/download:", key="dl-xlsx-done",
-                                   data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
+                                   on_click="ignore", data=lambda: book_xlsx(views, local_transactions(receipts), TX_FIELDS),
                                    file_name=f"{event.event_id}_books.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     if ss.get("format_errors"):
