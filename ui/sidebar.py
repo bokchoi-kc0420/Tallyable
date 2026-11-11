@@ -3,6 +3,7 @@ Also saving the session, and opening a past event."""
 from __future__ import annotations
 
 import os
+import secrets
 import time
 from datetime import date
 from decimal import Decimal
@@ -23,8 +24,10 @@ HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the 
 
 
 def event_id_for(name: str, d: date) -> str:
+    """Date + name + a random tail, so two events named "Picnic" never share an id
+    (a shared id merged their rows in the sheet and skipped the second one's receipts)."""
     slug = "".join(ch for ch in name.upper() if ch.isalnum())[:12] or "EVENT"
-    return f"EVT-{d.isoformat()}-{slug}"
+    return f"EVT-{d.isoformat()}-{slug}-{secrets.token_hex(2).upper()}"
 
 
 def start_new_event() -> None:
@@ -256,7 +259,10 @@ def show() -> tuple[str, EventInfo]:
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
-    st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }}</style>")
+    # Before the first event there's nothing to show on a ticket: it appears once one is started.
+    blank = ss.get("view") == "club" and not ss.event.get("set_up") and not ss.receipts
+    hide = ".st-key-event-group { display: none; }" if blank else ""
+    st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }} {hide}</style>")
     past_events_box()
     if ss.get("past_error"):
         st.sidebar.error(ss.pop("past_error"))

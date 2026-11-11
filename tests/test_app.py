@@ -463,7 +463,7 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
     at.button(key="start-go").click().run()
     assert at.header[0].value == "Upload receipts"
     assert at.session_state["event"]["members"] == "Jamie Lee"
-    assert at.session_state["event"]["event_id"] == f"EVT-{date.today().isoformat()}-SPRINGPICNIC"  # blank start: today
+    assert at.session_state["event"]["event_id"].startswith(f"EVT-{date.today().isoformat()}-SPRINGPICNIC-")  # blank start: today
     at.button(key="edit-members").click().run()  # back to change who's in
     assert at.header[0].value == "Start a new event"
     at.pills(key="roster").unselect("Jamie Lee").run()  # tap to leave someone out

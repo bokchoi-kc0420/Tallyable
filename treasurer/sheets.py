@@ -172,7 +172,7 @@ class GoogleSheetsSink:
             if ws.title.startswith(f"{BALANCE}: "):
                 self.book.del_worksheet(ws)
         ev = next(e for e in events if str(e["event_id"]) == event.event_id)
-        self._rewrite(expense_tab_title(ev), render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())))
+        self._rewrite(expense_tab_title(ev, events), render_expense_report(ev, group(tx).get(event.event_id, OrderedDict())))
         reimb_ws = self._tab(REIMB, REIMB_FIELDS)
         reimb = reimb_ws.get_all_records()
         self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
