@@ -131,9 +131,9 @@ def crew(me: dict) -> None:
         club.chip_style("club-rm", names)
         start = "not set" if me["start_balance"] is None else usd(Decimal(str(me["start_balance"])))
         # The sink, not just the Connect link: a sheet set up in .env counts too.
-        books = ("table", "Google Sheets") if get_sink()[0].label == "Google Sheets" else ("laptop_mac", "This computer")
+        books = ("table", "Google Sheets") if get_sink()[0].label == "Google Sheets" else ("download", "Your Excel file")
         facts = [("savings", "Started with", start), ("flag", "Profit goal", f'{me["target"]}%'),
-                 (books[0], "Books saved on", books[1])]
+                 (books[0], "Books go to", books[1])]
         st.html('<div class="tly-facts">' + "".join(
             f'<div><i class="ms">{icon}</i><span><small>{label}</small><b>{value}</b></span></div>'
             for icon, label, value in facts) + "</div>")

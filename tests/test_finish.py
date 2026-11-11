@@ -21,7 +21,7 @@ def pushed_app():
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.text_input(key="income-Cash").set_value("100.00").run()
-    next(b for b in at.button if b.label.startswith("Push to")).click().run()
+    at.download_button(key="dl-xlsx-row").click().run()  # no Google Sheet: saving is the push
     assert not at.exception
     return at
 
@@ -31,10 +31,10 @@ def test_done_card_counts_left_out_and_goes_stale_after_an_edit():
     card = " ".join(m.value for m in at.markdown)
     assert "Your book is ready!" in card  # no Google Sheet in tests: the no-sheet wording
     assert "1 receipt (13 left out) and $100.00 income" in card
-    assert "Download the whole book (Excel)" in [b.label for b in at.get("download_button")]
+    assert at.button(key="to-closeout").proto.type == "primary"  # Close out is the next step now
     at.text_input(key="income-Cash").set_value("120.00").run()
     assert any("You changed something since" in m.value for m in at.markdown)
-    next(b for b in at.button if b.label == "Push again").click().run()
+    next(b for b in at.button if b.label == "Save again").click().run()
     assert any("Your book is ready!" in m.value for m in at.markdown)
 
 

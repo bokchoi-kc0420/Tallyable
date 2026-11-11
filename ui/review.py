@@ -88,13 +88,13 @@ def edit_form(rid: str, flags: list) -> None:
         with st.container(key=f"flag-{tone}-{rid}-{n}"):
             st.markdown(f"{icon} **{title}** <span class='tly-flagpill'>{hint}</span>\n\n"
                         f"<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
-    st.markdown('<p class="tly-edit-hint">Got something wrong? Click any box to fix it - '
-                'the item rows too.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="tly-edit-hint"><i class="ms">edit</i>Got something wrong? Click any box or cell to fix it.</p>',
+                unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    place = c1.text_input(":material/edit: Place", r.place, key=f"place-{rid}")
-    d = c2.date_input(":material/edit: Date", r.date, key=f"date-{rid}")
+    place = c1.text_input("Place", r.place, key=f"place-{rid}")
+    d = c2.date_input("Date", r.date, key=f"date-{rid}")
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
-    payer = c3.selectbox(":material/edit: Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
+    payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
     df = pd.DataFrame([{"category": i.category, "item": i.item, "unit": i.unit, "price": float(i.price),
                         "returned": i.returned} for i in r.items])
     columns = {"category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"]),
@@ -102,9 +102,9 @@ def edit_form(rid: str, flags: list) -> None:
                "price": st.column_config.NumberColumn("Price", format="%.2f")}
     edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns)
     c1, c2, c3 = st.columns(3)
-    tax = c1.text_input(":material/edit: Tax", str(r.tax), key=f"tax-{rid}")
-    tip = c2.text_input(":material/edit: Tip", str(r.tip), key=f"tip-{rid}")
-    total = c3.text_input(":material/edit: Total", str(r.total), key=f"total-{rid}")
+    tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
+    tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
+    total = c3.text_input("Total", str(r.total), key=f"total-{rid}")
 
     try:
         items = [LineItem(category=row.category, item=str(row.item), unit=int(row.unit),
