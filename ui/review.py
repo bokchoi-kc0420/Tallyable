@@ -87,7 +87,7 @@ def edit_form(rid: str, flags: list) -> None:
         tone, hint = FLAG_TONE[f.severity]
         with st.container(key=f"flag-{tone}-{rid}-{n}"):
             st.markdown(f"{icon} **{title}** <span class='tly-flagpill'>{hint}</span>\n\n"
-                        f"<span class='tly-flagmsg'>{html.escape(f.message)}</span>", unsafe_allow_html=True)
+                        f"<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
     st.markdown('<p class="tly-edit-hint">Got something wrong? Click any box to fix it - '
                 'the item rows too.</p>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)

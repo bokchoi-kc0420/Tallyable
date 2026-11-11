@@ -10,7 +10,7 @@ import streamlit as st
 
 from treasurer.ledger_view import school_year
 from ui import club, connect
-from ui.common import STEPS, mascot_uri, reviewed, ss, usd
+from ui.common import STEPS, get_sink, mascot_uri, reviewed, ss, usd
 from ui.home import badge, balance, year_events
 from ui.sidebar import start_new_event
 from ui.tickets import PALETTE, _vars
@@ -130,7 +130,8 @@ def crew(me: dict) -> None:
                           kwargs={"members": [x for x in names if x != name]})
         club.chip_style("club-rm", names)
         start = "not set" if me["start_balance"] is None else usd(Decimal(str(me["start_balance"])))
-        books = ("table", "Google Sheets") if connect.linked() else ("laptop_mac", "This computer")
+        # The sink, not just the Connect link: a sheet set up in .env counts too.
+        books = ("table", "Google Sheets") if get_sink()[0].label == "Google Sheets" else ("laptop_mac", "This computer")
         facts = [("savings", "Started with", start), ("flag", "Profit goal", f'{me["target"]}%'),
                  (books[0], "Books saved on", books[1])]
         st.html('<div class="tly-facts">' + "".join(
