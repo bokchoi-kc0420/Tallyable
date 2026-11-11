@@ -82,25 +82,25 @@
   background: var(--tly-green-tint); }
 .st-key-edit-event [data-testid="stExpander"] summary { color: var(--tly-forest); font-weight: 700; }
 .st-key-edit-event [data-testid="stExpander"] summary:hover { background: var(--tly-done); }
-.st-key-step { margin-top: 8px; }
+.st-key-steps { margin-top: 8px; }
 .st-key-event-group { background: var(--tly-card); border: 2px solid var(--tly-line) !important; border-radius: var(--tly-r) !important;
   padding: 16px 16px 16px !important; }
 .st-key-edit-event { margin-top: -16px; }
-.st-key-step [data-testid="stWidgetLabel"] { display: none; }
-.st-key-step [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
-.st-key-step [role="radiogroup"]::before, .st-key-step [role="radiogroup"]::after { content: ""; position: absolute;
+.st-key-steps [data-testid="stWidgetLabel"] { display: none; }
+.st-key-steps [role="radiogroup"] { gap: 4px; position: relative; padding: 4px 0; }
+.st-key-steps [role="radiogroup"]::before, .st-key-steps [role="radiogroup"]::after { content: ""; position: absolute;
   left: 23px; top: 22px; width: 4px; border-radius: 4px; }
-.st-key-step [role="radiogroup"]::before { bottom: 38px; background: var(--tly-line); }
-.st-key-step [role="radiogroup"]::after { background: var(--tly-forest); height: var(--tly-fill, 0%); max-height: calc(100% - 60px); }
-.st-key-step label { position: relative; display: flex; align-items: flex-start; gap: 16px; width: 100%; margin: 0;
+.st-key-steps [role="radiogroup"]::before { bottom: 38px; background: var(--tly-line); }
+.st-key-steps [role="radiogroup"]::after { background: var(--tly-forest); height: var(--tly-fill, 0%); max-height: calc(100% - 60px); }
+.st-key-steps label { position: relative; display: flex; align-items: flex-start; gap: 16px; width: 100%; margin: 0;
   padding: 8px 8px 16px 8px !important; border-radius: var(--tly-r); cursor: pointer; transition: background-color .15s; }
-.st-key-step label:hover { background: var(--tly-hover); }
-.st-key-step label > div > div:first-child { display: none; }  /* the radio circle */
-.st-key-step label::before { position: relative; z-index: 1; display: inline-grid; place-items: center; flex: none;
+.st-key-steps label:hover { background: var(--tly-hover); }
+.st-key-steps label > div > div:first-child { display: none; }  /* the radio circle */
+.st-key-steps label::before { position: relative; z-index: 1; display: inline-grid; place-items: center; flex: none;
   width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--tly-line-strong); background: var(--tly-card);
   font-size: var(--tly-t-sm); font-weight: 700; color: var(--tly-soft); box-sizing: border-box; }
-.st-key-step label p { font-size: var(--tly-t-md); font-weight: 600; line-height: 1.25; margin-top: 4px; white-space: pre-line; }
-.st-key-step label p::after { display: block; font-size: var(--tly-t-sm); font-weight: 400; color: var(--tly-soft); margin-top: 4px; }
+.st-key-steps label p { font-size: var(--tly-t-md); font-weight: 600; line-height: 1.25; margin-top: 4px; white-space: pre-line; }
+.st-key-steps label p::after { display: block; font-size: var(--tly-t-sm); font-weight: 400; color: var(--tly-soft); margin-top: 4px; }
 /* Money in vs out */
 .tly-money { display: grid; gap: 8px; padding-bottom: 8px; }
 .tly-money .row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; }
@@ -258,7 +258,7 @@
 .tly-confirm-note { font-family: var(--tly-body); line-height: 1.45; margin: 16px 0 16px; }
 .tly-confirm-note b { font-family: var(--tly-body); color: var(--tly-forest); font-weight: 700; }
 .tly-confirm-note small { font-size: var(--tly-t-sm); color: var(--tly-soft); }
-.tly-confirm { display: flex; justify-content: center; margin-bottom: 16px; } .tly-confirm .tly-event { width: 300px; }
+.tly-confirm { display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 16px; } .tly-confirm .tly-event { width: 300px; }
 div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-family: var(--tly-head) !important; font-weight: 600; }
 /* Ticket color chips: a dot in each color (the colors are set per chip in sidebar.py). */
 .st-key-ticket-color [data-testid="stRadioOption"] p::before, .st-key-color-menu [data-testid="stPopoverButton"] p::before { content: ""; display: inline-block; width: 11px; height: 11px;
@@ -282,7 +282,7 @@ div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-famil
 /* Start page A: the live ticket (Kevin's pick, round 22) */
 p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: var(--tly-soft); margin: -8px 0 8px; }
 .tly-live { position: relative; padding-top: 80px; max-width: 460px; margin: 0 auto; }  /* keeps its size when the sidebar folds */
-.tly-live img { position: absolute; right: 0; top: 0; width: 104px; transform: rotate(8deg); }
+.tly-live img { position: absolute; right: 8px; top: -16px; width: 88px; transform: rotate(8deg); z-index: 2; }
 .tly-live .bubble { position: absolute; left: 0; top: 12px; max-width: calc(100% - 120px); background: var(--tly-card);
   border: 2px solid var(--tly-ink); border-radius: var(--tly-r); padding: 8px 16px; font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-ink); }
 .tly-live .bubble::after { content: ""; position: absolute; right: 26px; bottom: -8px; width: 12px; height: 12px;

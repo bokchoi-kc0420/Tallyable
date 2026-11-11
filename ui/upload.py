@@ -151,7 +151,7 @@ def show(event: EventInfo) -> None:
               "Your own receipts need the full version.", key="demo", tip=True)
     if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
-            st.image(str(ART / "mascot-empty.png"), width=190, alt="")
+            st.image(str(ART / "tally-camera.png"), width=190, alt="")
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
     files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
     if st.button("Use the fake event's 14 receipts instead"):

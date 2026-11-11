@@ -28,9 +28,9 @@ ICON = {Status.DRAFTED: ":material/schedule:", Status.APPROVED: ":green[:materia
 FLAG_ICON = ":orange[:material/flag:]"
 STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved", "ok"),
                Status.REJECTED: ("left out", "no"), Status.POSTED: ("in the books", "post")}
-# Tally's pose on the walker bar for each step (Kevin's picks). Close out keeps the original.
+# Tally's pose on the walker bar for each step (Kevin's picks), one per step.
 TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small.png",
-         "3. Summary": "tally-summary-small.png", "4. Close out": "mascot-small.png"}
+         "3. Summary": "tally-summary-small.png", "4. Close out": "tally-calculator.png"}
 ss = st.session_state
 
 
@@ -146,7 +146,7 @@ def loading(slot, title: str, detail: str, frac: float | None, rows: list[str | 
     bar = (f'<div class="bar"><i style="width:{max(frac, 0.04) * 100:.0f}%"></i></div>' if frac is not None
            else '<div class="bar run"><i></i></div>')
     lines = "".join(f"<li>{html.escape(r)}</li>" if r else '<li class="sk"></li>' for r in rows)
-    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri("tally-review-small.png")}" alt="">'
+    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri("tally-magnify.png")}" alt="">'
                   f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}'
                   f'{f"<ul>{lines}</ul>" if lines else ""}</div></div>', unsafe_allow_html=True)
 

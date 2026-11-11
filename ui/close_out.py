@@ -205,7 +205,7 @@ def show(event: EventInfo) -> None:
         st.warning(f"Still need a look, so they're not counted yet: {', '.join(waiting)}")
     else:
         with st.container(key="mascot-cheer"):
-            st.image(str(ART / "tally-cheer.png"), width=170)
+            st.image(str(ART / "tally-thumbs-up.png"), width=170)  # the finish page has the flag
         left_out = len(ss.receipts) - len(done)
         cheer = f"All {len(done)} receipts approved!" if not left_out else f"All reviewed! {len(done)} approved, {left_out} left out."
         st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)

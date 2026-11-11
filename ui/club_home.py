@@ -21,7 +21,7 @@ def next_step() -> tuple[str, list[tuple[bool, str]], str, str | None]:
     button opens (None: start a new event)."""
     ev, rs = ss.event, ss.receipts
     if ev.get("finished") or (not ev.get("set_up") and not rs):
-        return ("Start your next event", [(False, "Name it and pick who's in"), (False, "Upload the receipts")],
+        return ("Start your next event", [(False, "Name it and choose who paid"), (False, "Upload the receipts")],
                 "Start an event", None if ev.get("finished") else STEPS[0])
     n, checked, pushed = len(rs), reviewed(), bool(ev.get("pushed_at"))
     items = [(n > 0, f"{n} receipt{'s' if n != 1 else ''} in" if n else "Upload the receipts"),
@@ -49,20 +49,16 @@ def hero(me: dict, events: list[dict]) -> None:
         with st.container(key="hero-money"):
             n = len(me["members"])
             amount = usd(money) if money is not None else "$ —"
+            # No starting balance yet: it's asked when the club is made, or set later in Club settings.
+            sub = "in the club bank" if money is not None else "No starting balance yet (Club settings)"
             up = None if money is None else money - Decimal(str(start))
             delta = ("" if not up else
                      f'<span class="tly-delta{" down" if up < 0 else ""}"><b>{"▲" if up >= 0 else "▼"}</b> '
                      f'{usd(abs(up))} since the year started</span>')
             st.html(f'<div class="tly-hero-id">{badge(me["name"], "mid")}<div><b>{html.escape(me["name"])}</b>'
                     f'<small>{n} member{"s" if n != 1 else ""} · {school_year(date.today()).replace("-", "–")}</small></div></div>'
-                    f'<p class="tly-hero-money">{amount}</p><p class="tly-hero-sub">in the club bank</p>{delta}'
+                    f'<p class="tly-hero-money">{amount}</p><p class="tly-hero-sub">{sub}</p>{delta}'
                     f'<img class="tly-hero-jar" src="{mascot_uri("tally-coin-jar.png")}" alt="">')
-            if money is None:
-                begin = st.number_input("What did the club have before this year's first event? ($)", value=None,
-                                        step=10.0, format="%.2f", placeholder="0.00", key="home-start")
-                if begin is not None:
-                    club.save(start_balance=begin)
-                    st.rerun()
         with st.container(key="hero-next"):
             title, items, label, target = next_step()
             checks = "".join(f'<li class="{"done" if done else ""}">{html.escape(text)}</li>' for done, text in items)
@@ -97,19 +93,24 @@ def save_from(field: str, key: str) -> None:
 
 
 def settings(me: dict) -> None:
-    """Club settings behind one button: name, starting balance, profit target, Google Sheets."""
-    with st.popover("Club settings", icon=":material/settings:"):
+    """Club settings behind one button: name, starting balance, profit target, Google Sheets, Delete club."""
+    with st.popover("Club settings", icon=":material/settings:", key="club-set", on_change="rerun"), st.container(key="club-settings"):
+        st.html(f'<div class="tly-set-head">{badge(me["name"], "mid")}<div><b>Club settings</b>'
+                f'<small>{html.escape(me["name"])}</small></div></div>')
         # Keys carry the saved value, so a change made elsewhere (or another club) redraws them fresh.
         k = f"{club.current()}-{me['name']}-{me['start_balance']}-{me['target']}"
         st.text_input("Club name", me["name"], key=f"club-name-{k}", on_change=save_from, args=("name", f"club-name-{k}"))
-        st.number_input("Starting balance this school year ($)", value=me["start_balance"], step=10.0, format="%.2f",
-                        placeholder="0.00", key=f"club-start-{k}", on_change=save_from, args=("start_balance", f"club-start-{k}"),
-                        help="What the club had before this year's first event. The General Ledger starts from it.")
-        st.number_input("Profit target (%)", min_value=0, max_value=100, value=int(me["target"]), key=f"club-target-{k}",
-                        on_change=save_from, args=("target", f"club-target-{k}"), help="The Summary shows if an event hit it.")
+        c = st.columns(2)
+        c[0].number_input("Starting balance ($)", value=me["start_balance"], step=10.0, format="%.2f",
+                          placeholder="0.00", key=f"club-start-{k}", on_change=save_from, args=("start_balance", f"club-start-{k}"),
+                          help="What the club had before this year's first event. The General Ledger starts from it.")
+        c[1].number_input("Profit target (%)", min_value=0, max_value=100, value=int(me["target"]), key=f"club-target-{k}",
+                          on_change=save_from, args=("target", f"club-target-{k}"), help="The Summary shows if an event hit it.")
         label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
         if st.button(label, icon=":material/table_chart:", key="open-connect", width="stretch"):
             connect.dialog()
+        st.button("Delete club", icon=":material/delete:", key="delete-club", width="stretch",
+                  on_click=lambda: ss.update({"confirm_club_delete": True, "club-set": False}))
 
 
 def crew(me: dict) -> None:

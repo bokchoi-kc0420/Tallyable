@@ -99,7 +99,8 @@ def save_session() -> None:
     it's set up, even before any receipts, so starting a new one never loses it."""
     if not ss.receipts and not ss.event.get("set_up"):
         return
-    state = {k: ss[k] for k in session_store.SAVED_KEYS}
+    # On Club home the event's step radio isn't drawn, so its step lives in last_step.
+    state = {k: ss[k] if k != "step" else ss.get("step") or ss.get("last_step") or STEPS[0] for k in session_store.SAVED_KEYS}
     text = session_store.dump(state)
     if text == ss.get("_saved"):
         return
@@ -159,7 +160,9 @@ def past_events_box() -> None:
                           args=() if here_now else (e["path"],), help=f"Reopen {e['name']}")
 
 
-def go_event() -> None:
+def leave_home() -> None:
+    """A step clicked on Club home: open the event on that step."""
+    ss.step = ss.pop("step-home")
     ss.view = "event"
 
 
@@ -176,9 +179,9 @@ def stepper_css(current: str) -> None:
     frac = STEPS.index(current) / (len(STEPS) - 1)
     if current == "2. Review" and rs:
         frac += checked / len(rs) / (len(STEPS) - 1) * 0.8
-    rules = [f'.st-key-step [role="radiogroup"] {{ --tly-fill: {frac * 100:.1f}%; }}']
+    rules = [f'.st-key-steps [role="radiogroup"] {{ --tly-fill: {frac * 100:.1f}%; }}']
     for n, name in enumerate(STEPS, start=1):
-        row = f'.st-key-step [role="radiogroup"] > div:nth-child({n}) label'
+        row = f'.st-key-steps [role="radiogroup"] > div:nth-child({n}) label'
         rules.append(f'{row} p::after {{ content: "{sub[name]}"; }}')
         if name != current:
             rules.append(f'{row}::before {{ content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); '
@@ -238,9 +241,14 @@ def show() -> tuple[str, EventInfo]:
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))
     event_card.markdown(ticket(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_html=True)
-    # On Club home no step is picked, so clicking any step (even the last one) goes back to the event.
-    page = steps_slot.radio("Steps", STEPS, key="step", format_func=step_label, on_change=go_event)
-    page = page or ss.get("last_step") or STEPS[0]
+    with steps_slot.container(key="steps"):
+        if ss.get("view") == "club":
+            # A fresh radio with nothing picked, so clicking any step (even the event's current one) opens it.
+            # Reusing the event's radio left the browser showing the old pick, and that click did nothing.
+            st.radio("Steps", STEPS, index=None, key="step-home", format_func=step_label, on_change=leave_home)
+            page = ss.get("last_step") or STEPS[0]
+        else:
+            page = st.radio("Steps", STEPS, key="step", format_func=step_label)
     stepper_css(page)
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))

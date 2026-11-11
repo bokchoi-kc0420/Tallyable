@@ -64,19 +64,33 @@ def set_current(cid: str) -> None:
     _write({**_read(), "current": cid})
 
 
-def add(name: str) -> str | None:
-    """A new club, opened right away. Returns its id, or None for a blank name."""
+def add(name: str, start_balance: float | None = None, members: list[str] = ()) -> str | None:
+    """A new club, opened right away. Returns its id, or None for a blank name. A name that's
+    already a club opens that club instead of making a second one with the same name."""
     name = name.strip()
     if not name:
         return None
     data = _read()
+    same = next((cid for cid, c in data["clubs"].items() if c["name"].casefold() == name.casefold()), None)
+    if same:
+        _write({**data, "current": same})
+        return same
     base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "club"
     cid, n = base, 2
     while cid in data["clubs"]:
         cid, n = f"{base}-{n}", n + 1
-    data["clubs"][cid] = {**DEFAULT, "name": name}
+    data["clubs"][cid] = {**DEFAULT, "name": name, "start_balance": start_balance, "members": list(members)}
     _write({**data, "current": cid})
     return cid
+
+
+def remove(cid: str) -> str | None:
+    """Delete a club. The first club left is opened; returns its id (None when none are left)."""
+    data = _read()
+    data["clubs"].pop(cid, None)
+    left = next(iter(data["clubs"]), None)
+    _write({**data, "current": left if data["current"] == cid else data["current"]})
+    return current()
 
 
 def owns(event: dict) -> bool:
@@ -105,7 +119,8 @@ def add_member(key: str) -> str | None:
 
 
 def initials(name: str) -> str:
-    return "".join(w[0] for w in name.split()[:2]).upper()
+    """First letters of the first two words, skipping words like "&" (safe inside CSS content too)."""
+    return "".join(w[0] for w in name.split() if w[0].isalnum())[:2].upper()
 
 
 def chip_style(prefix: str, names: list[str]) -> None:

@@ -71,10 +71,12 @@ def finish_button(lines: list) -> None:
             "1 thing's still open, but you can finish anyway! It stays listed on the event." if len(items) == 1 else
             f"{len(items)} things are still open, but you can finish anyway! They stay listed on the event.")
     with st.container(border=True, key="finish-row"):
-        c = st.columns([1.3, 4], vertical_alignment="center")
-        c[0].button("Finish event", type="primary", icon=":material/check:", icon_position="right", key="finish-event",
+        # Message on the left, button on the right: the same order as the other "what's next" boxes.
+        c = st.columns([4, 1.3], vertical_alignment="center")
+        c[0].markdown(f'<p class="tly-done-title">Ready to finish?</p><p class="tly-done-sub">{html.escape(note)}</p>',
+                      unsafe_allow_html=True)
+        c[1].button("Finish event", type="primary", icon=":material/check:", icon_position="right", key="finish-event",
                     on_click=set_finished, args=(True,), width="stretch")
-        c[1].markdown(f'<p class="tly-done-sub">{html.escape(note)}</p>', unsafe_allow_html=True)
 
 
 def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
@@ -123,7 +125,7 @@ def show(event: EventInfo) -> None:
     count = f"{len(done)} receipt{'s' if len(done) != 1 else ''}" + (f" ({left_out} left out)" if left_out else "")
     paid = "everyone paid back" if not any(x.owed > 0 for x in lines) else "paybacks still open"
     with st.container(border=True, key="finish-page"):
-        st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-cheer.png")}" alt="">'
+        st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-flag.png")}" alt="">'
                 f'<h2>{html.escape(event.name)} is closed out!</h2>'
                 f'<p>{event.date:%b} {event.date.day}, {event.date.year} · {count} · {paid}</p>'
                 f'{tiles(t, club_balance(event, t["net"]))}</div>')
