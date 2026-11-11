@@ -21,7 +21,7 @@ def next_step() -> tuple[str, list[tuple[bool, str]], str, str | None]:
     button opens (None: start a new event)."""
     ev, rs = ss.event, ss.receipts
     if ev.get("finished") or (not ev.get("set_up") and not rs):
-        return ("Start your next event", [(False, "Name it and pick who's in"), (False, "Upload the receipts")],
+        return ("Start your next event", [(False, "Name it and choose who paid"), (False, "Upload the receipts")],
                 "Start an event", None if ev.get("finished") else STEPS[0])
     n, checked, pushed = len(rs), reviewed(), bool(ev.get("pushed_at"))
     items = [(n > 0, f"{n} receipt{'s' if n != 1 else ''} in" if n else "Upload the receipts"),
