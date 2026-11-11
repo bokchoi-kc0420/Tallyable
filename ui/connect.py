@@ -39,7 +39,7 @@ def box(key: str) -> None:
     """The connect form. `key` keeps widget keys apart where it's drawn twice."""
     email = bot_email(ROOT, GCP_KEY)
     if not email:
-        st.caption("Google Sheets isn't set up on this copy of Tallyable, so your books save on this computer.")
+        st.caption("Google Sheets isn't set up on this copy of Tallyable, so your books come out as an Excel file.")
         return
     saved = linked()
     st.markdown("**1. Share your sheets with Tally** as Editor (Share button, top right in Google Sheets):")

@@ -20,6 +20,7 @@ from treasurer.sheets import EventInfo, local_transactions, local_views
 from treasurer.xlsx_export import book_xlsx
 from ui import club, done_card
 from ui.common import PAST, dec, get_sink, mascot_uri, saved_reimbursements, ss, usd
+from ui.home import go_home
 from ui.sidebar import save_session, start_new_event
 
 FIX = {"2. Review": "Fix in Review", "3. Summary": "Go push", "4. Close out": "Pay back"}
@@ -136,18 +137,23 @@ def show(event: EventInfo) -> None:
                     row = st.columns([3, 1.4], vertical_alignment="center")
                     row[0].markdown(f'<p class="tly-open-item"><i class="tly-warn">!</i>{html.escape(text)}</p>',
                                    unsafe_allow_html=True)
-                    row[1].button(FIX[step], key=f"fix-{n}", type="tertiary", icon=":material/arrow_forward:",
+                    row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
                                   icon_position="right", on_click=set_finished, args=(False, step))
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
-            st.button("Start the next event", type="primary", key="next-event", on_click=next_event)
+            st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
+            st.button("Start the next event", key="next-event", on_click=next_event)
+        # The downloads sit a row lower and quieter, so the two ways on don't compete with them.
+        with st.container(horizontal=True, horizontal_alignment="center", key="finish-downloads"):
             ledger = getattr(getattr(sink, "ledger_book", None), "url", None)
             if ledger:
-                st.link_button("Open General Ledger", ledger, icon=":material/arrow_outward:", icon_position="right")
+                st.link_button("Open General Ledger", ledger, icon=":material/arrow_outward:", icon_position="right",
+                               type="tertiary")
             else:
                 income = {k: dec(v) for k, v in ss.income.items()}
                 receipts = list(ss.receipts.values())
                 views = local_views(receipts, event, income, saved_reimbursements(sink))
-                st.download_button("Download the whole book (Excel)", key="dl-xlsx-finish", on_click="ignore",
+                st.download_button("Download the whole book (Excel)", key="dl-xlsx-finish", on_click="ignore", type="tertiary",
+                                   icon=":material/download:",
                                    data=lambda: book_xlsx(views, local_transactions(receipts), TX_FIELDS),
                                    file_name=f"{event.event_id}_books.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -155,6 +161,7 @@ def show(event: EventInfo) -> None:
             state = {r.receipt_id: ("Not yet" if owed.get(r.payer, 0) > 0 else "Yes") if r.payer else "" for r in done}
             images = ss.images
             st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf", on_click="ignore",
+                               type="tertiary", icon=":material/download:",
                                file_name=f"{event.event_id}_receipt_photos.pdf", data=lambda: receipts_pdf(done, images, state))
     st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
               on_click=set_finished, args=(False,), help="Back to Close out. It leaves Past events until you finish again.")

@@ -333,7 +333,9 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   background: var(--tly-page); }
 .st-key-read-bar { background: var(--tly-card); box-shadow: var(--tly-shadow); justify-content: space-between; }
 .st-key-upload-next [data-testid="stVerticalBlockBorderWrapper"] { background: var(--tly-card); }
-.tly-edit-hint { font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-ink-2); margin: 0 0 8px; }
+.tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 16px; border-radius: var(--tly-r-in);
+  background: var(--tly-sun-tint); font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-ink); }
+.tly-edit-hint .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-lg); color: var(--tly-sun-ink); }
 .tly-led.paid { position: relative; }
 .tly-paid-pop { display: inline-block; animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
 .tly-coins i { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; translate: -50% -50%;
@@ -345,3 +347,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   60% { opacity: 1; transform: translate(var(--x), var(--y)) scale(1) rotate(200deg); }
   100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 24px)) scale(.9) rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tly-coins { display: none; } .tly-paid-pop { animation: none; } }
+.tly-led.group { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); color: var(--tly-forest); padding-top: 8px; }
+/* Labels line up with the text inside the boxes (inputs are white via secondaryBackgroundColor). */
+[data-testid="stMain"] [data-testid="stWidgetLabel"] { padding-left: 8px; margin-bottom: -4px; }
+[data-testid="stProgress"] [role="progressbar"] > div { background-color: var(--tly-paper); }

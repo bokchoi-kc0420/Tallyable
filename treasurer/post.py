@@ -46,7 +46,7 @@ class LocalCsvSink:
         with open(self.path, newline="") as fh:
             return {(row["event_id"], row["receipt_id"]) for row in csv.DictReader(fh)}
 
-    label = "this computer"  # shown to the treasurer: "Push to this computer"
+    label = "your Excel file"  # shown to the treasurer: "Each Mark paid is saved to your Excel file"
 
     def post(self, receipts: list[Receipt], event=None, income=None) -> list[str]:
         """Write approved, not-yet-posted receipts. Returns the ids written."""

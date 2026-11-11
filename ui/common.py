@@ -105,8 +105,8 @@ def get_sink():
         link = linked() or {}
         return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(OUT / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
-        return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so the books are saved on "
-                                                        f"this computer for now. ({e})")
+        return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so your books come out as "
+                                                        f"an Excel file for now. ({e})")
 
 
 def saved_reimbursements(sink) -> list[dict]:
