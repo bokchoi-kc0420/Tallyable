@@ -196,7 +196,7 @@ try {
   await page.getByRole("button", { name: "Delete club" }).click();
   await page.getByText("This can't be undone!").waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(OUT, "7-delete-club.png") });
-  await page.getByRole("button", { name: "Keep it" }).click();
+  await page.getByRole("button", { name: "Keep it" }).click({ force: true });
   await idle();
   await page.goto(`http://localhost:${PORT}`);  // a new tab with two clubs asks which one
   await page.getByText("Which club are you doing the books for?").waitFor({ timeout: 60000 });

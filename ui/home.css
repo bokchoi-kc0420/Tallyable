@@ -80,12 +80,12 @@
 .st-key-club-menu-new button { border: 2px dashed var(--tly-line-strong); background: transparent; color: var(--tly-forest); }
 .st-key-club-menu-new button:hover { border-color: var(--tly-forest); background: var(--tly-green-tint); }
 /* New club pop-up and Club settings */
-.tly-dialog-tally { display: block; height: 112px; margin: 0 auto 8px; }
+.tly-dialog-tally { display: block; height: 144px; margin: 0 auto 8px; }
 .stDialog:has(.tly-newclub) [data-testid="stMarkdownContainer"]:not([data-testid="stVerticalBlock"] *) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .tly-newclub { position: relative; min-height: 400px; height: 100%; background: var(--tly-sage); border-radius: var(--tly-r); padding: 24px; }
 .tly-newclub p { margin: 0 0 8px; font: 600 var(--tly-t-xs) var(--tly-head); letter-spacing: .08em; text-transform: uppercase; color: var(--tly-ink); }
 .tly-newclub b { display: block; font: 700 var(--tly-t-2xl) var(--tly-head); line-height: 1.15; color: var(--tly-ink); }
-.tly-newclub img { position: absolute; left: 50%; bottom: 16px; width: 80%; transform: translateX(-50%); }
+.tly-newclub img { position: absolute; left: 50%; bottom: 16px; height: 232px; transform: translateX(-50%); }
 .st-key-club-settings { gap: 12px; min-width: 340px; }
 .tly-set-head { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 2px dashed var(--tly-line); }
 .tly-set-head b { display: block; font-family: var(--tly-head); font-weight: 600; font-size: 1.15rem; color: var(--tly-ink); line-height: 1.2; }
