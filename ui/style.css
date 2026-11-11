@@ -258,7 +258,7 @@
 .tly-confirm-note { font-family: var(--tly-body); line-height: 1.45; margin: 16px 0 16px; }
 .tly-confirm-note b { font-family: var(--tly-body); color: var(--tly-forest); font-weight: 700; }
 .tly-confirm-note small { font-size: var(--tly-t-sm); color: var(--tly-soft); }
-.tly-confirm { display: flex; justify-content: center; margin-bottom: 16px; } .tly-confirm .tly-event { width: 300px; }
+.tly-confirm { display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 16px; } .tly-confirm .tly-event { width: 300px; }
 div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-family: var(--tly-head) !important; font-weight: 600; }
 /* Ticket color chips: a dot in each color (the colors are set per chip in sidebar.py). */
 .st-key-ticket-color [data-testid="stRadioOption"] p::before, .st-key-color-menu [data-testid="stPopoverButton"] p::before { content: ""; display: inline-block; width: 11px; height: 11px;

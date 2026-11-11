@@ -64,7 +64,7 @@ def set_current(cid: str) -> None:
     _write({**_read(), "current": cid})
 
 
-def add(name: str, start_balance: float | None = None) -> str | None:
+def add(name: str, start_balance: float | None = None, members: list[str] = ()) -> str | None:
     """A new club, opened right away. Returns its id, or None for a blank name. A name that's
     already a club opens that club instead of making a second one with the same name."""
     name = name.strip()
@@ -79,7 +79,7 @@ def add(name: str, start_balance: float | None = None) -> str | None:
     cid, n = base, 2
     while cid in data["clubs"]:
         cid, n = f"{base}-{n}", n + 1
-    data["clubs"][cid] = {**DEFAULT, "name": name, "start_balance": start_balance}
+    data["clubs"][cid] = {**DEFAULT, "name": name, "start_balance": start_balance, "members": list(members)}
     _write({**data, "current": cid})
     return cid
 

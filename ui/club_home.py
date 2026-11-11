@@ -94,7 +94,7 @@ def save_from(field: str, key: str) -> None:
 
 def settings(me: dict) -> None:
     """Club settings behind one button: name, starting balance, profit target, Google Sheets, Delete club."""
-    with st.popover("Club settings", icon=":material/settings:"), st.container(key="club-settings"):
+    with st.popover("Club settings", icon=":material/settings:", key="club-set", on_change="rerun"), st.container(key="club-settings"):
         st.html(f'<div class="tly-set-head">{badge(me["name"], "mid")}<div><b>Club settings</b>'
                 f'<small>{html.escape(me["name"])}</small></div></div>')
         # Keys carry the saved value, so a change made elsewhere (or another club) redraws them fresh.
@@ -110,7 +110,7 @@ def settings(me: dict) -> None:
         if st.button(label, icon=":material/table_chart:", key="open-connect", width="stretch"):
             connect.dialog()
         st.button("Delete club", icon=":material/delete:", key="delete-club", width="stretch",
-                  on_click=lambda: ss.update(confirm_club_delete=True))
+                  on_click=lambda: ss.update({"confirm_club_delete": True, "club-set": False}))
 
 
 def crew(me: dict) -> None:

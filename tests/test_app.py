@@ -550,10 +550,9 @@ def test_each_club_keeps_its_own_members_events_and_balance():
     at.button(key="confirm-new-yes").click().run()  # the older event is saved under My club
     at.button(key="club-menu-new").click().run()  # the New club pop-up
     at.text_input(key="new-club-name").set_value("Chess Club").run()
+    at.text_input(key="new-club-who").set_value("Dana Cho").run()  # the crew can join in the pop-up
     at.button(key="new-club-add").click().run()
-    assert at.session_state["event"]["members"] == ""  # a new club starts empty, on Club home
     assert any("Chess Club" in h.value for h in at.html)
-    at.text_input(key="club-new").set_value("Dana Cho").run()
     at.sidebar.button(key="new-event").click().run()
     assert at.session_state["event"]["members"] == "Dana Cho"
     assert at.session_state["event"]["club"] == "chess-club"

@@ -169,9 +169,14 @@ try {
   await page.keyboard.press("Escape");
   await clubMenu.click();
   await page.getByRole("button", { name: "New club" }).click();
-  await page.getByText("Start a new club").waitFor({ timeout: 30000 });
+  await page.getByText("Let's set up your club!").waitFor({ timeout: 30000 });
   const dialog = page.getByRole("dialog");
   await dialog.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Chess & Coffee");
+  for (const who of ["Jamie Lee", "Sam Park"]) {
+    await dialog.getByPlaceholder("Add someone, e.g. Jamie Lee").fill(who);
+    await dialog.getByPlaceholder("Add someone, e.g. Jamie Lee").press("Enter");
+    await idle();
+  }
   await page.waitForTimeout(400);
   await page.screenshot({ path: join(OUT, "7-new-club-popup.png") });
   await dialog.getByRole("button", { name: "Add club" }).click();
@@ -184,6 +189,15 @@ try {
   await page.waitForTimeout(500);
   await page.screenshot({ path: join(OUT, "7-club-menu-two-clubs.png") });
   await page.keyboard.press("Escape");
+  await clubMenu.click();
+  await page.locator(".st-key-club-home button").click();
+  await idle();
+  await page.getByRole("button", { name: "Club settings" }).click();
+  await page.getByRole("button", { name: "Delete club" }).click();
+  await page.getByText("This can't be undone!").waitFor({ timeout: 30000 });
+  await page.screenshot({ path: join(OUT, "7-delete-club.png") });
+  await page.getByRole("button", { name: "Keep it" }).click();
+  await idle();
   await page.goto(`http://localhost:${PORT}`);  // a new tab with two clubs asks which one
   await page.getByText("Which club are you doing the books for?").waitFor({ timeout: 60000 });
   await shot("8-which-club");

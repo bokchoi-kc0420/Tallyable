@@ -54,29 +54,49 @@ def add_club(prefix: str) -> None:
     ss.club_added = prefix == "new-club"  # the pop-up closes itself on the next run (see new_club_dialog)
     ss.setdefault("event", dict(DEFAULT_EVENT))
     save_session()
-    club.add(name, start)
+    club.add(name, start, ss.pop(f"{prefix}-crew", []))
     ss.club_picked = True
     start_new_event()
     go_home()
 
 
+def add_to_crew(prefix: str) -> None:
+    """Enter / Add callback: the typed name waits in the form until the club is added."""
+    name = ss.get(f"{prefix}-who", "").replace(",", " ").strip()
+    ss[f"{prefix}-who"] = ""
+    crew = ss.setdefault(f"{prefix}-crew", [])
+    if name and name not in crew:
+        crew.append(name)
+
+
 def club_form(prefix: str, primary: bool = True) -> None:
-    """Name and starting balance for a new club, with its Add button."""
+    """Name, starting balance and (optional) members for a new club, with its Add button."""
     st.text_input("Club name", key=f"{prefix}-name", placeholder="e.g. Sunrise Hiking Club")
-    st.number_input("Money in the club bank right now ($)", value=None, step=10.0, format="%.2f", placeholder="0.00",
+    st.number_input("Money in the bank right now ($)", value=None, step=10.0, format="%.2f", placeholder="0.00",
                     key=f"{prefix}-start", help="What the club has before this year's first event. "
                     "Not sure yet? Leave it blank and add it later in Club settings.")
+    st.text_input("Who's in? (optional)", key=f"{prefix}-who", placeholder="Add someone, e.g. Jamie Lee",
+                  on_change=add_to_crew, args=(prefix,))
+    crew = ss.get(f"{prefix}-crew", [])
+    with st.container(horizontal=True, key=f"{prefix}-chips"):
+        for n, name in enumerate(crew):
+            st.button(name, icon=":material/close:", icon_position="right", key=f"club-rm-{prefix}-{n}",
+                      help=f"Take {name} off", on_click=crew.remove, args=(name,))
+    club.chip_style(f"club-rm-{prefix}", crew)
     st.button("Add club", icon=":material/add:", key=f"{prefix}-add", type="primary" if primary else "secondary",
               width="stretch", on_click=add_club, args=(prefix,))
 
 
-@st.dialog("Start a new club", on_dismiss=lambda: ss.update(new_club=False))
+@st.dialog("Start a new club", width="medium", on_dismiss=lambda: ss.update(new_club=False))
 def new_club_dialog() -> None:
     if ss.pop("club_added", False):  # a dialog only closes when its own code reruns the app
         ss.new_club = False
         st.rerun()
-    st.html(f'<img class="tly-dialog-tally" src="{mascot_uri("tally-clipboard.png")}" alt="">')
-    club_form("new-club")
+    art, form = st.columns([2, 3], gap="medium")
+    art.html(f'<div class="tly-newclub"><p>New club</p><b>Let\'s set up your club!</b>'
+             f'<img src="{mascot_uri("tally-party.png")}" alt=""></div>')
+    with form:
+        club_form("new-club")
 
 
 def delete_club(cid: str) -> None:
@@ -103,7 +123,8 @@ def confirm_club_delete() -> None:
         st.rerun()
     me, cid = club.load(), club.current()
     n = sum(1 for e in session_store.past_events(PAST) if club.owns(e))
-    st.html(f'<div class="tly-confirm">{badge(me["name"], "big")}<b class="tly-pick-name">{html.escape(me["name"])}</b></div>')
+    st.html(f'<img class="tly-dialog-tally" src="{mascot_uri("tally-trash.png")}" alt="">'
+            f'<div class="tly-confirm">{badge(me["name"], "big")}<b class="tly-pick-name">{html.escape(me["name"])}</b></div>')
     events = f"its {n} saved event{'s' if n != 1 else ''}, " if n else ""
     st.markdown(f'<p class="tly-confirm-note"><b style="color: var(--tly-berry)">This can\'t be undone!</b> '
                 f"The club, {events}members and settings go away for good.<br>"
