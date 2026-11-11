@@ -33,7 +33,7 @@ def save_payback(sink, payback: Reimbursement) -> bool:
 def undo_last(sink, last: dict, event_id: str) -> None:
     """Take back this event's latest payback, for a misclicked Mark paid."""
     label = f"Undo last payback: {usd(dec(str(last['amount'])))} to {last['payer']}"
-    if not st.button(label, key="undo-paid", icon=":material/undo:", type="tertiary"):
+    if not st.button(label, key="undo-paid", icon=":material/undo:"):
         return
     try:
         sink.undo_reimbursement(event_id)
