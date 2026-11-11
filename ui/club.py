@@ -13,7 +13,7 @@ from ui.common import OUT, ss
 
 CLUBS = OUT / "clubs.json"
 OLD = OUT / "club.json"  # one unnamed club, from before clubs had names
-DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "books": None, "sheets": {}}
+DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "sheets": {}}
 AVATARS = ["#1C5C36", "#B0413E", "#6B4E8A", "#2F4B7C", "#C8673C", "#1F7A73"]
 
 
