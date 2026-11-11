@@ -260,4 +260,4 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
                 f'<div class="tly-legend">{in_leg}</div><div class="tly-legend">{out_leg}</div></div>',
                 unsafe_allow_html=True)
     if t["income"] <= 0:
-        st.caption("No income entered yet. Add it on the Summary step.")
+        st.caption("No income yet. You can add it on Summary.")

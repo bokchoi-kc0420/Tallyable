@@ -133,7 +133,7 @@ def my_funder() -> co.RulePack:
     """A form for the club's own funder rules. Saved with the event so it's filled in next time."""
     saved = ss.event.get("funder", {})
     with st.container(border=True, key="my-funder"):
-        st.caption("Fill in what your funder asks for. Leave a box empty if they don't have that rule.")
+        st.caption("Fill in whatever your funder asks for. If they don't have a rule, leave it blank.")
         f1 = st.columns(3)
         fname = f1[0].text_input("Funder name", saved.get("name", ""), placeholder="e.g. Student Government")
         fmax = f1[1].text_input("Biggest grant ($)", saved.get("max", ""), placeholder="no limit")
@@ -177,7 +177,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     if due:
         st.caption(f"{pack.name}: report due {due.isoformat()}")
     if not flags:
-        st.success(f"No {pack.name} rule flags.")
+        st.success(f"No {pack.name} rules broken.")
     for f in flags:
         {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
     for note in pack.notes:
@@ -231,7 +231,7 @@ def show(event: EventInfo) -> None:
     if owing:
         payback_form(sink, owing, event.event_id)
     else:
-        st.success("Everyone has been paid back.")
+        st.success("Everyone's been paid back!")
     funder_rules(event, done, reimbursed)
     photos(event, done, lines)
     finish.finish_button(lines)

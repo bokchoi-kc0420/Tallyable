@@ -177,7 +177,7 @@ def show(event: EventInfo) -> None:
               key="summary-empty", to="1. Upload")
         return
     st.subheader("Income")
-    st.caption("Add what came in! What went out is already counted from your receipts.")
+    st.caption("Add what came in. I already counted what went out from your receipts.")
     income = income_box()
     metrics(receipts, income)
     with st.container(border=True):

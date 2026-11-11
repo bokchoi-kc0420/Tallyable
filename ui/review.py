@@ -53,7 +53,7 @@ def approve_clean(flags: dict) -> None:
     with st.container(border=True, key="clean-card"):
         c = st.columns([3.2, 1.4], vertical_alignment="center")
         c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} look{"s" if n == 1 else ""} good!</p>'
-                      '<p class="tly-done-sub">The math adds up. Peek at the photos to be sure I read them right.</p>',
+                      '<p class="tly-done-sub">The math adds up - peek at the photos to make sure I read them right!</p>',
                       unsafe_allow_html=True)
         c[1].button(f"Approve all {n}" if n > 1 else "Approve it", type="primary", icon=":material/done_all:",
                     key="approve-clean", width="stretch", on_click=approve_all, args=(clean,))
@@ -126,7 +126,7 @@ def edit_form(rid: str, flags: list) -> None:
     b1, b2, b3 = st.columns(3)
     locked = r.status is Status.POSTED
     if locked:
-        st.caption("Posted to the books, so it can't change here. Fix it in the sheet's Transactions tab.")
+        st.caption("This one's already in the books, so change it in the sheet's Transactions tab.")
     decided = r.status is not Status.DRAFTED
     approve = b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note))
     leave_out = b2.container(key="leave-out").button("Leave out", disabled=locked or decided or not note.strip(),
@@ -156,7 +156,7 @@ def show() -> None:
     if checked == len(ss.receipts):
         ok = sum(1 for x in ss.receipts.values() if x.counts)
         next_step(f"**That's all {checked}!** {ok} approved, {checked - ok} left out. "
-                  "Next up: add the money that came in.",
+                  "Now let's add the money that came in.",
                   "Go to Summary →", "3. Summary", "to-summary")
 
     show_only = st.sidebar.selectbox("Show", ["All", "Not reviewed yet", "Needs attention"], key="review-filter")
@@ -164,7 +164,7 @@ def show() -> None:
            if show_only == "All" or (show_only == "Not reviewed yet" and rec.status is Status.DRAFTED)
            or (show_only == "Needs attention" and needs_look(x, flags))]
     if not ids:
-        st.success("Nothing left in this view.")
+        st.success("You've cleared everything here.")
         return
     labels = {x: f"{ICON[ss.receipts[x].status]} {x} · {ss.receipts[x].place}" + (f" {FLAG_ICON}" if needs_look(x, flags) else "")
               for x in ids}

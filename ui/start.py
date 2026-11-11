@@ -42,7 +42,7 @@ def members_box() -> None:
     """Who might have paid, picked from the club list. Receipts are tagged with these names."""
     with st.container(border=True, key="members-box"):
         st.markdown("**Who's in on this tally?**")
-        st.caption("Tap a name to leave them out of this event. New names join your club list too.")
+        st.caption("Tap a name to leave them out. Anyone new gets added to your club list too.")
         c = st.columns([3, 1], vertical_alignment="bottom")
         c[0].text_input("Name", key="new-member", placeholder="e.g. Jamie Lee", label_visibility="collapsed",
                         on_change=add_member)

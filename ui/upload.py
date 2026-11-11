@@ -49,7 +49,7 @@ def manual_form(key: str, event: EventInfo, image_file: str | None = None, data:
         tax = c[1].text_input("Tax", "0.00")
         tip = c[2].text_input("Tip", "0.00")
         total = c[3].text_input("Total", "0.00")
-        st.caption("One line here; add more lines on the Review screen.")
+        st.caption("Just one line for now. You can add more on Review.")
         if not st.form_submit_button("Add"):
             return
         if not place.strip() or not item.strip():
@@ -142,7 +142,9 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
     ss.demo = []
     ss.drafted_at = ss.drafted_at or time.time()
     cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
-    ss.last_draft = f"**Done! I read {plural(len(ss.receipts), 'receipt')}{cost}.** Now check my work against the photos."
+    n = len(ss.receipts)
+    what, them = (f"all {n} receipts", "them") if n > 1 else ("your receipt", "it")
+    ss.last_draft = f"**Done! I read {what}{cost}.** Now make sure I got {them} right."
     if skipped:
         ss.last_draft += f" (Skipped {skipped} I'd already read.)"
 
@@ -198,8 +200,8 @@ def next_up(todo: list[tuple[str, bytes]], ex, reader: str, event: EventInfo) ->
             untagged = sum(1 for name, _ in todo if not ss.get(f"payer-{name}"))
             with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
                 title, sub = ((f"{untagged} still need{'s' if untagged == 1 else ''} a payer",
-                               "Pick who paid on each photo, or set everyone at once.") if untagged else
-                              ("Everyone's tagged!", "Tally reads each photo and fills in the numbers for you to check."))
+                               "Tap who paid on each photo, or set them all at once.") if untagged else
+                              ("Everyone's tagged!", "Tally will pull the numbers off each photo. You just give them a look."))
                 st.markdown(f'<p class="tly-done-title">{title}</p><p class="tly-done-sub">{sub}</p>',
                             unsafe_allow_html=True)
                 if st.button(f"Read {plural(len(todo), 'receipt')}", type="primary", disabled=untagged > 0, key="read",
