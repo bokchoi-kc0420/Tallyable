@@ -348,3 +348,6 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 24px)) scale(.9) rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tly-coins { display: none; } .tly-paid-pop { animation: none; } }
 .tly-led.group { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); color: var(--tly-forest); padding-top: 8px; }
+/* Labels line up with the text inside the boxes (inputs are white via secondaryBackgroundColor). */
+[data-testid="stMain"] [data-testid="stWidgetLabel"] { padding-left: 16px; }
+[data-testid="stProgress"] [role="progressbar"] > div { background-color: var(--tly-paper); }

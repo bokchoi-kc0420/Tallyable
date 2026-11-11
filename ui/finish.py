@@ -137,7 +137,7 @@ def show(event: EventInfo) -> None:
                     row = st.columns([3, 1.4], vertical_alignment="center")
                     row[0].markdown(f'<p class="tly-open-item"><i class="tly-warn">!</i>{html.escape(text)}</p>',
                                    unsafe_allow_html=True)
-                    row[1].button(FIX[step], key=f"fix-{n}", type="tertiary", icon=":material/arrow_forward:",
+                    row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
                                   icon_position="right", on_click=set_finished, args=(False, step))
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
             st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
