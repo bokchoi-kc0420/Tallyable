@@ -265,9 +265,13 @@ def unread(sources: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
     return [(name, data) for name, data in sources if name not in seen]
 
 
-def next_up(todo: list[list[tuple[str, bytes]]], ex, reader: str, event: EventInfo) -> None:
+def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo) -> None:
     """The page's last step, pinned to the bottom of the screen: read the photos once everyone's
     tagged, then the way on to Review. Only one of the two shows, so there's one filled button."""
+    todo = bundles(unread(sources))
+    # Photos picked again after they were read: say so, or the page looks like nothing happened.
+    read = {r.image_file for r in ss.receipts.values()}
+    again = ", ".join(name for name, _ in sources if name in read)
     with st.container(key="upload-next"):
         if ss.get("joining"):
             names = picked([part for parts in todo for part in parts[:1]])
@@ -291,8 +295,9 @@ def next_up(todo: list[list[tuple[str, bytes]]], ex, reader: str, event: EventIn
                              help="Tag who paid for every receipt first" if untagged else None):
                     draft(todo, ex, reader, event.event_id)
                     st.rerun()
-        elif ss.get("last_draft") and ss.receipts:
-            next_step(ss.last_draft, "Go to Review →", "2. Review", "to-review")
+        elif ss.get("last_draft") or again:
+            next_step(ss.get("last_draft") or f"**Nothing new to read.** Already in this event: {again}.",
+                      "Go to Review →", "2. Review", "to-review")
 
 
 def show(event: EventInfo) -> None:
@@ -326,7 +331,7 @@ def show(event: EventInfo) -> None:
               f"**Read {plural(len(todo), 'receipt')}** at the bottom."), key="loaded", tip=True)
     if sources:
         who_paid(sources)
-    next_up(todo, ex, reader, event)
+    next_up(sources, ex, reader, event)
 
     for name, (data, reason) in list(ss.failed.items()):
         st.error(md(f"{name}: {reason}"))
