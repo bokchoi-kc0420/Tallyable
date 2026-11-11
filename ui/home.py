@@ -180,7 +180,15 @@ def needs_picking() -> bool:
 def picker() -> None:
     """Which club are you doing the books for? One card per club, then Add a club."""
     have = club.clubs()
-    st.header("Which club are you doing the books for?" if have else "What's your club called?")
+    if not have:
+        with st.container(key="first-club"):
+            art, form = st.columns([2, 3], gap="large", vertical_alignment="center")
+            art.html(f'<div class="tly-newclub"><p>Welcome to Tallyable</p><b>Let\'s set up<br>your club!</b>'
+                     f'<img src="{mascot_uri("tally-party.png")}" alt=""></div>')
+            with form:
+                club_form("club-first")
+        return
+    st.header("Which club are you doing the books for?")
     cols = st.columns(3)
     for n, (cid, c) in enumerate(have.items()):
         with cols[n % 3].container(border=True, key=f"pick-club-{cid}"):
@@ -189,5 +197,5 @@ def picker() -> None:
             st.button(f"Open {c['name']}", key=f"open-club-{cid}", on_click=switch, args=(cid,), width="stretch",
                       type="primary" if cid == club.current() else "secondary")
     with cols[len(have) % 3].container(border=True, key="pick-club-new"):
-        st.markdown("**Add a club**" if have else "**Your club**")
-        club_form("club-first", primary=not have)
+        st.markdown("**Add a club**")
+        club_form("club-first", primary=False)

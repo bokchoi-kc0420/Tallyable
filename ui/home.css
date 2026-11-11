@@ -1,6 +1,6 @@
 /* Club menu (top of the sidebar) and Club home. Kevin kept Club home's hand-tuned sizes, corners and
    shadow (2026-11-10), so this file is left out of the spacing/radius/shadow/size checks; colors and fonts are tokens.
-   Fredoka for names, labels and money; Inter for sentences. */
+   Fredoka for names, labels and money; Outfit for sentences. */
 .st-key-club-menu [data-testid="stPopoverButton"] { justify-content: flex-start; border: 2px solid var(--tly-line);
   border-radius: 16px; background: var(--tly-card); padding: 10px 12px; min-height: 66px; }
 .st-key-club-menu [data-testid="stPopoverButton"] > div { width: 100%; justify-content: space-between; }
@@ -94,3 +94,18 @@
 .st-key-delete-club button:hover { color: var(--tly-white); background: var(--tly-berry); border-color: var(--tly-berry); }
 .st-key-club-delete-yes button { background: var(--tly-berry); border-color: var(--tly-berry); }
 .st-key-club-delete-yes button:hover { background: var(--tly-berry-deep); border-color: var(--tly-berry-deep); }
+/* First club page: the New club pop-up's split card, centered */
+.st-key-first-club { max-width: 880px; margin: 48px auto 0; background: var(--tly-white); border: 1px solid var(--tly-line);
+  border-radius: 24px; padding: 16px 32px 16px 16px; box-shadow: var(--tly-shadow); }
+.st-key-first-club .tly-newclub { min-height: 420px; }
+/* Club facts as mini tiles: colored icon, small label, bold value */
+.tly-facts { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 8px; }
+.tly-facts > div { display: flex; gap: 10px; align-items: center; min-width: 180px; background: var(--tly-white);
+  border: 1px solid var(--tly-line); border-radius: 16px; padding: 10px 14px; }
+.tly-facts .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: 20px; line-height: 1;
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--tly-white);
+  background: var(--tly-forest); font-variation-settings: "FILL" 1; }
+.tly-facts > div:nth-child(2) .ms { background: var(--tly-clay); }
+.tly-facts > div:nth-child(3) .ms { background: var(--tly-navy); }
+.tly-facts small { display: block; font-size: .75rem; color: var(--tly-soft); }
+.tly-facts b { font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; color: var(--tly-ink); }

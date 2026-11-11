@@ -3,7 +3,7 @@
    Radius: --tly-r on every card, button, input and pop-up; --tly-r-in for things inside a card; 999px for pills and chips.
    Shadow: one "sticker" shadow, a hard drop straight down. Fonts: one heading, one body, one type ramp. */
 :root {
-  --tly-head: Fredoka, sans-serif; --tly-body: Inter, sans-serif;
+  --tly-head: Fredoka, sans-serif; --tly-body: Outfit, sans-serif;
   --tly-t-xs: .75rem; --tly-t-sm: .875rem; --tly-t-md: 1rem; --tly-t-lg: 1.25rem; --tly-t-xl: 1.5rem;
   --tly-t-2xl: 2rem; --tly-t-hero: 4rem;
   --tly-r: 16px; --tly-r-in: 8px;
@@ -13,7 +13,7 @@
   --tly-forest: #1C5C36; --tly-forest-2: #3F8A5A; --tly-forest-3: #6FAE82; --tly-done: #DDEBD9; --tly-green-tint: #E6F0E2; --tly-green-line: #CFE3D2; --tly-sage: #8FB38A;
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
-  --tly-hover: rgba(247,190,63,.22);
+  --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C;
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
    on buttons and cards, a numbered step bar, and the mascot. Motion is off for reduced-motion users. */
@@ -154,7 +154,7 @@
 /* No link icon next to headers: it only jumps to the same page */
 [data-testid="stHeaderActionElements"] { display: none !important; }
 
-/* Fredoka for labels, buttons, tabs and names; Inter stays for sentences and typed values */
+/* Fredoka for labels, buttons, tabs and names; Outfit stays for sentences and typed values */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: var(--tly-head) !important;
   font-weight: 500 !important; font-size: var(--tly-t-md) !important; color: var(--tly-ink); }
 .stButton button p, .stDownloadButton button p, .stFormSubmitButton button p, .stLinkButton a p {
@@ -251,10 +251,11 @@
 [data-testid="stSidebarHeader"] { height: auto; padding-top: 16px; }
 [data-testid="stSidebarHeader"] img[data-testid="stSidebarLogo"], [data-testid="stSidebarLogo"] {
   height: 3.4rem !important; max-width: 15rem; width: auto; }
+[data-testid="stHeaderLogo"] { height: 3.4rem !important; max-width: 15rem; width: auto; margin-top: 16px; }
 [data-testid="stSidebarHeader"] a:hover img { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
 
 /* The event's ticket in the New event pop-up: ticket-sized, not stretched across the dialog. */
-/* Both lines in one font (Inter), close together. */
+/* Both lines in one font (Outfit), close together. */
 .tly-confirm-note { font-family: var(--tly-body); line-height: 1.45; margin: 16px 0 16px; }
 .tly-confirm-note b { font-family: var(--tly-body); color: var(--tly-forest); font-weight: 700; }
 .tly-confirm-note small { font-size: var(--tly-t-sm); color: var(--tly-soft); }
@@ -323,3 +324,6 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-loading li.sk:nth-child(even) { width: 48%; }
 @keyframes tly-shimmer { to { background-position: -150% 0; } }
 @media (prefers-reduced-motion: reduce) { .tly-loading li.sk { animation: none; } }
+
+/* Helper sentences inside cards one size down, so boxes stay short */
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p { font-size: var(--tly-t-sm); line-height: 1.45; }
