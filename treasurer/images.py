@@ -40,10 +40,6 @@ class Prepared:
     media_type: str
     warnings: list[str] = field(default_factory=list)
 
-    @property
-    def is_pdf(self) -> bool:
-        return self.media_type == "application/pdf"
-
 
 def blur_score(im: Image.Image) -> float:
     g = im.convert("L")

@@ -52,7 +52,7 @@ def test_iphone_heic_photo_converts_to_jpg():
 
 def test_pdf_passes_through_and_fake_pdf_is_refused():
     f = prepare(b"%PDF-1.7 fake receipt", "R16.pdf")
-    assert f.is_pdf and f.filename == "R16.pdf"
+    assert f.media_type == "application/pdf" and f.filename == "R16.pdf"
     with pytest.raises(UnsupportedFile, match="isn't one"):
         prepare(b"hello", "R16.pdf")
 
