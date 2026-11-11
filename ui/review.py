@@ -53,8 +53,8 @@ def approve_clean(flags: dict) -> None:
     with st.container(border=True, key="clean-card"):
         c = st.columns([3.2, 1.4], vertical_alignment="center")
         c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} look{"s" if n == 1 else ""} good!</p>'
-                      '<p class="tly-done-sub">The math adds up and everyone\'s tagged. '
-                      "Peek at the photos to be sure I read them right.</p>", unsafe_allow_html=True)
+                      '<p class="tly-done-sub">The math adds up. Peek at the photos to be sure I read them right.</p>',
+                      unsafe_allow_html=True)
         c[1].button(f"Approve all {n}" if n > 1 else "Approve it", type="primary", icon=":material/done_all:",
                     key="approve-clean", width="stretch", on_click=approve_all, args=(clean,))
 
