@@ -8,7 +8,7 @@ toolbarMode = "minimal"
 # Locked to light (Kevin, 2026-11-05): the app always opens light, whatever the system setting.
 [theme]
 base = "light"
-font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+font = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap, sans-serif"
 headingFont = "Fredoka:https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap, sans-serif"
 headingFontWeights = [700, 600, 600, 600, 600, 600]
 baseRadius = "1rem"

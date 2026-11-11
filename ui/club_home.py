@@ -101,10 +101,10 @@ def settings(me: dict) -> None:
         k = f"{club.current()}-{me['name']}-{me['start_balance']}-{me['target']}"
         st.text_input("Club name", me["name"], key=f"club-name-{k}", on_change=save_from, args=("name", f"club-name-{k}"))
         c = st.columns(2)
-        c[0].number_input("Starting balance ($)", value=me["start_balance"], step=10.0, format="%.2f",
+        c[0].number_input("Started the year with ($)", value=me["start_balance"], step=10.0, format="%.2f",
                           placeholder="0.00", key=f"club-start-{k}", on_change=save_from, args=("start_balance", f"club-start-{k}"),
                           help="What the club had before this year's first event. The General Ledger starts from it.")
-        c[1].number_input("Profit target (%)", min_value=0, max_value=100, value=int(me["target"]), key=f"club-target-{k}",
+        c[1].number_input("Profit goal (%)", min_value=0, max_value=100, value=int(me["target"]), key=f"club-target-{k}",
                           on_change=save_from, args=("target", f"club-target-{k}"), help="The Summary shows if an event hit it.")
         label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
         if st.button(label, icon=":material/table_chart:", key="open-connect", width="stretch"):
@@ -130,9 +130,9 @@ def crew(me: dict) -> None:
                           kwargs={"members": [x for x in names if x != name]})
         club.chip_style("club-rm", names)
         start = "not set" if me["start_balance"] is None else usd(Decimal(str(me["start_balance"])))
-        books = "Google Sheets" if connect.linked() else "this computer"
-        st.html(f'<p class="tly-home-line">Started the year at <b>{start}</b> · Profit target <b>{me["target"]}%</b>'
-                f" · Books go to <b>{books}</b></p>")
+        books = "Saved to <b>Google Sheets</b>" if connect.linked() else "Saved on <b>this computer</b>"
+        st.html(f'<div class="tly-facts"><span>Started with <b>{start}</b></span>'
+                f'<span>Profit goal <b>{me["target"]}%</b></span><span>{books}</span></div>')
         settings(me)
 
 

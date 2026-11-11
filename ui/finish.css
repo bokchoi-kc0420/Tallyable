@@ -1,4 +1,4 @@
-/* S1 done card (Summary) and the F2 finish page. Fredoka for titles, labels and money; Inter for sentences. */
+/* S1 done card (Summary) and the F2 finish page. Fredoka for titles, labels and money; Outfit for sentences. */
 .st-key-books-in { background: var(--tly-green-tint); border-color: var(--tly-green-line) !important; }
 .st-key-books-in, .st-key-push-stale, .st-key-finish-row { padding: 16px 24px; }
 .st-key-push-stale { background: var(--tly-sun-tint); border-color: var(--tly-sun-deep) !important; }
