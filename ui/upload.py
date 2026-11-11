@@ -20,7 +20,7 @@ from ui.common import ART, FAKE, dec, guide, loading, md, next_step, payers, plu
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
 
 
-def next_id(filename: str | None = None, taken: list[str] = ()) -> str:
+def next_id(filename: str | None = None, taken: tuple | list = ()) -> str:
     """Use the file name (R03.jpg -> R03) when free, so ids match the answer key. `taken`: ids handed out
     for this batch already."""
     stem = Path(filename).stem.upper() if filename else ""
@@ -89,19 +89,20 @@ def thumbnail(data: bytes, name: str) -> bytes | None:
         return None
 
 
-def read_one(ex, name: str, data: bytes, event_id: str, rid: str, seen: frozenset) -> tuple:
-    """One upload, on a worker thread (so no Streamlit calls here): (photo, receipt, problem).
-    A photo with no receipt and no problem was read before, so it's skipped."""
+def read_one(ex, name: str, data: bytes, event_id: str, rid: str, seen: dict) -> tuple:
+    """One upload, on a worker thread (so no Streamlit calls here): (photo, receipt, problem, repeat).
+    `repeat` is the id of the receipt a photo already read became: it isn't read (or paid for) twice."""
     try:
         f = prepare(data, name)
     except UnsupportedFile as e:
-        return None, None, str(e)
-    if hashlib.sha256(f.data).hexdigest() in seen:  # already read: don't read (or pay) twice
-        return f, None, None
+        return None, None, str(e), None
+    repeat = seen.get(hashlib.sha256(f.data).hexdigest())
+    if repeat:
+        return f, None, None, repeat
     try:
-        return f, ex.extract(f.data, f.filename, event_id, rid), None
+        return f, ex.extract(f.data, f.filename, event_id, rid), None, None
     except ExtractionError as e:
-        return f, None, f"{e} You can type it in by hand below."
+        return f, None, f"{e} You can type it in by hand below.", None
 
 
 def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> None:
@@ -114,7 +115,7 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
         rids.append(next_id(name, rids))
     done: list[str] = []  # the last few read show as lines, the ones still waiting as skeleton lines
     with ThreadPoolExecutor(READERS) as pool:
-        jobs = [pool.submit(read_one, ex, name, data, event_id, rid, frozenset(seen))
+        jobs = [pool.submit(read_one, ex, name, data, event_id, rid, seen)
                 for (name, data), rid in zip(sources, rids, strict=True)]
         for n, job in enumerate(as_completed(jobs), start=1):
             r = job.result()[1]
@@ -124,13 +125,13 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
                     done[-3:] + [None] * min(len(sources) - n, 3))
     skipped = 0
     for (name, _), rid, job in zip(sources, rids, jobs, strict=True):  # in upload order, so R01 stays first
-        f, r, problem = job.result()
+        f, r, problem, repeat = job.result()
         if problem:
             ss.failed[name] = ((f.data, f.media_type) if f else None, problem)
             continue
-        if not r:
+        if repeat:
             skipped += 1
-            ss.skipped[name] = seen[hashlib.sha256(f.data).hexdigest()]
+            ss.skipped[name] = repeat
             continue
         ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
         ss.images[rid] = (f.data, f.media_type)

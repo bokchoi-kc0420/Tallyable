@@ -23,10 +23,6 @@ def expense_tab_title(event: dict) -> str:
     return f"Expense Report: {event['name']}"[:95]
 
 
-def _mmdd(d) -> str:
-    return date.fromisoformat(str(d)[:10]).strftime("%m/%d")
-
-
 def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -> View:
     ordered = sorted(receipts.items(), key=lambda kv: (str(kv[1][0]["date"]), kv[0]))
     total = sum((D(items[0]["receipt_posted"]) for _, items in ordered), Decimal("0"))
@@ -46,7 +42,7 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
                          int(D(i["unit"])), num(D(i["price"])), "", "", "", ""])
             if not is_returned(i):
                 by_cat[i["category"]] += D(i["amount"])
-        rows[top][0] = f"{f['place']}\n{_mmdd(f['date'])}"
+        rows[top][0] = f"{f['place']}\n{date.fromisoformat(str(f['date'])[:10]):%m/%d}"
         rows[top][5:9] = [num(D(f["receipt_tax"])), num(D(f["receipt_tip"])), num(D(f["receipt_posted"])),
                           f"{payer}\n{rid}"]
         by_payer[payer] += D(f["receipt_posted"])

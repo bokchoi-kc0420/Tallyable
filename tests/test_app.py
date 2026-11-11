@@ -106,12 +106,12 @@ def test_one_click_mark_paid_uses_chosen_method():
     at.button(key="paid-Member C").click().run()
     assert not at.exception
     assert owed_table(at)[0]["Owed"] == "$0.00"
-    rows = list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
+    rows = list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv").read_text().splitlines()))
     assert rows[-1]["method"] == "Venmo" and rows[-1]["payer"] == "Member C"
     assert not [b for b in at.button if b.key == "paid-Member C"]  # now shows Paid instead
     at.button(key="undo-paid").click().run()  # a misclick can be taken back
     assert owed_table(at)[0]["Owed"] != "$0.00"
-    assert not list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
+    assert not list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv").read_text().splitlines()))
 
 
 def test_mark_paid_back_updates_owed():
@@ -319,8 +319,8 @@ def test_photos_already_read_are_not_read_again():
     from ui.upload import read_one
     photo, data = at.session_state["images"]["R01"]
     import hashlib
-    f, r, problem = read_one(make_extractor()[0], "copy.jpg", photo, "EVT", "R99", frozenset({hashlib.sha256(photo).hexdigest()}))
-    assert f and r is None and problem is None  # the same photo under another name is skipped, not paid for twice
+    f, r, problem, repeat = read_one(make_extractor()[0], "copy.jpg", photo, "EVT", "R99", {hashlib.sha256(photo).hexdigest(): "R01"})
+    assert r is None and problem is None and repeat == "R01"  # the same photo under another name is skipped, not paid for twice
 
 
 def test_a_finished_event_can_be_reopened_later():
