@@ -142,7 +142,7 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
     ss.demo = []
     ss.drafted_at = ss.drafted_at or time.time()
     cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
-    ss.last_draft = f"**Done! I read {len(ss.receipts)} receipts{cost}.** Now check them against the photos."
+    ss.last_draft = f"**Done! I read {plural(len(ss.receipts), 'receipt')}{cost}.** Now check my work against the photos."
     if skipped:
         ss.last_draft += f" (Skipped {skipped} I'd already read.)"
 
@@ -197,8 +197,9 @@ def next_up(todo: list[tuple[str, bytes]], ex, reader: str, event: EventInfo) ->
         if todo:
             untagged = sum(1 for name, _ in todo if not ss.get(f"payer-{name}"))
             with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
-                title, sub = ((f"{untagged} still need a payer", "Pick who paid on each photo, or set everyone at once.")
-                              if untagged else ("Everyone's tagged!", "Tally reads each photo into a receipt for you to check."))
+                title, sub = ((f"{untagged} still need{'s' if untagged == 1 else ''} a payer",
+                               "Pick who paid on each photo, or set everyone at once.") if untagged else
+                              ("Everyone's tagged!", "Tally reads each photo and fills in the numbers for you to check."))
                 st.markdown(f'<p class="tly-done-title">{title}</p><p class="tly-done-sub">{sub}</p>',
                             unsafe_allow_html=True)
                 if st.button(f"Read {plural(len(todo), 'receipt')}", type="primary", disabled=untagged > 0, key="read",
