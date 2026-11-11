@@ -43,6 +43,10 @@ def undo_last(sink, last: dict, event_id: str) -> None:
     st.rerun()
 
 
+# Six coins fly up and out of the Paid cell; --x/--y is where each lands, --w its delay (style.css).
+COINS = '<span class="tly-coins" aria-hidden="true">' + "".join(
+    f'<i style="--x:{x}px;--y:{y}px;--w:{w}s">$</i>'
+    for x, y, w in [(-56, -64, 0), (-24, -88, .05), (8, -96, .1), (40, -80, .03), (64, -56, .08), (-8, -48, .12)]) + "</span>"
 LEDGER = [1.6, 0.9, 1.1, 1.1, 1.1, 1.5, 1.3]  # Person, Receipts, Fronted, Paid back, Still owed, Paid with, button
 
 
@@ -81,7 +85,8 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
             p = last.get(x.payer)
             cell(row[5], html.escape(f"{p['method']}, {date.fromisoformat(str(p['date'])):%b} "
                                      f"{date.fromisoformat(str(p['date'])).day}") if p else "", "soft")
-            cell(row[6], "✓ Paid", "paid")
+            pop = ss.get("just_paid") == x.payer  # coins burst out once, right after Mark paid
+            cell(row[6], f'<span class="tly-paid-pop">✓ Paid</span>{COINS}' if pop else "✓ Paid", "paid")
             continue
         if x.payer == "(no payer)":
             cell(row[5], "Set a payer in Review", "soft")
@@ -91,7 +96,9 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
                              help=f"Records {md('$' + str(x.owed))} paid back to {x.payer} today."):
             continue
         if save_payback(sink, Reimbursement(event_id, x.payer, date.today(), x.owed, *how)):
+            ss.just_paid = x.payer
             st.rerun()
+    ss.pop("just_paid", None)
     tot = st.columns(LEDGER, vertical_alignment="center")
     cell(tot[0], "Total", "total")
     cell(tot[1], str(sum(counts[x.payer] for x in lines)), "total num")

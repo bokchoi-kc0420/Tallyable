@@ -402,3 +402,14 @@ def test_a_pasted_sheet_link_is_used_over_env(monkeypatch, tmp_path):
     monkeypatch.setenv("TALLYABLE_LEDGER_SHEET_ID", "ledger-from-env")  # ignored: the linked book has no ledger link
     GoogleSheetsSink.from_env(tmp_path, linked={"book": sid})
     assert opened == [sid]
+
+
+def test_events_sharing_a_name_get_their_own_expense_tab():
+    from treasurer.expense_view import expense_tab_title
+    events = [{"event_id": "EVT-2026-10-03-PICNIC-AAAA", "name": "Picnic", "date": "2026-10-03"},
+              {"event_id": "EVT-2026-11-11-PICNIC-BBBB", "name": "picnic", "date": "2026-11-11"},
+              {"event_id": "EVT-2026-11-11-PICNIC-CCCC", "name": "Picnic", "date": "2026-11-11"},
+              {"event_id": "EVT-2026-11-12-MIXER-DDDD", "name": "Mixer", "date": "2026-11-12"}]
+    titles = [expense_tab_title(e, events) for e in events]
+    assert len({t.lower() for t in titles}) == 4  # Sheets refuses a repeat, caps aside
+    assert titles[0] == "Expense Report: Picnic (Oct 3)" and titles[3] == "Expense Report: Mixer"

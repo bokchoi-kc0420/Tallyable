@@ -93,7 +93,8 @@ def show() -> None:
         if not names:
             st.caption(":red[Add at least one member to keep going.]")
         if st.button("Continue to receipts →", type="primary", disabled=not names, key="start-go"):
+            same = ss.event.get("set_up") and (name, d) == (ss.event["name"], ss.event["date"])
             ss.event = {**ss.event, "name": name, "date": d, "attendees": people, "set_up": True,
-                        "event_id": ss.event["event_id"] if locked else event_id_for(name, d)}
+                        "event_id": ss.event["event_id"] if locked or same else event_id_for(name, d)}
             st.rerun()
     right.html(preview(name, d, people, names))

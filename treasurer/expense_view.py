@@ -19,8 +19,18 @@ WIDTHS = [112, 62, 172, 38, 72, 72, 60, 78, 88]  # 754 px: a letter page, portra
 TOP = 8  # rows above the first receipt: note, title, event line, gap, cards (2), gap, header
 
 
-def expense_tab_title(event: dict) -> str:
-    return f"Expense Report: {event['name']}"[:95]
+def expense_tab_title(event: dict, events: list[dict]) -> str:
+    """One tab per event. Sheets tab names must be unique (ignoring caps), so a name
+    another event already has gets the date, and the event id if the date matches too."""
+    name = str(event["name"])
+    twins = [e for e in events if str(e["name"]).strip().lower() == name.strip().lower()
+             and str(e["event_id"]) != str(event["event_id"])]
+    when = date.fromisoformat(str(event["date"])[:10])
+    if twins:
+        name += f" ({when:%b} {when.day})"
+    if any(str(e["date"])[:10] == when.isoformat() for e in twins):
+        name += f" {str(event['event_id'])[-4:]}"
+    return f"Expense Report: {name}"[:95]
 
 
 def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -> View:
