@@ -67,4 +67,10 @@ elif ss.event.get("finished"):
     finish.show(event)
 else:
     close_out.show(event)
+screen = (ss.get("view"), page, ss.event.get("finished"))
+if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: a new step should open at its top.
+    # Last on the page, so its empty block adds no gap above the header.
+    st.html("<script>document.querySelector('[data-testid=\"stMain\"]')?.scrollTo(0, 0)</script>",
+            unsafe_allow_javascript=True)
+ss.last_screen = screen
 sidebar.save_session()

@@ -114,7 +114,8 @@ def metrics(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
 def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal]) -> None:
     """Write to the books, mark what's in them as posted, and log the run."""
     pushing = st.empty()
-    loading(pushing, f"Tally is writing to {sink.label}", f"{len(receipts)} receipts, plus the event's income", None)
+    loading(pushing, f"Tally is writing to {sink.label}", f"{len(receipts)} receipts, plus the event's income", None,
+            pose="tally-ledger.png")
     try:
         written = sink.post(receipts, event, income)
     except Exception as e:  # network drop, sheet unshared mid-push, quota

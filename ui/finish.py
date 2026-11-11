@@ -66,12 +66,12 @@ def next_event() -> None:
 
 
 def finish_button(lines: list) -> None:
-    """Bottom of Close out, same spot every time."""
+    """Bottom of Close out, pinned to the bottom of the screen (like Upload's), so it's found without scrolling."""
     items = open_items(lines)
     note = ("Everything's wrapped up!" if not items else
             "1 thing's still open, but you can finish anyway! It stays listed on the event." if len(items) == 1 else
             f"{len(items)} things are still open, but you can finish anyway! They stay listed on the event.")
-    with st.container(border=True, key="finish-row"):
+    with st.container(key="finish-next"), st.container(border=True, key="finish-row"):
         # Message on the left, button on the right: the same order as the other "what's next" boxes.
         c = st.columns([4, 1.3], vertical_alignment="center")
         c[0].markdown(f'<p class="tly-done-title">Ready to finish?</p><p class="tly-done-sub">{html.escape(note)}</p>',

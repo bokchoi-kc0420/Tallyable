@@ -33,7 +33,7 @@ def save_payback(sink, payback: Reimbursement) -> bool:
 def undo_last(sink, last: dict, event_id: str) -> None:
     """Take back this event's latest payback, for a misclicked Mark paid."""
     label = f"Undo last payback: {usd(dec(str(last['amount'])))} to {last['payer']}"
-    if not st.button(label, key="undo-paid", icon=":material/undo:", type="tertiary"):
+    if not st.button(label, key="undo-paid", icon=":material/undo:"):
         return
     try:
         sink.undo_reimbursement(event_id)
@@ -74,10 +74,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
     for col, (label, cls) in zip(head, [("Person", ""), ("Receipts", "num"), ("Fronted", "num"), ("Paid back", "num"),
                                         ("Still owed", "num"), ("Paid with", ""), ("", "")], strict=True):
         cell(col, label, f"head {cls}")
-    owing = [x for x in lines if x.owed > 0]
-    for n, x in enumerate(owing + [x for x in lines if x.owed <= 0]):
-        if n == len(owing) and owing:  # who's still owed on top, then the paid-up group under its own label
-            cell(st.container(), "Paid back", "group")
+    for x in lines:  # rows never move: Mark paid leaves the person where they were
         row = st.columns(LEDGER, vertical_alignment="center")
         cell(row[0], f"<b>{html.escape(x.payer)}</b>")
         cell(row[1], str(counts[x.payer]), "num")
@@ -89,7 +86,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
             cell(row[5], html.escape(f"{p['method']}, {date.fromisoformat(str(p['date'])):%b} "
                                      f"{date.fromisoformat(str(p['date'])).day}") if p else "", "soft")
             pop = ss.get("just_paid") == x.payer  # coins burst out once, right after Mark paid
-            # data-for makes each payer's burst new markup, so it plays again when the next row lands in the same spot.
+            # data-for makes each payer's burst its own markup, so it plays for every payer, not just the first.
             coins = COINS.replace('class="tly-coins"', f'class="tly-coins" data-for="{html.escape(x.payer)}"')
             cell(row[6], f'<span class="tly-paid-pop">✓ Paid</span>{coins}' if pop else "✓ Paid", "paid")
             continue

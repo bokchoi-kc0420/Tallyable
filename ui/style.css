@@ -329,10 +329,14 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p { font-size: var(--tly-t-sm); line-height: 1.45; }
 
 /* Upload: the page's last step stays pinned to the bottom of the screen, so a pile of photos never hides it */
-[data-testid="stLayoutWrapper"]:has(> .st-key-upload-next) { position: sticky; bottom: 0; z-index: 5; padding: 8px 0;
+[data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { position: sticky; bottom: 0; z-index: 5; padding: 8px 0;
   background: var(--tly-page); }
 .st-key-read-bar { background: var(--tly-card); box-shadow: var(--tly-shadow); justify-content: space-between; }
 .st-key-upload-next [data-testid="stVerticalBlockBorderWrapper"] { background: var(--tly-card); }
+.st-key-finish-row { background: var(--tly-card); box-shadow: var(--tly-shadow); }
+/* Undo is a safe fix but takes money back: red outline, so it reads "careful" next to Mark paid */
+.st-key-undo-paid button { color: var(--tly-berry-deep); border-color: var(--tly-berry); }
+.st-key-undo-paid button:hover { color: var(--tly-berry-deep); border-color: var(--tly-berry-deep); background: var(--tly-berry-tint); }
 .tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 16px; border-radius: var(--tly-r-in);
   background: var(--tly-sun-tint); font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-ink); }
 .tly-edit-hint .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-lg); color: var(--tly-sun-ink); }
@@ -347,7 +351,6 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   60% { opacity: 1; transform: translate(var(--x), var(--y)) scale(1) rotate(200deg); }
   100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 24px)) scale(.9) rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tly-coins { display: none; } .tly-paid-pop { animation: none; } }
-.tly-led.group { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); color: var(--tly-forest); padding-top: 8px; }
 /* Labels line up with the text inside the boxes (inputs are white via secondaryBackgroundColor). */
 [data-testid="stMain"] [data-testid="stWidgetLabel"] { padding-left: 8px; margin-bottom: -4px; }
 [data-testid="stProgress"] [role="progressbar"] > div { background-color: var(--tly-paper); }

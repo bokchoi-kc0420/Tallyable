@@ -145,13 +145,14 @@ def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None 
     return bubble
 
 
-def loading(slot, title: str, detail: str, frac: float | None, rows: list[str | None] = ()) -> None:
+def loading(slot, title: str, detail: str, frac: float | None, rows: list[str | None] = (),
+            pose: str = "tally-magnify.png") -> None:
     """Tally's loading card, drawn into an st.empty() slot. frac None = a bar that just runs.
     rows: one line per item being read, a finished one as text and a waiting one (None) as a skeleton."""
     bar = (f'<div class="bar"><i style="width:{max(frac, 0.04) * 100:.0f}%"></i></div>' if frac is not None
            else '<div class="bar run"><i></i></div>')
     lines = "".join(f"<li>{html.escape(r)}</li>" if r else '<li class="sk"></li>' for r in rows)
-    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri("tally-magnify.png")}" alt="">'
+    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri(pose)}" alt="">'
                   f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}'
                   f'{f"<ul>{lines}</ul>" if lines else ""}</div></div>', unsafe_allow_html=True)
 

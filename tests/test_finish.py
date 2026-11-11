@@ -48,10 +48,13 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     assert any("1 person still owed" in m.value for m in at.markdown)  # honest about Member A
     assert any(b.label == "Reopen" for b in at.sidebar.button)  # its stub sits in Past events
     assert any('class="tly-stub"' in m.value for m in at.sidebar.markdown)  # finished = torn-off stub
+    hidden = ".st-key-event-group { display: none; }"
+    assert any(hidden in h.value for h in at.get("html"))  # its ticket left the sidebar
     at.button(key="reopen-event").click().run()
     assert not at.session_state["event"]["finished"]
     assert at.sidebar.radio(key="step").value == "4. Close out"
     assert any(b.key == "finish-event" for b in at.button)
+    assert not any(hidden in h.value for h in at.get("html"))  # reopened: the ticket is back
 
 
 def test_start_the_next_event_from_the_finish_page():
