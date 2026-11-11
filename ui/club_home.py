@@ -130,9 +130,12 @@ def crew(me: dict) -> None:
                           kwargs={"members": [x for x in names if x != name]})
         club.chip_style("club-rm", names)
         start = "not set" if me["start_balance"] is None else usd(Decimal(str(me["start_balance"])))
-        books = "Saved to <b>Google Sheets</b>" if connect.linked() else "Saved on <b>this computer</b>"
-        st.html(f'<div class="tly-facts"><span>Started with <b>{start}</b></span>'
-                f'<span>Profit goal <b>{me["target"]}%</b></span><span>{books}</span></div>')
+        books = ("table", "Google Sheets") if connect.linked() else ("laptop_mac", "This computer")
+        facts = [("savings", "Started with", start), ("flag", "Profit goal", f'{me["target"]}%'),
+                 (books[0], "Books saved on", books[1])]
+        st.html('<div class="tly-facts">' + "".join(
+            f'<div><i class="ms">{icon}</i><span><small>{label}</small><b>{value}</b></span></div>'
+            for icon, label, value in facts) + "</div>")
         settings(me)
 
 

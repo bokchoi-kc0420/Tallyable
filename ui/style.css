@@ -13,7 +13,7 @@
   --tly-forest: #1C5C36; --tly-forest-2: #3F8A5A; --tly-forest-3: #6FAE82; --tly-done: #DDEBD9; --tly-green-tint: #E6F0E2; --tly-green-line: #CFE3D2; --tly-sage: #8FB38A;
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
-  --tly-hover: rgba(247,190,63,.22);
+  --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C;
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
    on buttons and cards, a numbered step bar, and the mascot. Motion is off for reduced-motion users. */

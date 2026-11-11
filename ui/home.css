@@ -98,8 +98,14 @@
 .st-key-first-club { max-width: 880px; margin: 48px auto 0; background: var(--tly-white); border: 1px solid var(--tly-line);
   border-radius: 24px; padding: 16px 32px 16px 16px; box-shadow: var(--tly-shadow); }
 .st-key-first-club .tly-newclub { min-height: 420px; }
-/* Club facts as chips */
-.tly-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
-.tly-facts span { background: transparent; border: 1px dashed var(--tly-line-strong); border-radius: 999px; padding: 4px 12px;
-  font-size: .875rem; color: var(--tly-soft); }
-.tly-facts b { font-family: var(--tly-head); font-weight: 600; color: var(--tly-ink); }
+/* Club facts as mini tiles: colored icon, small label, bold value */
+.tly-facts { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 8px; }
+.tly-facts > div { display: flex; gap: 10px; align-items: center; min-width: 180px; background: var(--tly-white);
+  border: 1px solid var(--tly-line); border-radius: 16px; padding: 10px 14px; }
+.tly-facts .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: 20px; line-height: 1;
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--tly-white);
+  background: var(--tly-forest); font-variation-settings: "FILL" 1; }
+.tly-facts > div:nth-child(2) .ms { background: var(--tly-clay); }
+.tly-facts > div:nth-child(3) .ms { background: var(--tly-navy); }
+.tly-facts small { display: block; font-size: .75rem; color: var(--tly-soft); }
+.tly-facts b { font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; color: var(--tly-ink); }
