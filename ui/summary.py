@@ -199,9 +199,10 @@ def show(event: EventInfo) -> None:
         st.markdown("**Money in vs out**")
         money_panel(receipts, income)
 
-    html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)", "Status": r.status,
-                 "Posts": usd(r.posted_amount) if r.counts else "",
-                 "Note": r.review_note or ""} for r in receipts], numeric=("Posts",))
+    with st.expander(f"See all {len(receipts)} receipts"):  # folded, so the books button isn't a long scroll away
+        html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)", "Status": r.status,
+                     "Posts": usd(r.posted_amount) if r.counts else "",
+                     "Note": r.review_note or ""} for r in receipts], numeric=("Posts",))
 
     waiting = [r.receipt_id for r in receipts if r.status is Status.DRAFTED]
     if waiting:

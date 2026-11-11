@@ -85,7 +85,9 @@ def show() -> None:
             st.markdown("**What's the event?**")
             c = st.columns([3, 2, 1.3])
             locked = bool(ss.receipts)  # receipts carry the event id, so it stays put (name and date can change)
-            name = c[0].text_input("Event name", ss.event["name"], key="start-name")
+            typed = c[0].text_input("Event name", "" if ss.event["name"] == "New event" else ss.event["name"],
+                                    key="start-name", placeholder="e.g. Spring Picnic")
+            name = typed.strip() or "New event"  # empty box, not a pre-typed name to delete first
             d = c[1].date_input("Date", ss.event["date"], key="start-date")
             people = int(c[2].number_input("People", min_value=1, value=ss.event["attendees"], key="start-people"))
         members_box()

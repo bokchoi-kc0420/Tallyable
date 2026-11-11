@@ -122,14 +122,14 @@ try {
   await shot("3-summary");
   const panel = page.locator(".tly-money").first();
   await shot("3-summary-money", panel);
-  await page.getByRole("button", { name: /Push to/ }).click();
+  await page.getByRole("button", { name: "Save and get Excel" }).click();  // no Google Sheet: saving is the push
   await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
   await shot("3-summary-done-card", page.locator(".st-key-books-in"));
   await firstAmount.fill("520");  // an edit after Push: the card asks to push again
   await firstAmount.press("Enter");
   await page.locator(".st-key-push-stale").waitFor({ timeout: 30000 });
   await shot("3-summary-stale", page.locator(".st-key-push-stale"));
-  await page.getByRole("button", { name: "Push again" }).click();
+  await page.getByRole("button", { name: "Save again" }).click();
   await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
 
   await step("Close out");
@@ -182,9 +182,7 @@ try {
   await dialog.getByRole("button", { name: "Add club" }).click();
   await idle();
   await shot("7-club-home-new-club");
-  await page.locator('[data-testid="stSidebar"] .st-key-steps label').filter({ hasText: "Upload" }).first().click();
-  await idle();
-  await shot("7-step-from-club-home");  // must leave Club home
+  // A brand-new club has no event yet, so the sidebar shows no steps to click (only New event).
   await clubMenu.click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: join(OUT, "7-club-menu-two-clubs.png") });
