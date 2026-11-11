@@ -1,12 +1,13 @@
 /* S1 done card (Summary) and the F2 finish page. Fredoka for titles, labels and money; Outfit for sentences. */
-.st-key-books-in { background: var(--tly-green-tint); border-color: var(--tly-green-line) !important; }
-.st-key-books-in, .st-key-push-stale, .st-key-finish-row { padding: 16px 24px; }
+.st-key-books-in, .st-key-clean-card { background: var(--tly-green-tint); border-color: var(--tly-green-line) !important; }
+.st-key-books-in, .st-key-push-stale, .st-key-finish-row, .st-key-clean-card, .st-key-read-bar { padding: 16px 24px; }
 .st-key-push-stale { background: var(--tly-sun-tint); border-color: var(--tly-sun-deep) !important; }
 .tly-done-art { width: 120px; height: auto; display: block; margin: 0 auto; }
 .tly-done-title, [data-testid="stMarkdownContainer"] p.tly-done-title { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-xl); color: var(--tly-ink); margin: 0; line-height: 1.2; }
 .tly-done-title span { color: var(--tly-forest); }
 .tly-done-sub, [data-testid="stMarkdownContainer"] p.tly-done-sub { font-family: var(--tly-body); color: var(--tly-soft); font-size: var(--tly-t-md); margin: 4px 0 8px; }
-.st-key-finish-row .tly-done-sub, .st-key-push-stale .tly-done-sub { margin: 0; }
+.st-key-finish-row .tly-done-sub, .st-key-push-stale .tly-done-sub, .st-key-clean-card .tly-done-sub,
+.st-key-read-bar .tly-done-sub { margin: 0; }
 .st-key-books-in-buttons { gap: 16px; flex-wrap: wrap; }
 
 /* F2 */
@@ -28,7 +29,8 @@
 .tly-open-title { font-family: var(--tly-head); font-weight: 600; color: var(--tly-sun-ink); margin: 0; }
 .tly-open-item { font-family: var(--tly-body); margin: 0; color: var(--tly-ink-2); }
 .st-key-finish-buttons { gap: 16px; flex-wrap: wrap; margin-top: 8px; }
-.st-key-push-stale p.tly-done-title, .st-key-finish-row p.tly-done-title { font-size: var(--tly-t-lg); }
+.st-key-push-stale p.tly-done-title, .st-key-finish-row p.tly-done-title, .st-key-clean-card p.tly-done-title,
+.st-key-read-bar p.tly-done-title { font-size: var(--tly-t-lg); }
 
 /* A wider sidebar (Kevin, 2026-11-09): the ticket, steps, Edit event and Past events had too little room. */
 @media (min-width: 768px) { section[data-testid="stSidebar"][data-collapsed="false"] { width: 360px !important; min-width: 360px !important; } }

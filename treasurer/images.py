@@ -75,16 +75,15 @@ def prepare(data: bytes, filename: str) -> Prepared:
         raise UnsupportedFile(f"{name} won't open as an image (it may be damaged). Enter it by hand below.") from e
 
     warnings = []
-    rotated = ImageOps.exif_transpose(im)  # phones store "turn me" as a tag; apply it
-    if rotated.size != im.size or im.getexif().get(0x0112, 1) != 1:
-        warnings.append("Rotated upright using the photo's orientation tag.")
-    im = rotated
+    upright = ImageOps.exif_transpose(im)  # phones store "turn me" as a tag; apply it (no warning: nothing to check)
+    turned = upright.size != im.size or im.getexif().get(0x0112, 1) != 1
+    im = upright
     if min(im.size) < MIN_SIDE:
         warnings.append(f"Small image ({im.size[0]}x{im.size[1]}px); small print may be misread. Check each line.")
     if blur_score(im) < BLUR_LINE:
         warnings.append("Looks blurry. Check every number against the photo, or retake it.")
 
-    changed = ext in (".heic", ".heif") or max(im.size) > MAX_SIDE or bool(warnings and "Rotated" in warnings[0])
+    changed = ext in (".heic", ".heif") or max(im.size) > MAX_SIDE or turned
     if not changed:
         return Prepared(data, name, IMAGE_TYPES[ext], warnings)
     im.thumbnail((MAX_SIDE, MAX_SIDE))

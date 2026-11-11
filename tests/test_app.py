@@ -22,10 +22,10 @@ def new_app(members: str = MEMBERS) -> AppTest:
 
 
 def draft(at) -> None:
-    """Click Draft rows, tagging every untagged receipt with the first member first (Draft waits for tags)."""
-    if next(b for b in at.button if b.label == "Draft rows").disabled:
+    """Click Read, tagging every untagged receipt with the first member first (Read waits for tags)."""
+    if at.button(key="read").disabled:
         next(b for b in at.button if b.label == "Apply to all").click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    at.button(key="read").click().run()
 
 
 def owed_table(at) -> list[dict]:
@@ -274,7 +274,8 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
 def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert any("14 receipts in" in i.value and "14 still need a payer" in i.value for i in at.markdown)
+    assert any("14 receipts in" in i.value for i in at.markdown)
+    assert any("14 still need a payer" in i.value for i in at.markdown)
     next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
@@ -307,13 +308,19 @@ def test_each_step_says_what_comes_next():
     assert at.sidebar.radio(key="step").value == "4. Close out"
 
 
-def test_drafting_the_same_photos_twice_reads_them_once():
+def test_photos_already_read_are_not_read_again():
     at = new_app().run()
-    for _ in range(2):
-        next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-        draft(at)
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    draft(at)
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    assert not [b for b in at.button if b.key == "read"]  # nothing new: Go to Review is the next step
     assert len(at.session_state["receipts"]) == 14
-    assert "Skipped 14 I'd already read" in at.session_state["last_draft"]
+    from treasurer.reader import make_extractor
+    from ui.upload import read_one
+    photo, data = at.session_state["images"]["R01"]
+    import hashlib
+    f, r, problem = read_one(make_extractor()[0], "copy.jpg", photo, "EVT", "R99", frozenset({hashlib.sha256(photo).hexdigest()}))
+    assert f and r is None and problem is None  # the same photo under another name is skipped, not paid for twice
 
 
 def test_a_finished_event_can_be_reopened_later():
@@ -514,12 +521,12 @@ def test_connect_catches_a_viewer_only_share(monkeypatch):
     assert connect.check({"book": "x"}) is None
 
 
-def test_draft_rows_waits_for_every_payer():
+def test_read_waits_for_every_payer():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert next(b for b in at.button if b.label == "Draft rows").disabled
+    assert at.button(key="read").label == "Read 14 receipts" and at.button(key="read").disabled
     next(b for b in at.button if b.label == "Apply to all").click().run()
-    assert not next(b for b in at.button if b.label == "Draft rows").disabled
+    assert not at.button(key="read").disabled
 
 
 def test_delete_event_removes_it_for_good():

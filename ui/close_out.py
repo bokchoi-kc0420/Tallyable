@@ -244,6 +244,7 @@ def photos(event: EventInfo, done: list[Receipt], lines) -> None:
     owed = {x.payer: x.owed for x in lines}
     paid = {r.receipt_id: ("Not yet" if owed.get(r.payer or "(no payer)", 0) > 0 else "Yes") if r.payer else ""
             for r in done}
+    images = ss.images  # the PDF is built when the button is clicked, not on every visit (0.7s with phone photos)
     st.download_button("Download receipt photos (PDF)", icon=":material/photo_library:", key="dl-photos",
-                       file_name=f"{event.event_id}_receipt_photos.pdf", mime="application/pdf",
-                       data=receipts_pdf(done, ss.images, paid))
+                       file_name=f"{event.event_id}_receipt_photos.pdf", mime="application/pdf", on_click="ignore",
+                       data=lambda: receipts_pdf(done, images, paid))

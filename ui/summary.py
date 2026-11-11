@@ -157,8 +157,8 @@ def downloads(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
         st.caption("Every report in one formatted Excel file, for approved receipts. Open it in Excel, or bring "
                    "it into your own Google Sheet with File > Import. No sharing needed.")
         views = local_views(receipts, event, income, saved_reimbursements(sink))
-        st.download_button("Download the whole book (Excel)", type="secondary" if tucked else "primary",
-                           icon=":material/download:", data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
+        st.download_button("Download the whole book (Excel)", icon=":material/download:", on_click="ignore",
+                           data=lambda: book_xlsx(views, local_transactions(receipts), TX_FIELDS),  # built on click
                            file_name=f"{event.event_id}_books.xlsx", key="dl-xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     with st.expander("Or one report at a time (CSV)"):

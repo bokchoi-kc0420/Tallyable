@@ -13,7 +13,7 @@
   --tly-forest: #1C5C36; --tly-forest-2: #3F8A5A; --tly-forest-3: #6FAE82; --tly-done: #DDEBD9; --tly-green-tint: #E6F0E2; --tly-green-line: #CFE3D2; --tly-sage: #8FB38A;
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
-  --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C;
+  --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
    on buttons and cards, a numbered step bar, and the mascot. Motion is off for reduced-motion users. */
@@ -327,3 +327,9 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 
 /* Helper sentences inside cards one size down, so boxes stay short */
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p { font-size: var(--tly-t-sm); line-height: 1.45; }
+
+/* Upload: the page's last step stays pinned to the bottom of the screen, so a pile of photos never hides it */
+[data-testid="stLayoutWrapper"]:has(> .st-key-upload-next) { position: sticky; bottom: 0; z-index: 5; padding: 8px 0;
+  background: var(--tly-page); }
+.st-key-read-bar { background: var(--tly-card); box-shadow: var(--tly-shadow); justify-content: space-between; }
+.st-key-upload-next [data-testid="stVerticalBlockBorderWrapper"] { background: var(--tly-card); }

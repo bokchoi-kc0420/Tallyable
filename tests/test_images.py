@@ -28,7 +28,7 @@ def test_sideways_phone_photo_is_turned_upright():
     f = prepare(jpeg(im, exif=exif), "R01.jpg")
     out = Image.open(io.BytesIO(f.data))
     assert out.size == Image.open(io.BytesIO(R01)).size
-    assert any("Rotated" in w for w in f.warnings)
+    assert f.warnings == []  # turned for you: nothing to check, so it can't hold the receipt out of Approve all
 
 
 def test_blurry_photo_warns_but_does_not_block():
