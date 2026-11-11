@@ -58,3 +58,6 @@
 @keyframes tly-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); }
   85% { opacity: 1; } 100% { opacity: 0; transform: translateY(105vh) rotate(var(--r)); } }
 @media (prefers-reduced-motion: reduce) { .tly-confetti { display: none; } }
+/* Streamlit pulls markdown up by 16px at the bottom; in these one-row cards that sank the text below center. */
+.st-key-finish-row [data-testid="stMarkdownContainer"], .st-key-push-stale [data-testid="stMarkdownContainer"],
+.st-key-clean-card [data-testid="stMarkdownContainer"], .st-key-read-bar [data-testid="stMarkdownContainer"] { margin-bottom: 0; }
