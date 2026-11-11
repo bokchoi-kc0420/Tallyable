@@ -259,8 +259,8 @@ def show() -> tuple[str, EventInfo]:
     dots = "".join(f".st-key-ticket-color [role=radiogroup] > div:nth-of-type({n}) p::before {{ background: {c}; }}"
                    for n, (c, _) in enumerate(PALETTE.values(), start=1))
     picked = PALETTE[ss.event.get("color") or NAMES[0]][0]
-    # Before the first event there's nothing to show on a ticket: it appears once one is started.
-    blank = ss.get("view") == "club" and not ss.event.get("set_up") and not ss.receipts
+    # No ticket before the first event starts, and none once it's finished: it lives under Past events then.
+    blank = ss.event.get("finished") or (ss.get("view") == "club" and not ss.event.get("set_up") and not ss.receipts)
     hide = ".st-key-event-group { display: none; }" if blank else ""
     st.html(f"<style>{dots} .st-key-color-menu button p::before {{ background: {picked}; }} {hide}</style>")
     past_events_box()
