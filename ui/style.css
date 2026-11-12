@@ -149,6 +149,14 @@
   font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg);
   color: var(--tly-ink); line-height: 1.25; }
 [class*="st-key-guide-"] { margin: 4px 0 8px; }
+/* A missed receipt's way back to the finish: four small numbered steps inside Tally's bubble */
+.tly-trail { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 0; }
+.tly-trail span { display: inline-flex; align-items: center; gap: 8px; font-family: var(--tly-head) !important; font-weight: 600; color: var(--tly-soft); }
+.tly-trail i { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-style: normal;
+  font-size: var(--tly-t-xs); border: 2px solid var(--tly-line-strong); }
+.tly-trail .now, .tly-trail .done { color: var(--tly-forest); }
+.tly-trail .now i { background: var(--tly-forest); border-color: var(--tly-forest); color: var(--tly-white); }
+.tly-trail .done i { background: var(--tly-done); border-color: var(--tly-done); }
 [class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: var(--tly-white) !important; font-weight: 600; }
 
 /* No link icon next to headers: it only jumps to the same page */
@@ -342,6 +350,12 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* Helper sentences inside cards one size down, so boxes stay short */
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p { font-size: var(--tly-t-sm); line-height: 1.45; }
 
+/* The bar is the page's last thing and the page is at least a screen tall, so the bar sits on the
+   bottom edge of the screen whether the page is short or long. */
+[data-testid="stMainBlockContainer"]:has(.st-key-upload-next, .st-key-finish-next) { display: flex; flex-direction: column;
+  min-height: 100vh; padding-bottom: 0; }
+[data-testid="stMainBlockContainer"]:has(.st-key-upload-next, .st-key-finish-next) > [data-testid="stVerticalBlock"] { flex: 1; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { margin-top: auto; }
 /* Upload: the page's last step stays pinned to the bottom of the screen, so a pile of photos never hides it */
 [data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { position: sticky; bottom: 0; z-index: 5; padding: 8px 0;
   background: var(--tly-page); }

@@ -163,6 +163,7 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
             ss.notes[rid] = notes
         ss.failed.pop(name, None)
     bar.empty()
+    ss.next_pick = next((rid for rid in rids if rid in ss.receipts), None)  # Review opens on the first one just read
     ss.demo = []
     ss.drafted_at = ss.drafted_at or time.time()
     cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
@@ -331,8 +332,6 @@ def show(event: EventInfo) -> None:
               f"**Read {plural(len(todo), 'receipt')}** at the bottom."), key="loaded", tip=True)
     if sources:
         who_paid(sources)
-    next_up(sources, ex, reader, event)
-
     for name, (data, reason) in list(ss.failed.items()):
         st.error(md(f"{name}: {reason}"))
         with st.expander(f"Enter {name} by hand"):
@@ -342,3 +341,4 @@ def show(event: EventInfo) -> None:
 
     with st.expander("Add a purchase with no photo (cash, lost receipt)"):
         manual_form("manual", event)
+    next_up(sources, ex, reader, event)  # last, so it's the bar along the bottom of the screen

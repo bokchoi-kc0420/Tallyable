@@ -194,11 +194,12 @@ class GoogleSheetsSink:
     def reimbursements(self) -> list[dict]:
         return self._records(REIMB, REIMB_FIELDS)
 
-    def record_reimbursement(self, r) -> None:
-        """Append to the Reimbursements tab and rebuild the Receipts tab."""
-        row = r.row()
+    def record_reimbursements(self, paybacks: list) -> None:
+        """Append to the Reimbursements tab and rebuild the Receipts tab: once, however many paybacks."""
+        rows = [r.row() for r in paybacks]
         ws = self._tab(REIMB, REIMB_FIELDS)
-        ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS]], value_input_option="RAW")
+        ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS] for row in rows],
+                       value_input_option="RAW")
         self._refresh_receipts(ws)
 
     def undo_reimbursement(self, event_id: str) -> None:

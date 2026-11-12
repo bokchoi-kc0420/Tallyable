@@ -1,6 +1,9 @@
 """The "Books are in!" card after Push, and finishing an event."""
+import csv
+import os
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 from test_app import new_app, upload_and_draft
 
@@ -100,3 +103,31 @@ def test_upload_says_so_when_the_photos_were_already_read():
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()  # ...and picking them again
     assert any("Nothing new to read" in m.value and "R01.jpg" in m.value for m in at.markdown)
     assert at.button(key="to-review")
+
+
+def test_mark_all_paid_pays_everyone_the_way_their_row_says():
+    at = new_app().run()
+    upload_and_draft(at)
+    for rid, payer in [("R01", "Member A"), ("R03", "Member B")]:
+        at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
+            update={"status": Status.APPROVED, "payer": payer})
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.selectbox(key="method-Member B").set_value("Venmo").run()
+    at.button(key="paid-all").click().run()
+    assert not at.exception
+    assert not [b for b in at.button if b.key.startswith("paid-")]  # everyone shows Paid
+    saved = list(csv.DictReader(Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv").open()))
+    assert {(r["payer"], r["method"]) for r in saved} == {("Member A", "Zelle"), ("Member B", "Venmo")}
+
+
+def test_add_a_missed_receipt_reopens_on_upload_and_shows_the_way_back():
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    at.button(key="add-missed").click().run()
+    assert at.sidebar.radio[0].value == "1. Upload" and not at.session_state["event"]["finished"]
+    assert any("Adding a missed receipt" in m.value for m in at.markdown)
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    assert any("Pay them back" in m.value for m in at.markdown)  # the trail follows every step
+    at.button(key="finish-event").click().run()
+    assert not at.session_state["event"]["late"]  # finished again: the trail is done

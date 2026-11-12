@@ -20,10 +20,11 @@ from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, sa
 EXAMPLES = {"Example: event grant (up to $2,500)": co.CFC, "Example: yearly grant ($250)": co.ORG}
 
 
-def save_payback(sink, payback: Reimbursement) -> bool:
+def save_paybacks(sink, paybacks: list[Reimbursement]) -> bool:
+    who = paybacks[0].payer if len(paybacks) == 1 else f"{len(paybacks)} people"
     try:
-        with st.spinner(f"Saving the payback to {payback.payer}..."):
-            sink.record_reimbursement(payback)
+        with st.spinner(f"Saving the payback to {who}..."):
+            sink.record_reimbursements(paybacks)
     except Exception as e:
         st.error(f"Payback not saved: {e}. Try again.")
         return False
@@ -74,6 +75,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
     for col, (label, cls) in zip(head, [("Person", ""), ("Receipts", "num"), ("Fronted", "num"), ("Paid back", "num"),
                                         ("Still owed", "num"), ("Paid with", ""), ("", "")], strict=True):
         cell(col, label, f"head {cls}")
+    unpaid: list[Reimbursement | None] = []  # one per row that can be paid; None while its "Other" has no note
     for x in lines:  # rows never move: Mark paid leaves the person where they were
         row = st.columns(LEDGER, vertical_alignment="center")
         cell(row[0], f"<b>{html.escape(x.payer)}</b>")
@@ -85,7 +87,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
             p = last.get(x.payer)
             cell(row[5], html.escape(f"{p['method']}, {date.fromisoformat(str(p['date'])):%b} "
                                      f"{date.fromisoformat(str(p['date'])).day}") if p else "", "soft")
-            pop = ss.get("just_paid") == x.payer  # coins burst out once, right after Mark paid
+            pop = x.payer in ss.get("just_paid", ())  # coins burst out once, right after Mark paid
             # data-for makes each payer's burst its own markup, so it plays for every payer, not just the first.
             coins = COINS.replace('class="tly-coins"', f'class="tly-coins" data-for="{html.escape(x.payer)}"')
             cell(row[6], f'<span class="tly-paid-pop">✓ Paid</span>{coins}' if pop else "✓ Paid", "paid")
@@ -94,11 +96,12 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
             cell(row[5], "Set a payer in Review", "soft")
             continue
         how = paid_with(row[5], x.payer)
+        unpaid.append(Reimbursement(event_id, x.payer, date.today(), x.owed, *how) if how else None)
         if not row[6].button("Mark paid", key=f"paid-{x.payer}", type="primary", width="stretch", disabled=not how,
                              help=f"Records {md('$' + str(x.owed))} paid back to {x.payer} today."):
             continue
-        if save_payback(sink, Reimbursement(event_id, x.payer, date.today(), x.owed, *how)):
-            ss.just_paid = x.payer
+        if save_paybacks(sink, unpaid[-1:]):
+            ss.just_paid = [x.payer]
             st.rerun()
     ss.pop("just_paid", None)
     tot = st.columns(LEDGER, vertical_alignment="center")
@@ -106,8 +109,15 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
     cell(tot[1], str(sum(counts[x.payer] for x in lines)), "total num")
     for col, field in zip(tot[2:5], ["fronted", "reimbursed", "owed"], strict=True):
         cell(col, usd(sum((getattr(x, field) for x in lines), Decimal("0"))), "total num")
-    for col in tot[5:]:
-        cell(col, "", "total")
+    cell(tot[5], "", "total")
+    if len(unpaid) < 2:
+        cell(tot[6], "", "total")
+    # One save for everyone: each Mark paid is its own trip to the books, which is the slow part.
+    elif tot[6].button("Mark all paid", key="paid-all", width="stretch", disabled=None in unpaid,
+                       help=f"Records all {len(unpaid)} paid back today, each the way their row says."):
+        if save_paybacks(sink, unpaid):
+            ss.just_paid = [p.payer for p in unpaid]
+            st.rerun()
     st.caption(f"Each Mark paid is saved to {sink.label}.")
     if paybacks:
         undo_last(sink, paybacks[-1], event_id)
@@ -133,7 +143,7 @@ def payback_form(sink, owing: list, event_id: str) -> None:
         if problem:
             st.error(md(problem))
             return
-        if save_payback(sink, Reimbursement(event_id, who, when, amt, method, note)):
+        if save_paybacks(sink, [Reimbursement(event_id, who, when, amt, method, note)]):
             st.success(md(f"Recorded {usd(amt)} paid back to {who}."))
             st.rerun()
 

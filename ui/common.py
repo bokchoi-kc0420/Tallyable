@@ -214,6 +214,22 @@ def step_bar(current: str) -> None:
                 f'<div class="track"><div class="fill" style="width:{pct}%"></div>{"".join(dots)}'
                 f'<img src="{mascot_uri(TALLY[current])}" alt="" style="left:{pct}%"></div>'
                 f'<div class="stops">{"".join(labels)}</div></div>', unsafe_allow_html=True)
+    if ss.event.get("late"):
+        late_trail(i)
+
+
+LATE = [("Drop it", "Drop it below - I'll walk you back to the finish!"),
+        ("Check it", "Give it a look, then approve it."),
+        ("Push again", "Push again so the books get it."),
+        ("Pay back + finish", "Pay them back, then hit Finish event.")]
+
+
+def late_trail(now: int) -> None:
+    """A receipt added after closing out: Tally names the four steps back to the finish, on every one of them."""
+    chips = "".join(f'<span class="{"now" if n == now else "done" if n < now else ""}"><i>{"✓" if n < now else n + 1}</i>'
+                    f'{label}</span>' for n, (label, _) in enumerate(LATE))
+    bubble = guide(f"Adding a missed receipt to {ss.event['name']}.", LATE[now][1], key="late", tip=True)
+    bubble.markdown(f'<p class="tly-trail">{chips}</p>', unsafe_allow_html=True)
 
 
 def html_table(rows: list[dict], numeric: tuple[str, ...] = ()) -> None:

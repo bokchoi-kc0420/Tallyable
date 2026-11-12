@@ -71,14 +71,14 @@ class LocalCsvSink:
         with open(self._reimb_path, newline="") as fh:
             return list(csv.DictReader(fh))
 
-    def record_reimbursement(self, r) -> None:
+    def record_reimbursements(self, paybacks: list) -> None:
         new_file = not self._reimb_path.exists()
         self._reimb_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._reimb_path, "a", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=REIMB_FIELDS)
             if new_file:
                 w.writeheader()
-            w.writerow(r.row())
+            w.writerows(r.row() for r in paybacks)
 
     def undo_reimbursement(self, event_id: str) -> None:
         """Delete this event's most recent payback (a misclicked Mark paid)."""

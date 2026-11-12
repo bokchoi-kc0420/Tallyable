@@ -33,7 +33,7 @@ def event_id_for(name: str, d: date) -> str:
 def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
     Income sources carry over; who's in starts as the whole club list."""
-    ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished")}
+    ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished", "late")}
     ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color")),
                 "club": club.current()}
