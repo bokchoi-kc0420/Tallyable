@@ -119,6 +119,17 @@ def test_duplicate_by_identical_image_even_if_fields_differ():
     assert "B" in check_duplicates([a, b])
 
 
+def test_same_payer_same_total_a_day_apart_is_a_soft_flag_but_other_payers_are_not():
+    """Kevin's real parking: three members each paid $25 at the same garage (three real purchases),
+    but one member's paper receipt plus their bank screenshot is one purchase sent twice."""
+    paper = make(receipt_id="A", place="LAZ Parking")
+    bank = make(receipt_id="B", place="LAZ PKG L CENTER", date=date(2026, 11, 2))
+    flag = check_duplicates([paper, bank])["B"][0]
+    assert flag.severity is Severity.WARN and "A" in flag.message
+    other_car = make(receipt_id="C", place="Center Street Garage", payer="Member B")
+    assert check_duplicates([paper, other_car]) == {}
+
+
 def test_duplicates_only_within_one_event():
     a = make(receipt_id="A", event_id="E1")
     b = make(receipt_id="B", event_id="E2")

@@ -80,6 +80,16 @@ class ExtractedReceipt(BaseModel):
     tip: str = "0.00"
     total: str = Field(description="Total exactly as printed or handwritten")
     unreadable_note: str | None = None
+    proof: Literal["receipt", "cart", "estimate", "pending_charge"] = Field(
+        default="receipt", description="receipt: a final receipt or a placed order. cart: a shopping cart before "
+        "checkout. estimate: a price quoted before the service (a ride not taken yet). pending_charge: a bank or "
+        "card app showing a charge, not the seller's receipt.")
+
+
+# Not proof that money was spent: the treasurer decides, Tally only says so on Review.
+NOT_FINAL = {"cart": "This is a cart before checkout, not a final receipt - ask for the order confirmation.",
+             "estimate": "This is a price estimate, not a final receipt - ask for the receipt from after the ride or service.",
+             "pending_charge": "This is a bank charge, not the seller's receipt - ask for the receipt if there is one."}
 
 
 def _money(text: str, field: str, filename: str) -> Decimal:
@@ -140,7 +150,7 @@ class ClaudeExtractor:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
-        note = x.unreadable_note
+        note = "; ".join(filter(None, [NOT_FINAL.get(x.proof), x.unreadable_note])) or None
         if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
             x.date = date.today().isoformat()
             note = "; ".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))

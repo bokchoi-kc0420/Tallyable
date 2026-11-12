@@ -54,6 +54,12 @@ def test_qty_zero_line_is_not_charged():  # Dollar Tree: "Bag Fee 0 0.10 0.00N" 
     assert [i.item for i in r.items] == ["Mini cups"]
 
 
+def test_a_cart_screenshot_is_called_out_as_not_a_final_receipt():
+    r = ClaudeExtractor(client=FakeClient(reading(proof="cart"))).extract(b"x", "cart.png", "EVT", "R01")
+    assert "not a final receipt" in r.review_note
+    assert ClaudeExtractor(client=FakeClient(reading())).extract(b"x", "R01.jpg", "EVT", "R01").review_note is None
+
+
 def test_reader_uses_stub_in_tests():
     from treasurer.reader import make_extractor
     assert make_extractor()[1] == "stub"
