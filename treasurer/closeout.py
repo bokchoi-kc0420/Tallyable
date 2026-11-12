@@ -217,8 +217,9 @@ def payer_summary(receipts: list[Receipt], reimbursed: dict[str, Decimal] | None
     fronted: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for r in receipts:
         fronted[(r.payer or "").strip() or "(no payer)"] += r.posted_amount
+    # Biggest spender first. Not by what's still owed: a payback would shuffle the rows under the cursor.
     return sorted((PayerLine(p, money(v), money(reimbursed.get(p, Decimal("0"))))
-                   for p, v in fronted.items()), key=lambda line: -line.owed)
+                   for p, v in fronted.items()), key=lambda line: -line.fronted)
 
 
 def funder_report_csv(event: Event, receipts: list[Receipt], pack: RulePack, requested: Decimal | None = None,

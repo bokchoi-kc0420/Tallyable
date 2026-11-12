@@ -118,3 +118,16 @@ def test_mark_all_paid_pays_everyone_the_way_their_row_says():
     assert not [b for b in at.button if b.key.startswith("paid-")]  # everyone shows Paid
     saved = list(csv.DictReader(Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv").open()))
     assert {(r["payer"], r["method"]) for r in saved} == {("Member A", "Zelle"), ("Member B", "Venmo")}
+
+
+def test_add_a_missed_receipt_reopens_on_upload_and_shows_the_way_back():
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    at.button(key="add-missed").click().run()
+    assert at.sidebar.radio[0].value == "1. Upload" and not at.session_state["event"]["finished"]
+    assert any("Adding a missed receipt" in m.value for m in at.markdown)
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    assert any("Pay them back" in m.value for m in at.markdown)  # the trail follows every step
+    at.button(key="finish-event").click().run()
+    assert not at.session_state["event"]["late"]  # finished again: the trail is done

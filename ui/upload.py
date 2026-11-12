@@ -163,6 +163,7 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
             ss.notes[rid] = notes
         ss.failed.pop(name, None)
     bar.empty()
+    ss.next_pick = next((rid for rid in rids if rid in ss.receipts), None)  # Review opens on the first one just read
     ss.demo = []
     ss.drafted_at = ss.drafted_at or time.time()
     cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""

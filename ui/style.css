@@ -149,6 +149,14 @@
   font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg);
   color: var(--tly-ink); line-height: 1.25; }
 [class*="st-key-guide-"] { margin: 4px 0 8px; }
+/* A missed receipt's way back to the finish: four small numbered steps inside Tally's bubble */
+.tly-trail { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 0; }
+.tly-trail span { display: inline-flex; align-items: center; gap: 8px; font-family: var(--tly-head) !important; font-weight: 600; color: var(--tly-soft); }
+.tly-trail i { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-style: normal;
+  font-size: var(--tly-t-xs); border: 2px solid var(--tly-line-strong); }
+.tly-trail .now, .tly-trail .done { color: var(--tly-forest); }
+.tly-trail .now i { background: var(--tly-forest); border-color: var(--tly-forest); color: var(--tly-white); }
+.tly-trail .done i { background: var(--tly-done); border-color: var(--tly-done); }
 [class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: var(--tly-white) !important; font-weight: 600; }
 
 /* No link icon next to headers: it only jumps to the same page */

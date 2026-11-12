@@ -51,9 +51,11 @@ def payback_lines(sink, event: EventInfo) -> list:
     return co.payer_summary(done, totals_by_payer(paybacks, event.event_id))
 
 
-def set_finished(done: bool, step: str = "4. Close out") -> None:
-    """Button callback: finish (or reopen) the event and save it, so Past events shows it right away."""
-    ss.event = {**ss.event, "finished": done}
+def set_finished(done: bool, step: str = "4. Close out", late: bool = False) -> None:
+    """Button callback: finish (or reopen) the event and save it, so Past events shows it right away.
+    late: reopened to add a missed receipt, so every step shows the way back to the finish."""
+    ss.event = {**ss.event, "finished": done, "late": late}
+    ss.pop("last_draft", None)  # "Done! I read all 14" is old news on a reopened Upload
     ss.confetti = done  # once, right after Finish event: not on every visit to the page
     ss.step = step
     save_session()
@@ -142,6 +144,8 @@ def show(event: EventInfo) -> None:
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
             st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
             st.button("Start the next event", key="next-event", on_click=next_event)
+            st.button("Add a missed receipt", key="add-missed", icon=":material/add:", on_click=set_finished,
+                      args=(False, "1. Upload", True))
         # The downloads sit a row lower and quieter, so the two ways on don't compete with them.
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-downloads"):
             ledger = getattr(getattr(sink, "ledger_book", None), "url", None)
