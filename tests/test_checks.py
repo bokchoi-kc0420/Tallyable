@@ -140,3 +140,22 @@ def test_blocking_flags_need_an_override_note(flags):
     assert not can_approve(flags["R07"])
     assert can_approve(flags["R07"], override_note="Paid by Member B, confirmed in chat")
     assert can_approve(flags["R14"])  # missing receipt only warns
+
+
+def test_a_cart_or_estimate_needs_a_note_but_a_bank_charge_only_asks():
+    for proof in ("cart", "estimate"):
+        f = run_checks([make(proof=proof)])["T1"]
+        assert [x.code for x in f] == ["not_final"] and not can_approve(f) and can_approve(f, "Final price matched")
+    assert run_checks([make(proof="pending_charge")])["T1"][0].severity is Severity.WARN
+    assert run_checks([make()])["T1"] == []
+
+
+def test_overridden_math_books_the_whole_total_under_one_category():
+    from collections import OrderedDict
+
+    from treasurer.expense_view import render_expense_report
+    from treasurer.post import transaction_rows
+    over_read = make(total="5.83")  # lines say $10.00, the receipt says $5.83 with $0.83 tax
+    view = render_expense_report({"event_id": "E", "name": "Mixer", "date": "2026-11-01"},
+                                 OrderedDict(T1=transaction_rows(over_read)))
+    assert ["Other", 5.0] in [r[:2] for r in view.grid]  # not the $10.00 the lines add up to

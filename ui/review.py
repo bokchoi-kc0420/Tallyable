@@ -17,6 +17,7 @@ FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_receipt": (":material/hide_image:", "No photo attached"),
              "unusual_tax": (":material/percent:", "Tax looks high"),
              "returned_item": (":material/undo:", "Returned item"),
+             "not_final": (":material/receipt_long:", "Not a final receipt"),
              "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
 FLAG_TONE = {Severity.BLOCK: ("block", "Must fix"), Severity.WARN: ("warn", "Check"), Severity.INFO: ("info", "FYI")}
 

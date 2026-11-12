@@ -59,6 +59,8 @@ class Receipt(BaseModel):
     image_hash: str | None = None
     status: Status = Status.DRAFTED
     review_note: str | None = None
+    # What the photo shows. Anything but a receipt is not proof that money was spent (see checks.check_proof).
+    proof: Literal["receipt", "cart", "estimate", "pending_charge"] = "receipt"
 
     @model_validator(mode="after")
     def _not_a_refund(self):

@@ -152,7 +152,7 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
             skipped += 1
             ss.skipped[name] = repeat
             continue
-        ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
+        ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name, "review_note": None})
         ss.images[rid] = (f.data, f.media_type)
         notes = f.warnings + (r.review_note.splitlines() if r.review_note else [])  # one line each on Review
         if len(parts) > 1:
