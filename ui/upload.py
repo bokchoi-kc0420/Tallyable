@@ -154,9 +154,9 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
             continue
         ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
         ss.images[rid] = (f.data, f.media_type)
-        notes = f.warnings + ([f"Reader's note: {r.review_note}"] if r.review_note else [])
+        notes = f.warnings + (r.review_note.splitlines() if r.review_note else [])  # one line each on Review
         if len(parts) > 1:
-            notes.append(f"Read from {len(parts)} screenshots as one receipt. Check that nothing is counted twice.")
+            notes.append(f"Read from {len(parts)} screenshots as one receipt - check nothing is counted twice.")
         for part, _ in parts[1:]:
             ss.skipped[part] = rid  # read as part of this receipt, so it isn't read again on its own
         if notes:

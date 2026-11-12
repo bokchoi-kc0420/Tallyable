@@ -154,10 +154,10 @@ class ClaudeExtractor:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
-        note = "; ".join(filter(None, [NOT_FINAL.get(x.proof), x.unreadable_note])) or None
+        note = "\n".join(filter(None, [NOT_FINAL.get(x.proof), x.unreadable_note])) or None
         if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
             x.date = date.today().isoformat()
-            note = "; ".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
+            note = "\n".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
         try:
             d = date.fromisoformat(x.date)
             # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.

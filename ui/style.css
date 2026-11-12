@@ -216,7 +216,12 @@
 .tly-nothumb { height: 110px; border-radius: var(--tly-r-in); background: var(--tly-paper); display: grid; place-items: center;
   font-family: var(--tly-head); font-weight: 600; color: var(--tly-forest); }
 /* Check results as cards */
-[class*="st-key-flag-"] { border-radius: var(--tly-r); padding: 8px 16px; margin-bottom: 4px; }
+[class*="st-key-flag-"] { border-radius: var(--tly-r); padding: 16px; margin-bottom: 8px; gap: 8px; }
+[class*="st-key-flag-note-"] { background: var(--tly-paper-soft); }
+.tly-notes { margin: 0; padding: 0 0 0 16px; font-size: var(--tly-t-sm); line-height: 1.45; color: var(--tly-ink-2); }
+.tly-notes li { margin: 0; padding: 0; }
+[class*="st-key-flag-"] [data-testid="stElementContainer"] + [data-testid="stElementContainer"]:has(.tly-notes) {
+  border-top: 1px solid var(--tly-line); padding-top: 8px; }
 /* Streamlit pulls markdown up by -1rem at the bottom, which pushed the message into the card's edge */
 [class*="st-key-flag-"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 [class*="st-key-flag-"] p { margin: 0; color: var(--tly-ink); line-height: 1.35; }
@@ -232,9 +237,9 @@
 [class*="st-key-flag-info-"] span[role="img"] { color: var(--tly-forest); }
 .tly-flagpill { font-family: var(--tly-head); font-weight: 500; font-size: var(--tly-t-xs); color: var(--tly-white); border-radius: 999px;
   padding: 4px 8px; margin-left: 8px; vertical-align: 1px; }
-[class*="st-key-flag-block-"] .tly-flagpill { background: var(--tly-berry); }
-[class*="st-key-flag-warn-"] .tly-flagpill { background: var(--tly-sun-deep); color: var(--tly-sun-ink); }
-[class*="st-key-flag-info-"] .tly-flagpill { background: var(--tly-forest); }
+.tly-flagpill.block { background: var(--tly-berry); }
+.tly-flagpill.warn { background: var(--tly-sun-deep); color: var(--tly-sun-ink); }
+.tly-flagpill.info { background: var(--tly-forest); }
 .tly-decided { border-radius: var(--tly-r); padding: 16px 16px; font-size: var(--tly-t-md); line-height: 1.5; }
 .tly-decided small { font-size: var(--tly-t-sm); opacity: .85; }
 .st-key-leave-out button { background: var(--tly-berry); border-color: var(--tly-berry); color: var(--tly-white); }
@@ -346,8 +351,8 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* Undo is a safe fix but takes money back: red outline, so it reads "careful" next to Mark paid */
 .st-key-undo-paid button { color: var(--tly-berry-deep); border-color: var(--tly-berry); }
 .st-key-undo-paid button:hover { color: var(--tly-berry-deep); border-color: var(--tly-berry-deep); background: var(--tly-berry-tint); }
-.tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 16px; border-radius: var(--tly-r-in);
-  background: var(--tly-sun-tint); font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-ink); }
+.tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0 16px;
+  font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-soft); }
 .tly-edit-hint .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-lg); color: var(--tly-sun-ink); }
 .tly-led.paid { position: relative; }
 .tly-paid-pop { display: inline-block; animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }

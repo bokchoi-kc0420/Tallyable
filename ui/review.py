@@ -71,11 +71,27 @@ def photo(rid: str) -> None:
     st.download_button("Open the PDF", image[0], file_name=f"{rid}.pdf", mime="application/pdf")
 
 
+def look_card(rid: str, flags: list) -> None:
+    """Everything to check on one receipt in ONE card: what must be fixed first, then the smaller notes
+    (blurry photo, what the reader couldn't see). The card takes the colour of its worst flag."""
+    notes = ss.notes.get(rid, [])
+    if not flags and not notes:
+        return
+    flags = sorted(flags, key=lambda f: list(FLAG_TONE).index(f.severity))
+    tone = FLAG_TONE[flags[0].severity][0] if flags else "note"
+    with st.container(key=f"flag-{tone}-{rid}"):
+        for f in flags:
+            icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
+            st.markdown(f"{icon} **{title}** <span class='tly-flagpill {FLAG_TONE[f.severity][0]}'>{FLAG_TONE[f.severity][1]}"
+                        f"</span>\n\n<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
+        if notes:
+            lines = "".join(f"<li>{md(html.escape(n))}</li>" for n in notes)
+            st.markdown(f"<ul class='tly-notes'>{lines}</ul>", unsafe_allow_html=True)
+
+
 def edit_form(rid: str, flags: list) -> None:
     """The receipt's fields, line items, and the Approve / Leave out / Reopen buttons."""
     r = ss.receipts[rid]
-    for note in ss.notes.get(rid, []):
-        st.warning(md(note))
     if r.status is not Status.DRAFTED:  # decided: one card says what happened, the flags are done with
         label, tone = STATUS_CHIP[r.status]
         why = f" · {html.escape(r.review_note)}" if r.review_note else ""
@@ -83,12 +99,7 @@ def edit_form(rid: str, flags: list) -> None:
                 else "<br><small>Changed your mind? Hit Reopen.</small>")
         st.markdown(f'<div class="tly-decided {tone}"><b>{label.capitalize()}</b>{why}{undo}</div>',
                     unsafe_allow_html=True)
-    for n, f in enumerate(flags if r.status is Status.DRAFTED else []):
-        icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
-        tone, hint = FLAG_TONE[f.severity]
-        with st.container(key=f"flag-{tone}-{rid}-{n}"):
-            st.markdown(f"{icon} **{title}** <span class='tly-flagpill'>{hint}</span>\n\n"
-                        f"<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
+    look_card(rid, flags if r.status is Status.DRAFTED else [])
     st.markdown('<p class="tly-edit-hint"><i class="ms">edit</i>Got something wrong? Click any box or cell to fix it.</p>',
                 unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
