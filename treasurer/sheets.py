@@ -156,9 +156,15 @@ class GoogleSheetsSink:
 
     def post(self, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal]) -> list[str]:
         """Append approved, not-yet-posted receipts; upsert the event; rebuild the views.
+        A receipt reopened after a push is no longer "posted": its old rows are taken out first,
+        so a fixed receipt replaces the wrong one (and one left out leaves the books).
         Returns the receipt ids written."""
         tx_ws = self._tab(TX, TX_FIELDS)
-        done = {(str(r["event_id"]), str(r["receipt_id"])) for r in tx_ws.get_all_records()}
+        reopened = {(r.event_id, r.receipt_id) for r in receipts if r.status is not Status.POSTED}
+        rows_now = [(str(r["event_id"]), str(r["receipt_id"])) for r in tx_ws.get_all_records()]
+        for n in reversed([n for n, key in enumerate(rows_now) if key in reopened]):
+            tx_ws.delete_rows(n + 2)  # +1 for the header, +1 because sheet rows count from 1
+        done = set(rows_now) - reopened
         todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
         rows = [[_cell(f, row[f]) for f in TX_FIELDS] for r in todo for row in transaction_rows(r)]
         if rows:

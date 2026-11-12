@@ -595,3 +595,14 @@ def test_club_home_steps_open_the_event_and_clubs_can_be_deleted():
     assert not at.exception
     assert [c["name"] for c in club.clubs().values()] == ["My club"]
     assert club.current() == "my-club"
+
+
+def test_a_pushed_receipt_can_be_reopened_and_fixed():
+    at = drafted_app()
+    r = at.session_state["receipts"]["R01"]
+    at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.POSTED})  # as after a push
+    at.run()
+    reopen = next(b for b in at.button if b.label == "Reopen")
+    assert not reopen.disabled  # it used to lock for good: "change it in the sheet"
+    reopen.click().run()
+    assert at.session_state["receipts"]["R01"].status is Status.DRAFTED

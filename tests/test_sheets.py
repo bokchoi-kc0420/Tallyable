@@ -140,8 +140,13 @@ def test_push_writes_tidy_tabs_and_is_idempotent(approved):
     assert len(written) == len(approved)
     n_rows = len(book.tabs[TX].cells)
     assert n_rows == 1 + sum(len(r.items) for r in approved)
-    assert sink.post(approved, EVENT, INCOME) == []          # second click writes nothing
+    posted = [r.model_copy(update={"status": Status.POSTED}) for r in approved]  # what the app does after a push
+    assert sink.post(posted, EVENT, INCOME) == []            # second click writes nothing
     assert len(book.tabs[TX].cells) == n_rows
+    fixed = approved[0].model_copy(update={"place": "Fixed Place"})  # reopened, edited, approved again
+    assert sink.post([fixed, *posted[1:]], EVENT, INCOME) == [fixed.receipt_id]
+    places = [row[3] for row in book.tabs[TX].cells[1:]]  # the place column
+    assert len(places) == n_rows - 1 and places.count("Fixed Place") == len(fixed.items)  # replaced, not added
     assert len(book.tabs[EVENTS].cells) == 2                  # event upserted, not duplicated
 
 
