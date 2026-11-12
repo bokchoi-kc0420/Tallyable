@@ -179,6 +179,14 @@ def show() -> None:
                                 f"{ICON[Status.REJECTED]} left out · {ICON[Status.POSTED]} posted · {FLAG_ICON} has a flag")
     left, right = st.columns([2, 3])
     with left:
+        # Back and forward through the same list as the sidebar, so an approved receipt is one click away.
+        i = ids.index(rid)
+        with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center", key="review-nav"):
+            st.button("", icon=":material/arrow_back:", key="review-prev", help="Previous receipt", disabled=i == 0,
+                      on_click=ss.__setitem__, args=("review-pick", ids[i - 1]))
+            st.markdown(f'<p class="tly-nav-count">{i + 1} of {len(ids)}</p>', unsafe_allow_html=True)
+            st.button("", icon=":material/arrow_forward:", key="review-next", help="Next receipt", disabled=i == len(ids) - 1,
+                      on_click=ss.__setitem__, args=("review-pick", ids[(i + 1) % len(ids)]))
         photo(rid)
     with right:
         edit_form(rid, flags[rid])

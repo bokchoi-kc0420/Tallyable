@@ -354,3 +354,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* Labels line up with the text inside the boxes (inputs are white via secondaryBackgroundColor). */
 [data-testid="stMain"] [data-testid="stWidgetLabel"] { padding-left: 8px; margin-bottom: -4px; }
 [data-testid="stProgress"] [role="progressbar"] > div { background-color: var(--tly-paper); }
+/* Review: "← 2 of 5 →" above the photo. */
+.tly-nav-count { margin: 0; font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-md); color: var(--tly-ink); }
+.st-key-review-nav [data-testid="stMarkdownContainer"] { margin: 0; }
+.st-key-review-nav [data-testid="stMarkdown"] { align-self: center; }

@@ -36,7 +36,7 @@ def next_id(filename: str | None = None, taken: tuple | list = ()) -> str:
 def manual_form(key: str, event: EventInfo, image_file: str | None = None, data: tuple[bytes, str] | None = None) -> None:
     """Type a one-item receipt by hand. Used for lost receipts and for photos the
     reader could not handle. With `image_file`, the photo stays attached as evidence."""
-    with st.form(key):
+    with st.form(key, enter_to_submit=False):  # a stray Enter used to add a half-typed $0 receipt
         c = st.columns(3)
         place = c[0].text_input("Place")
         d = c[1].date_input("Date", value=event.date)
@@ -55,6 +55,9 @@ def manual_form(key: str, event: EventInfo, image_file: str | None = None, data:
             return
         if not place.strip() or not item.strip():
             st.error("Fill in Place and Item, then click Add.")
+            return
+        if dec(total) <= 0:
+            st.error("Type the Total from the receipt, then click Add.")
             return
         rid = next_id(image_file)
         try:

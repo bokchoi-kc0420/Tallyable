@@ -243,7 +243,8 @@ def test_approve_moves_to_next_receipt_and_reopen_undoes():
     assert at.sidebar.radio(key="review-pick").value == "R01"
     next(b for b in at.button if b.label == "Approve").click().run()
     assert at.sidebar.radio(key="review-pick").value == "R02"
-    at.sidebar.radio(key="review-pick").set_value("R01").run()
+    at.button(key="review-prev").click().run()  # the arrow goes back to the approved one
+    assert at.sidebar.radio(key="review-pick").value == "R01" and at.button(key="review-prev").disabled
     next(b for b in at.button if b.label == "Reopen").click().run()
     assert at.session_state["receipts"]["R01"].status.value == "drafted"
 
@@ -347,6 +348,8 @@ def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
     assert any("Fill in Place and Item" in e.value for e in at.error) and not at.session_state["receipts"]
     next(t for t in at.text_input if t.label == "Place").set_value("Campus Market")
     next(t for t in at.text_input if t.label == "Item").set_value("Ice")
+    next(b for b in at.button if b.label == "Add").click().run()  # no total yet: a $0 receipt slipped into the books
+    assert any("Type the Total" in e.value for e in at.error) and not at.session_state["receipts"]
     next(t for t in at.text_input if t.label == "Price per unit").set_value("$3.50")
     next(t for t in at.text_input if t.label == "Total").set_value("$3.50")
     next(b for b in at.button if b.label == "Add").click().run()
