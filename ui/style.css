@@ -215,6 +215,9 @@
 [class*="st-key-who-"] { padding: 8px; gap: 8px; position: relative; }
 [class*="st-key-who-"]:has(input[type="checkbox"]:checked) { outline: 4px solid var(--tly-forest); }
 [class*="st-key-who-"] [class*="st-key-pick-"] { position: absolute; top: 16px; left: 16px; z-index: 2; width: auto; }
+[class*="st-key-who-"] [class*="st-key-drop-"] { position: absolute; top: 16px; right: 16px; z-index: 2; width: auto; }
+[class*="st-key-who-"] [class*="st-key-drop-"] button { min-height: 32px; padding: 0 8px; }
+[class*="st-key-who-"] [data-testid="stFullScreenFrame"]:has(img) [data-testid="stElementToolbar"] { top: auto !important; bottom: 8px; }  /* Fullscreen: clear of the X */
 [class*="st-key-who-"] [class*="st-key-pick-"] label { background: var(--tly-card); border-radius: var(--tly-r-in); padding: 4px; }
 .st-key-join-start button, [class*="st-key-split-"] button { color: var(--tly-forest); text-decoration: underline; text-underline-offset: 4px; }
 [class*="st-key-who-wide-"] b { font-family: var(--tly-head); font-weight: 500; }

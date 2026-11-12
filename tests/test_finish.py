@@ -131,3 +131,14 @@ def test_add_a_missed_receipt_reopens_on_upload_and_shows_the_way_back():
     assert any("Pay them back" in m.value for m in at.markdown)  # the trail follows every step
     at.button(key="finish-event").click().run()
     assert not at.session_state["event"]["late"]  # finished again: the trail is done
+
+
+def test_remove_takes_a_photo_off_upload_before_its_read():
+    at = new_app().run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    at.button(key="drop-R02.jpg").click().run()
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    assert at.button(key="read").label == "Read 13 receipts"
+    at.button(key="read").click().run()
+    assert "R02" not in at.session_state["receipts"]
+    assert not [b for b in at.button if (b.key or "").startswith("drop-")]  # read ones: Leave out on Review
