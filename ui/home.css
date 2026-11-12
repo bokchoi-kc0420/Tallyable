@@ -109,3 +109,9 @@
 .tly-facts > div:nth-child(3) .ms { background: var(--tly-navy); }
 .tly-facts span { line-height: 1.2; } .tly-facts small { display: block; font-size: .75rem; color: var(--tly-soft); }
 .tly-facts b { font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; color: var(--tly-ink); }
+/* Demo mode: a pill above the club menu, and a band on Club home with the way back to your club. */
+.tly-demo-pill { display: inline-block; margin: 0; padding: 4px 16px; border-radius: 999px; background: var(--tly-sun-tint);
+  border: 2px solid var(--tly-sun); color: var(--tly-sun-ink); font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); }
+.st-key-demo-band { background: var(--tly-sun-tint); border: 2px solid var(--tly-sun); border-radius: var(--tly-r); padding: 8px 16px;
+  justify-content: space-between; margin-bottom: 24px; }
+.st-key-demo-band p, .st-key-demo-band [data-testid="stMarkdownContainer"] { margin: 0; }

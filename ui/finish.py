@@ -19,7 +19,7 @@ from treasurer.reimburse import totals_by_payer
 from treasurer.sheets import EventInfo, local_transactions, local_views
 from treasurer.xlsx_export import book_xlsx
 from ui import club, done_card
-from ui.common import PAST, dec, get_sink, mascot_uri, saved_reimbursements, ss, usd
+from ui.common import dec, get_sink, mascot_uri, past, saved_reimbursements, ss, usd
 from ui.home import go_home
 from ui.sidebar import save_session, start_new_event
 
@@ -86,7 +86,7 @@ def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
     if event.start_balance is None:
         return None
     year = school_year(event.date)
-    others = [e["net"] for e in session_store.past_nets(PAST)
+    others = [e["net"] for e in session_store.past_nets(past())
               if club.owns(e) and e["event_id"] != event.event_id and school_year(e["date"]) == year]
     return event.start_balance + sum(others, Decimal("0")) + net
 

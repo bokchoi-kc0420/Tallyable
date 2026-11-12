@@ -3,6 +3,7 @@ club's balance, and the "Which club?" page when there's more than one. The page 
 from __future__ import annotations
 
 import html
+import shutil
 from datetime import date
 from decimal import Decimal
 
@@ -11,14 +12,14 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.ledger_view import school_year
 from ui import club
-from ui.common import PAST, STEPS, mascot_uri, ss, usd
+from ui.common import BASE, FAKE, MODE_FILE, STEPS, is_demo, mascot_uri, out, past, ss, usd
 from ui.sidebar import DEFAULT_EVENT, open_past, save_session, start_new_event
 
 
 def year_events() -> list[dict]:
     """The open club's saved events this school year, newest first, each with its net."""
     year = school_year(date.today())
-    events = [e for e in session_store.past_nets(PAST) if club.owns(e) and school_year(e["date"]) == year]
+    events = [e for e in session_store.past_nets(past()) if club.owns(e) and school_year(e["date"]) == year]
     return sorted(events, key=lambda e: str(e["date"]), reverse=True)
 
 
@@ -38,7 +39,7 @@ def switch(cid: str) -> None:
     save_session()
     club.set_current(cid)
     ss.club_picked = True
-    still_open = [e for e in session_store.past_events(PAST) if club.owns(e) and not e["finished"]]
+    still_open = [e for e in session_store.past_events(past()) if club.owns(e) and not e["finished"]]
     if still_open:
         open_past(still_open[0]["path"])
     else:
@@ -102,13 +103,13 @@ def new_club_dialog() -> None:
 def delete_club(cid: str) -> None:
     """Delete club callback: the club, its saved events, and the screen. Opens the next club (or the first-club page)."""
     ss.club_deleted = True  # the pop-up closes itself on the next run
-    for e in session_store.past_events(PAST):
+    for e in session_store.past_events(past()):
         if e["club"] == cid or (e["club"] is None and club.owns(e)):
             session_store.clear(e["path"])
     left = club.remove(cid)
     ss.event = dict(DEFAULT_EVENT)
     ss.club_picked = left is not None
-    still_open = [e for e in session_store.past_events(PAST) if club.owns(e) and not e["finished"]] if left else []
+    still_open = [e for e in session_store.past_events(past()) if club.owns(e) and not e["finished"]] if left else []
     if still_open:
         open_past(still_open[0]["path"])
     else:
@@ -122,7 +123,7 @@ def confirm_club_delete() -> None:
         ss.confirm_club_delete = False
         st.rerun()
     me, cid = club.load(), club.current()
-    n = sum(1 for e in session_store.past_events(PAST) if club.owns(e))
+    n = sum(1 for e in session_store.past_events(past()) if club.owns(e))
     st.html(f'<img class="tly-dialog-tally" src="{mascot_uri("tally-trash.png")}" alt="">'
             f'<div class="tly-confirm">{badge(me["name"], "big")}<b class="tly-pick-name">{html.escape(me["name"])}</b></div>')
     events = f"its {n} saved event{'s' if n != 1 else ''}, " if n else ""
@@ -143,8 +144,45 @@ def go_home() -> None:
     ss["club-pop"] = False  # close the club menu
 
 
+def switch_mode(demo: bool) -> None:
+    """Switch callback: save this event, then reopen the app in the other mode's folder. The demo
+    starts fresh every time: a sample club with the fake event's receipts already loaded."""
+    if "event" in ss:
+        save_session()
+    authed = ss.get("authed")
+    ss.clear()
+    ss.authed, ss.demo_mode = authed, demo
+    BASE.mkdir(parents=True, exist_ok=True)
+    MODE_FILE.write_text("demo" if demo else "real")
+    if not demo:
+        ss.view = "club"  # app.py reopens the real club's last event behind it
+        return
+    shutil.rmtree(out(), ignore_errors=True)
+    club.add("Sunrise Hiking Club", 1200.0, ["Alex Kim", "Jordan Diaz", "Sam Patel", "Riley Chen"])
+    ss.club_picked = True
+    ss.event = dict(DEFAULT_EVENT)
+    start_new_event()
+    ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
+    go_home()
+
+
+def demo_band() -> None:
+    """Club home: which mode you're in, and the way to the other one."""
+    if not is_demo():
+        st.button("Try the demo", icon=":material/science:", key="to-demo", type="tertiary",
+                  help="A sample club with fake receipts, so you can play around. Your club stays as it is.",
+                  on_click=switch_mode, args=(True,))
+        return
+    with st.container(key="demo-band", horizontal=True, vertical_alignment="center"):
+        st.markdown("**You're in the demo** - a sample club with fake receipts. Play around, nothing here is real!")
+        st.button("Back to my club", icon=":material/arrow_forward:", icon_position="right", key="to-real",
+                  on_click=switch_mode, args=(False,))
+
+
 def menu() -> None:
     """Top of the sidebar: the open club and its balance. Opens Club home, other clubs, New club."""
+    if is_demo():
+        st.sidebar.html('<p class="tly-demo-pill">Demo mode</p>')
     me = club.load()
     money = balance(year_events())
     sub = "Club home" + (f" · {usd(money)}" if money is not None else "")
@@ -187,6 +225,8 @@ def picker() -> None:
                      f'<img src="{mascot_uri("tally-party.png")}" alt=""></div>')
             with form:
                 club_form("club-first")
+                st.button("Just looking? Try the demo", icon=":material/science:", key="first-demo", type="tertiary",
+                          on_click=switch_mode, args=(True,))
         return
     st.header("Which club are you doing the books for?")
     cols = st.columns(3)

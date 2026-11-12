@@ -15,7 +15,7 @@ from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
-from ui.common import ART, FAKE, dec, guide, loading, md, next_step, payers, plural, ss, step_bar
+from ui.common import ART, FAKE, dec, guide, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
 
@@ -219,6 +219,9 @@ def show(event: EventInfo) -> None:
     ex, reader = make_extractor()
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
+    elif not is_demo():
+        st.warning("Tally can't read real receipts yet: add your ANTHROPIC_API_KEY to .env. "
+                   "Until then, add each purchase by hand at the bottom.")
     else:
         guide("Demo mode:", "I can only read the 14 sample receipts (I hid a few mistakes in them for you to find). "
               "Your own receipts need the full version.", key="demo", tip=True)
@@ -227,7 +230,7 @@ def show(event: EventInfo) -> None:
             st.image(str(ART / "tally-camera.png"), width=190, alt="")
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
     files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
-    if st.button("Use the fake event's 14 receipts instead"):
+    if is_demo() and st.button("Use the fake event's 14 receipts instead"):  # fake receipts never reach real books
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
     sources = [(f.name, f.getvalue()) for f in files] if files else [(p.name, p.read_bytes()) for p in ss.get("demo", [])]

@@ -14,7 +14,7 @@ import streamlit as st
 
 from treasurer import session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, upload
-from ui.common import ART, ROOT, SESSION_FILE, ss
+from ui.common import ART, ROOT, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 st.markdown("<style>" + "".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "ui").glob("*.css")))
@@ -32,7 +32,7 @@ if os.getenv("APP_PASSWORD") and not ss.get("authed"):
         st.error("Wrong password.")
     st.stop()
 
-if "event" not in ss and (saved := session_store.load(SESSION_FILE)):  # a new tab: back where you left off
+if "event" not in ss and (saved := session_store.load(out() / "session.json")):  # a new tab: back where you left off
     ss.update(saved)
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
 ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to the reader

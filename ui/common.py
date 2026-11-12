@@ -15,12 +15,10 @@ from treasurer.post import LocalCsvSink, event_totals
 from treasurer.sheets import GoogleSheetsSink
 
 ROOT = Path(__file__).parent.parent
-OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
+BASE = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
+MODE_FILE = BASE / "mode.txt"  # "demo" or "real": which folder a new tab opens
 FAKE = ROOT / "fake_event"
 ART = ROOT / "assets"
-RUN_LOG = OUT / "run_log.csv"
-SESSION_FILE = OUT / "session.json"
-PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
 # Drawn (Material) icons, never emoji: they match the rest of the UI and take the theme colors.
 ICON = {Status.DRAFTED: ":material/schedule:", Status.APPROVED: ":green[:material/check_circle:]",
@@ -32,6 +30,24 @@ STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved"
 TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small.png",
          "3. Summary": "tally-summary-small.png", "4. Close out": "tally-calculator.png"}
 ss = st.session_state
+
+
+def is_demo() -> bool:
+    """Demo (sample club, fake receipts) or real (your club). Each tab keeps the mode it opened in,
+    so a switch in one tab can't send another tab's event into the wrong folder."""
+    if "demo_mode" not in ss:
+        ss.demo_mode = MODE_FILE.exists() and MODE_FILE.read_text().strip() == "demo"
+    return ss.demo_mode
+
+
+def out() -> Path:
+    """This mode's own data folder. Demo and real never share a file."""
+    return BASE / ("demo" if is_demo() else "real")
+
+
+def past() -> Path:
+    """One saved file per event, so a closed event can be reopened later."""
+    return out() / "events"
 
 
 def load_cloud_secrets() -> dict | None:
@@ -103,9 +119,11 @@ def get_sink():
     try:
         from ui.connect import linked
         link = linked() or {}
-        return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(OUT / "transactions.csv"), None
+        if not link and not is_demo():  # real books only go to a sheet linked in the app, never the .env test sheet
+            return LocalCsvSink(out() / "transactions.csv"), None
+        return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(out() / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
-        return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so your books come out as "
+        return LocalCsvSink(out() / "transactions.csv"), ("Couldn't open the Google Sheet, so your books come out as "
                                                         f"an Excel file for now. ({e})")
 
 

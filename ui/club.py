@@ -1,5 +1,5 @@
 """Clubs: what stays the same all year (name, members, starting balance, profit target, where the
-books go). Saved on this computer (output/clubs.json). One club is open at a time; every event
+books go). Saved on this computer (output/real/clubs.json, or output/demo/ in demo mode). One club is open at a time; every event
 belongs to the club that was open when it started."""
 from __future__ import annotations
 
@@ -9,33 +9,31 @@ import re
 
 import streamlit as st
 
-from ui.common import OUT, ss
+from ui.common import out, ss
 
-CLUBS = OUT / "clubs.json"
-OLD = OUT / "club.json"  # one unnamed club, from before clubs had names
 DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "sheets": {}}
 AVATARS = ["#1C5C36", "#B0413E", "#6B4E8A", "#2F4B7C", "#C8673C", "#1F7A73"]
 
 
 def _read() -> dict:
     try:
-        return json.loads(CLUBS.read_text())
+        return json.loads((out() / "clubs.json").read_text())
     except (OSError, ValueError):
         pass
     try:  # the old single club becomes "My club", with its linked sheets
-        old = json.loads(OLD.read_text())
+        old = json.loads((out() / "club.json").read_text())  # one unnamed club, from before clubs had names
     except (OSError, ValueError):
         return {"current": None, "clubs": {}}
     try:
-        old["sheets"] = json.loads((OUT / "sheets.json").read_text())
+        old["sheets"] = json.loads((out() / "sheets.json").read_text())
     except (OSError, ValueError):
         pass
     return {"current": "my-club", "clubs": {"my-club": {**DEFAULT, **old}}}
 
 
 def _write(data: dict) -> None:
-    CLUBS.parent.mkdir(parents=True, exist_ok=True)
-    CLUBS.write_text(json.dumps(data))
+    out().mkdir(parents=True, exist_ok=True)
+    (out() / "clubs.json").write_text(json.dumps(data))
 
 
 def clubs() -> dict[str, dict]:
