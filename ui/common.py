@@ -10,7 +10,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from treasurer.models import Receipt, Status
+from treasurer.models import CENT, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.sheets import GoogleSheetsSink
 
@@ -250,8 +250,16 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
     else:
         pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> more out than in</span>'
     cats: dict[str, Decimal] = {}
-    for i in (i for r in receipts if r.counts for i in r.items if not i.returned):
-        cats[i.category] = cats.get(i.category, Decimal("0")) + i.amount
+    for r in (r for r in receipts if r.counts):
+        own: dict[str, Decimal] = {}
+        for i in (i for i in r.items if not i.returned):
+            own[i.category] = own.get(i.category, Decimal("0")) + i.amount
+        # Approved with the math flag overridden: the lines can't be trusted, the total can.
+        # So the whole total goes under the receipt's biggest category and the bars still add up.
+        if own and abs(r.computed_total - r.total) > CENT:
+            own = {max(own, key=own.get): r.posted_amount}
+        for k, v in own.items():
+            cats[k] = cats.get(k, Decimal("0")) + v
     cats = {k: v for k, v in cats.items() if v > 0}
     rest = t["expenses"] - sum(cats.values(), Decimal("0"))
     if rest > 0:

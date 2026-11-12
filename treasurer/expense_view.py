@@ -11,6 +11,7 @@ from collections import OrderedDict, defaultdict
 from datetime import date
 from decimal import Decimal
 
+from .models import CENT
 from .models import cell_decimal as D
 from .views import DARK, INK, MUTED, RED, TINT, TINT2, VIEW_NOTE, View, is_returned, num
 
@@ -47,11 +48,19 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
     for n, (rid, items) in enumerate(ordered):
         f, top = items[0], len(rows)
         payer = f["payer"] or "No payer"
+        own = defaultdict(Decimal)
         for i in items:
             rows.append(["", i["category"], i["item"] + (" (returned)" if is_returned(i) else ""),
                          int(D(i["unit"])), num(D(i["price"])), "", "", "", ""])
             if not is_returned(i):
-                by_cat[i["category"]] += D(i["amount"])
+                own[i["category"]] += D(i["amount"])
+        extras = D(f["receipt_tax"]) + D(f["receipt_tip"])
+        # Lines that don't add up to the total (approved with a note): the total is what was paid,
+        # so all of it goes under the receipt's biggest category.
+        if own and abs(sum(D(i["amount"]) for i in items) + extras - D(f["receipt_total"])) > CENT:
+            own = {max(own, key=own.get): D(f["receipt_posted"]) - extras}
+        for k, v in own.items():
+            by_cat[k] += v
         rows[top][0] = f"{f['place']}\n{date.fromisoformat(str(f['date'])[:10]):%m/%d}"
         rows[top][5:9] = [num(D(f["receipt_tax"])), num(D(f["receipt_tip"])), num(D(f["receipt_posted"])),
                           f"{payer}\n{rid}"]

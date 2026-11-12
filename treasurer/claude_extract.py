@@ -86,12 +86,6 @@ class ExtractedReceipt(BaseModel):
         "card app showing a charge, not the seller's receipt.")
 
 
-# Not proof that money was spent: the treasurer decides, Tally only says so on Review.
-NOT_FINAL = {"cart": "This is a cart before checkout, not a final receipt - ask for the order confirmation.",
-             "estimate": "This is a price estimate, not a final receipt - ask for the receipt from after the ride or service.",
-             "pending_charge": "This is a bank charge, not the seller's receipt - ask for the receipt if there is one."}
-
-
 def _money(text: str, field: str, filename: str) -> Decimal:
     t = str(text).replace("$", "").replace(",", "").replace("\u2212", "-").strip()
     if t.startswith("(") and t.endswith(")"):  # accounting style: (4.00) is -4.00
@@ -154,7 +148,7 @@ class ClaudeExtractor:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
-        note = "\n".join(filter(None, [NOT_FINAL.get(x.proof), x.unreadable_note])) or None
+        note = x.unreadable_note or None
         if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
             x.date = date.today().isoformat()
             note = "\n".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
@@ -168,7 +162,7 @@ class ClaudeExtractor:
                 payer=None,  # payer comes from the upload tag, never from the AI
                 items=items, tax=_money(x.tax, "tax", filename), tip=_money(x.tip, "tip", filename),
                 total=_money(x.total, "total", filename), image_file=filename,
-                image_hash=hashlib.sha256(image).hexdigest(), review_note=note,
+                image_hash=hashlib.sha256(image).hexdigest(), review_note=note, proof=x.proof,
             )
         except ValueError as e:  # bad date, no items, negative money
             raise ExtractionError(f"Claude's reading of {filename} did not fit the receipt format: {e}") from e
