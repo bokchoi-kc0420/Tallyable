@@ -21,7 +21,7 @@ const QA = [
   },
   {
     q: "What does it cost?",
-    a: "The app is free and open source. Reading receipts with AI runs on your own API key, at under a cent per receipt in our tests. There's also a free mode where you type rows in yourself.",
+    a: "The app is free and open source (MIT license). Reading receipts with AI runs on your own API key, at under a cent per receipt in our tests. There's also a free mode where you type rows in yourself.",
   },
 ];
 

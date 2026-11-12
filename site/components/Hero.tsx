@@ -1,6 +1,6 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CloseoutPreview } from "./CloseoutPreview";
 import { Sparkle } from "./Sparkle";
 import { APP_URL } from "./links";
@@ -37,11 +37,29 @@ function Sticker({ src, alt, className, float = 8, delay = 0, tilt = 6 }: Sticke
 export function Hero() {
   const [open, setOpen] = useState(false);
 
+  const phone = useRef<HTMLButtonElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+
+  // Keyboard: focus jumps into the pop-up, Tab stays inside it, and closing hands focus back to the phone.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const items = () => [...(card.current?.querySelectorAll<HTMLElement>("a, button") ?? [])];
+    items()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return setOpen(false);
+      if (e.key !== "Tab") return;
+      const all = items();
+      const edge = e.shiftKey ? all[0] : all[all.length - 1];
+      if (document.activeElement !== edge) return;
+      e.preventDefault();
+      (e.shiftKey ? all[all.length - 1] : all[0])?.focus();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const back = phone.current;
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      back?.focus();
+    };
   }, [open]);
 
   return (
@@ -79,6 +97,7 @@ export function Hero() {
         <Sticker src="/art/coins-a.png" alt="" className="bottom-[2%] left-[2%] w-[20%]" delay={1.2} />
         <Sticker src="/art/coins-b.png" alt="" className="bottom-[6%] right-[22%] w-[15%]" delay={0.6} tilt={-10} />
         <motion.button
+          ref={phone}
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Tap the phone to peek inside the app"
@@ -113,6 +132,7 @@ export function Hero() {
               animate={{ scale: 1, x: 0, y: 0, rotate: 0, opacity: 1 }}
               exit={{ scale: 0.3, x: 200, y: 120, rotate: 10, opacity: 0, transition: { duration: 0.22 } }}
               transition={{ type: "spring", stiffness: 260, damping: 24 }}
+              ref={card}
               onClick={(e) => e.stopPropagation()}
               className="relative max-h-[90vh] w-full max-w-[400px] overflow-y-auto rounded-[2.5rem] border-[10px] border-forest bg-cream p-3 shadow-2xl"
             >
