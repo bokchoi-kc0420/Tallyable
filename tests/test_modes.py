@@ -26,8 +26,7 @@ def test_demo_and_real_never_share_data():
     at.button(key="to-real").click().run()
     assert not at.exception
     assert not any("Demo mode" in h.value for h in at.sidebar.html)
-    from ui import club
-    assert club.load()["name"] == "Chess Club"
+    assert (base / "mode.txt").read_text() == "real"
     fresh = AppTest.from_file(APP, default_timeout=30).run()  # a new tab opens the mode you left in
     assert not any("Demo mode" in h.value for h in fresh.sidebar.html)
 
@@ -35,6 +34,6 @@ def test_demo_and_real_never_share_data():
 def test_real_books_never_go_to_the_env_test_sheet(monkeypatch):
     monkeypatch.setenv("TALLYABLE_SHEET_ID", "the-test-sheet")
     from ui import common
-    common.ss.demo_mode = False
+    monkeypatch.setitem(common.ss, "demo_mode", False)
     sink, error = common.get_sink()
     assert sink.label != "Google Sheets" and error is None
