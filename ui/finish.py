@@ -18,8 +18,9 @@ from treasurer.post import TX_FIELDS, event_totals
 from treasurer.reimburse import totals_by_payer
 from treasurer.sheets import EventInfo, local_transactions, local_views
 from treasurer.xlsx_export import book_xlsx
-from ui import done_card
-from ui.common import PAST, dec, get_sink, mascot_uri, saved_reimbursements, ss, usd
+from ui import club, done_card
+from ui.common import dec, get_sink, mascot_uri, past, saved_reimbursements, ss, usd
+from ui.home import go_home
 from ui.sidebar import save_session, start_new_event
 
 FIX = {"2. Review": "Fix in Review", "3. Summary": "Go push", "4. Close out": "Pay back"}
@@ -65,16 +66,18 @@ def next_event() -> None:
 
 
 def finish_button(lines: list) -> None:
-    """Bottom of Close out, same spot every time."""
+    """Bottom of Close out, pinned to the bottom of the screen (like Upload's), so it's found without scrolling."""
     items = open_items(lines)
     note = ("Everything's wrapped up!" if not items else
-            "1 thing still open. You can still finish: it stays listed on the event." if len(items) == 1 else
-            f"{len(items)} things still open. You can still finish: they stay listed on the event.")
-    with st.container(border=True, key="finish-row"):
-        c = st.columns([1.3, 4], vertical_alignment="center")
-        c[0].button("Finish event", type="primary", icon=":material/check:", icon_position="right", key="finish-event",
+            "1 thing's still open, but you can finish anyway! It stays listed on the event." if len(items) == 1 else
+            f"{len(items)} things are still open, but you can finish anyway! They stay listed on the event.")
+    with st.container(key="finish-next"), st.container(border=True, key="finish-row"):
+        # Message on the left, button on the right: the same order as the other "what's next" boxes.
+        c = st.columns([4, 1.3], vertical_alignment="center")
+        c[0].markdown(f'<p class="tly-done-title">Ready to finish?</p><p class="tly-done-sub">{html.escape(note)}</p>',
+                      unsafe_allow_html=True)
+        c[1].button("Finish event", type="primary", icon=":material/check:", icon_position="right", key="finish-event",
                     on_click=set_finished, args=(True,), width="stretch")
-        c[1].markdown(f'<p class="tly-done-sub">{html.escape(note)}</p>', unsafe_allow_html=True)
 
 
 def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
@@ -83,8 +86,8 @@ def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
     if event.start_balance is None:
         return None
     year = school_year(event.date)
-    others = [e["net"] for e in session_store.past_nets(PAST)
-              if e["event_id"] != event.event_id and school_year(e["date"]) == year]
+    others = [e["net"] for e in session_store.past_nets(past())
+              if club.owns(e) and e["event_id"] != event.event_id and school_year(e["date"]) == year]
     return event.start_balance + sum(others, Decimal("0")) + net
 
 
@@ -93,7 +96,7 @@ def confetti() -> str:
     rng = random.Random(7)
     colors = ["#1C5C36", "#3F8A5A", "#F7BE3F", "#C44536", "#8FB38A", "#6B4E8A"]
     bits = "".join(f'<i style="left:{rng.uniform(0, 100):.1f}%;background:{rng.choice(colors)};'
-                   f'--d:{rng.uniform(2.2, 3.8):.2f}s;--w:{rng.uniform(0, 0.9):.2f}s;--r:{rng.choice([-1, 1]) * 540}deg"></i>'
+                   f'--d:{rng.uniform(2.2, 3.8):.2f}s;--w:{rng.uniform(0.3, 1.2):.2f}s;--r:{rng.choice([-1, 1]) * 540}deg"></i>'
                    for _ in range(90))
     return f'<div class="tly-confetti" aria-hidden="true">{bits}</div>'
 
@@ -112,8 +115,6 @@ def tiles(t: dict, balance: Decimal | None) -> str:
 
 
 def show(event: EventInfo) -> None:
-    if ss.pop("confetti", False):
-        st.html(confetti())
     sink, err = get_sink()
     if err:
         st.error(err)
@@ -125,7 +126,7 @@ def show(event: EventInfo) -> None:
     count = f"{len(done)} receipt{'s' if len(done) != 1 else ''}" + (f" ({left_out} left out)" if left_out else "")
     paid = "everyone paid back" if not any(x.owed > 0 for x in lines) else "paybacks still open"
     with st.container(border=True, key="finish-page"):
-        st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-cheer.png")}" alt="">'
+        st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-flag.png")}" alt="">'
                 f'<h2>{html.escape(event.name)} is closed out!</h2>'
                 f'<p>{event.date:%b} {event.date.day}, {event.date.year} · {count} · {paid}</p>'
                 f'{tiles(t, club_balance(event, t["net"]))}</div>')
@@ -136,23 +137,33 @@ def show(event: EventInfo) -> None:
                     row = st.columns([3, 1.4], vertical_alignment="center")
                     row[0].markdown(f'<p class="tly-open-item"><i class="tly-warn">!</i>{html.escape(text)}</p>',
                                    unsafe_allow_html=True)
-                    row[1].button(FIX[step], key=f"fix-{n}", type="tertiary", icon=":material/arrow_forward:",
+                    row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
                                   icon_position="right", on_click=set_finished, args=(False, step))
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
-            st.button("Start the next event", type="primary", key="next-event", on_click=next_event)
+            st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
+            st.button("Start the next event", key="next-event", on_click=next_event)
+        # The downloads sit a row lower and quieter, so the two ways on don't compete with them.
+        with st.container(horizontal=True, horizontal_alignment="center", key="finish-downloads"):
             ledger = getattr(getattr(sink, "ledger_book", None), "url", None)
             if ledger:
-                st.link_button("Open General Ledger", ledger, icon=":material/arrow_outward:", icon_position="right")
+                st.link_button("Open General Ledger", ledger, icon=":material/arrow_outward:", icon_position="right",
+                               type="tertiary")
             else:
                 income = {k: dec(v) for k, v in ss.income.items()}
-                views = local_views(list(ss.receipts.values()), event, income, saved_reimbursements(sink))
-                st.download_button("Download the whole book (Excel)", key="dl-xlsx-finish",
-                                   data=book_xlsx(views, local_transactions(list(ss.receipts.values())), TX_FIELDS),
+                receipts = list(ss.receipts.values())
+                views = local_views(receipts, event, income, saved_reimbursements(sink))
+                st.download_button("Download the whole book (Excel)", key="dl-xlsx-finish", on_click="ignore", type="tertiary",
+                                   icon=":material/download:",
+                                   data=lambda: book_xlsx(views, local_transactions(receipts), TX_FIELDS),
                                    file_name=f"{event.event_id}_books.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             owed = {x.payer: x.owed for x in lines}
             state = {r.receipt_id: ("Not yet" if owed.get(r.payer, 0) > 0 else "Yes") if r.payer else "" for r in done}
-            st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf",
-                               file_name=f"{event.event_id}_receipt_photos.pdf", data=receipts_pdf(done, ss.images, state))
+            images = ss.images
+            st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf", on_click="ignore",
+                               type="tertiary", icon=":material/download:",
+                               file_name=f"{event.event_id}_receipt_photos.pdf", data=lambda: receipts_pdf(done, images, state))
     st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
               on_click=set_finished, args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
+    if ss.pop("confetti", False):  # last, so it falls once the whole page is built
+        st.html(confetti())

@@ -8,15 +8,15 @@ toolbarMode = "minimal"
 # Locked to light (Kevin, 2026-11-05): the app always opens light, whatever the system setting.
 [theme]
 base = "light"
-font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, sans-serif"
+font = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap, sans-serif"
 headingFont = "Fredoka:https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap, sans-serif"
 headingFontWeights = [700, 600, 600, 600, 600, 600]
-baseRadius = "0.9rem"
-buttonRadius = "full"
+baseRadius = "1rem"
+buttonRadius = "1rem"
 showWidgetBorder = true
 primaryColor = "#1C5C36"
 backgroundColor = "#FFFCF1"
-secondaryBackgroundColor = "#F2ECD3"
+secondaryBackgroundColor = "#FFFFFF"  # inputs: white reads as "type here" on the cream page
 textColor = "#1F2A22"
 borderColor = "#E3D9B6"
 linkColor = "#1C5C36"

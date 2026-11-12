@@ -1,0 +1,117 @@
+/* Club menu (top of the sidebar) and Club home. Kevin kept Club home's hand-tuned sizes, corners and
+   shadow (2026-11-10), so this file is left out of the spacing/radius/shadow/size checks; colors and fonts are tokens.
+   Fredoka for names, labels and money; Outfit for sentences. */
+.st-key-club-menu [data-testid="stPopoverButton"] { justify-content: flex-start; border: 2px solid var(--tly-line);
+  border-radius: 16px; background: var(--tly-card); padding: 10px 12px; min-height: 66px; }
+.st-key-club-menu [data-testid="stPopoverButton"] > div { width: 100%; justify-content: space-between; }
+.st-key-club-menu [data-testid="stPopoverButton"] > div > div:first-child { flex: 1; display: flex; justify-content: flex-start; }
+.st-key-club-menu [data-testid="stPopoverButton"] p { display: grid; grid-template-columns: 42px 1fr; column-gap: 12px;
+  align-items: center; text-align: left; font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; line-height: 1.2; }
+.st-key-club-menu [data-testid="stPopoverButton"] p::before { grid-row: span 2; width: 42px; height: 42px; border-radius: 12px;
+  background: var(--tly-forest); color: var(--tly-white); display: grid; place-items: center; font-size: 1rem; }
+.st-key-club-menu [data-testid="stPopoverButton"] p::after { font-family: var(--tly-body); font-weight: 400; font-size: .85rem;
+  color: var(--tly-soft); }
+.tly-club-badge { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; flex: none;
+  background: var(--tly-forest); color: var(--tly-white); font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; }
+.tly-club-badge.big { width: 56px; height: 56px; border-radius: 16px; font-size: 1.3rem; }
+.tly-club-badge.huge { width: 62px; height: 62px; border-radius: 18px; font-size: 1.5rem; }
+.tly-club-badge.mid { width: 50px; height: 50px; }
+.tly-home-line, [data-testid="stMarkdownContainer"] p.tly-home-line { color: var(--tly-soft); margin: 2px 0 8px; }
+.tly-home-line b { color: var(--tly-ink); }
+/* Club home hero (pick C): money on green, the next step on sunny yellow. */
+.st-key-home-hero { border-radius: 30px; overflow: hidden; box-shadow: 0 18px 40px rgba(31,42,34,.15); flex-wrap: nowrap; margin-top: -1.5rem; }
+.st-key-hero-money, .st-key-hero-next { position: relative; min-height: 320px; padding: 30px 34px; }
+.st-key-hero-money { flex: 1.25 1 0; background: var(--tly-white) radial-gradient(rgba(31,42,34,.06) 1.5px, transparent 1.5px) 0 0 / 18px 18px; color: var(--tly-ink); }
+/* White with faint dots, so Tally's dark outlines and the yellow coins show (Kevin, 2026-11-10) */
+.st-key-hero-next { flex: 1 1 0; background: var(--tly-sage); }  /* sage, so Tally and the yellow sparkles stand out (Kevin, 2026-11-10) */
+.tly-hero-id { display: flex; gap: 14px; align-items: center; }
+.tly-hero-id b { font-family: var(--tly-head); font-weight: 600; font-size: 1.6rem; display: block; line-height: 1.15; }
+.tly-hero-id small { opacity: .8; }
+.tly-hero-money { font-family: var(--tly-head); font-weight: 700; font-size: 4.4rem; line-height: 1; margin: 26px 0 4px;
+  font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
+.tly-hero-sub { opacity: .85; margin: 0 0 14px; max-width: calc(100% - 150px); }  /* clear of the coin-jar Tally */
+.tly-delta { display: inline-block; font-family: var(--tly-head); font-weight: 600; background: var(--tly-paper); color: var(--tly-ink);
+  border-radius: 999px; padding: 4px 14px; } .tly-delta b { color: var(--tly-forest); } .tly-delta.down b { color: var(--tly-berry); }
+.tly-hero-jar { position: absolute; right: -6px; top: 150px; height: 135px; }
+.st-key-hero-money [data-testid="stWidgetLabel"] p { color: var(--tly-ink); }
+.tly-kick { font-family: var(--tly-head); font-weight: 600; font-size: .85rem; letter-spacing: .08em; margin: 6px 0 0; }
+.tly-next-title { font-family: var(--tly-head); font-weight: 700; font-size: 1.9rem; line-height: 1.15; margin: 6px 0 4px; color: var(--tly-ink); max-width: 75%; }
+.tly-checks { list-style: none; padding: 0 !important; margin: 12px 0 8px; display: grid; gap: 6px; font-weight: 500; position: relative; z-index: 1; }
+.tly-checks li { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; }  /* circle and text on one line */
+.tly-checks li::before { content: ""; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  flex: none; box-sizing: border-box; border: 2px solid var(--tly-ink); background: var(--tly-white); font-size: .75rem; }
+.tly-checks li.done::before { content: "✓"; background: var(--tly-forest); border-color: var(--tly-forest); color: var(--tly-white); }
+.tly-hero-clip { position: absolute; right: -26px; top: 70px; height: 200px; }
+.st-key-home-go button { border: 3px solid var(--tly-ink) !important; box-shadow: 4px 4px 0 var(--tly-ink); padding: 10px 22px; }
+.st-key-home-go button p { font-size: 1.05rem; }
+/* Ticket strip and crew cards, each with its own Tally in the corner */
+.st-key-home-tickets, .st-key-home-crew { background: var(--tly-card); padding: 20px 22px; position: relative; margin-top: 8px; min-height: 150px; }
+.tly-card-title { font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; margin: 0 0 12px; }
+.tly-card-tally { position: absolute; right: 22px; top: 8px; height: 118px; pointer-events: none; }
+.st-key-home-crew .tly-card-tally { height: 100px; top: 14px; }
+.st-key-home-crew [data-testid="stHorizontalBlock"], .st-key-club-chips, .st-key-home-crew .tly-home-line { max-width: calc(100% - 200px); }
+.tly-strip { display: flex; gap: 14px; flex-wrap: wrap; max-width: calc(100% - 160px); }
+.tly-strip .tly-event { width: 205px; margin: 0; }
+.tly-strip .info span { font-family: var(--tly-head); font-weight: 600; }
+.tly-strip .pos { color: var(--tly-forest); } .tly-strip .neg { color: var(--tly-berry); } .tly-strip .open { color: var(--tly-soft); }
+.tly-pick-name { font-family: var(--tly-head); font-weight: 600; font-size: 1.2rem; margin: 10px 0 0; color: var(--tly-ink); }
+.tly-pick-sub { color: var(--tly-soft); margin: 0; font-size: .92rem; }
+[class*="st-key-pick-club-"] { background: var(--tly-card); padding: 20px; }
+.st-key-pick-club-new { border-style: dashed !important; }
+.st-key-club-pop [data-testid="stBaseButton-tertiary"]:disabled { color: var(--tly-forest); opacity: 1; }
+/* Club menu list (Kevin, round 2): each club a row with its colored initials, the open one tinted with a check */
+.tly-menu-label, [data-testid="stMarkdownContainer"] p.tly-menu-label { font-family: var(--tly-head); font-weight: 600; font-size: .75rem; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--tly-soft); margin: 8px 0 0 4px; }
+.st-key-club-home button > div { width: 100%; justify-content: flex-start; }
+.st-key-club-home button { justify-content: flex-start; border-color: transparent; background: transparent; }
+.st-key-club-home button:hover { background: var(--tly-hover); }
+.st-key-club-list { gap: 4px; }
+[class*="st-key-club-pick-"] button { justify-content: flex-start; min-height: 48px; padding: 4px 12px 4px 8px; background: var(--tly-white);
+  border: 2px solid var(--tly-line); }
+[class*="st-key-club-pick-"] button > div { width: 100%; justify-content: space-between; }
+[class*="st-key-club-pick-"] button > div > div:first-child, [class*="st-key-club-pick-"] button [data-testid="stMarkdownContainer"] { flex: 1; display: flex; }
+[class*="st-key-club-pick-"] button p { display: flex; align-items: center; gap: 12px; text-align: left; }
+[class*="st-key-club-pick-"] button p::before { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px;
+  border-radius: 8px; color: var(--tly-white); font: 600 .8rem var(--tly-head); }
+[class*="st-key-club-pick-"] button:hover:not(:disabled) { border-color: var(--tly-forest); background: var(--tly-hover); }
+[class*="st-key-club-pick-"] button:disabled { opacity: 1; cursor: default; background: var(--tly-green-tint); border-color: var(--tly-forest);
+  color: var(--tly-forest); }
+[class*="st-key-club-pick-"] button:disabled p { color: var(--tly-ink); }
+.st-key-club-menu-new button { border: 2px dashed var(--tly-line-strong); background: transparent; color: var(--tly-forest); }
+.st-key-club-menu-new button:hover { border-color: var(--tly-forest); background: var(--tly-green-tint); }
+/* New club pop-up and Club settings */
+.tly-dialog-tally { display: block; height: 144px; margin: 0 auto 8px; }
+.stDialog:has(.tly-newclub) [data-testid="stMarkdownContainer"]:not([data-testid="stVerticalBlock"] *) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.tly-newclub { position: relative; min-height: 400px; height: 100%; background: var(--tly-sage); border-radius: var(--tly-r); padding: 24px; }
+.tly-newclub p { margin: 0 0 8px; font: 600 var(--tly-t-xs) var(--tly-head); letter-spacing: .08em; text-transform: uppercase; color: var(--tly-ink); }
+.tly-newclub b { display: block; font: 700 var(--tly-t-2xl) var(--tly-head); line-height: 1.15; color: var(--tly-ink); }
+.tly-newclub img { position: absolute; left: 50%; bottom: 16px; height: 232px; transform: translateX(-50%); }
+.st-key-club-settings { gap: 12px; min-width: 340px; }
+.tly-set-head { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 2px dashed var(--tly-line); }
+.tly-set-head b { display: block; font-family: var(--tly-head); font-weight: 600; font-size: 1.15rem; color: var(--tly-ink); line-height: 1.2; }
+.tly-set-head small { color: var(--tly-soft); }
+.st-key-delete-club button { color: var(--tly-berry); border-color: var(--tly-berry-soft); background: transparent; }
+.st-key-delete-club button:hover { color: var(--tly-white); background: var(--tly-berry); border-color: var(--tly-berry); }
+.st-key-club-delete-yes button { background: var(--tly-berry); border-color: var(--tly-berry); }
+.st-key-club-delete-yes button:hover { background: var(--tly-berry-deep); border-color: var(--tly-berry-deep); }
+/* First club page: the New club pop-up's split card, centered */
+.st-key-first-club { max-width: 880px; margin: 48px auto 0; background: var(--tly-white); border: 1px solid var(--tly-line);
+  border-radius: 24px; padding: 16px 32px 16px 16px; box-shadow: var(--tly-shadow); }
+.st-key-first-club .tly-newclub { min-height: 420px; }
+/* Club facts as mini tiles: colored icon, small label, bold value */
+.tly-facts { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 8px; }
+.tly-facts > div { display: flex; gap: 10px; align-items: center; min-width: 180px; background: var(--tly-white);
+  border: 1px solid var(--tly-line); border-radius: 16px; padding: 10px 14px; }
+.tly-facts .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: 20px; line-height: 1;
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--tly-white);
+  background: var(--tly-forest); font-variation-settings: "FILL" 1; }
+.tly-facts > div:nth-child(2) .ms { background: var(--tly-clay); }
+.tly-facts > div:nth-child(3) .ms { background: var(--tly-navy); }
+.tly-facts span { line-height: 1.2; } .tly-facts small { display: block; font-size: .75rem; color: var(--tly-soft); }
+.tly-facts b { font-family: var(--tly-head); font-weight: 600; font-size: 1.1rem; color: var(--tly-ink); }
+/* Demo mode: a pill above the club menu, and a band on Club home with the way back to your club. */
+.tly-demo-pill { display: inline-block; margin: 0; padding: 4px 16px; border-radius: 999px; background: var(--tly-sun-tint);
+  border: 2px solid var(--tly-sun); color: var(--tly-sun-ink); font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); }
+.st-key-demo-band { background: var(--tly-sun-tint); border: 2px solid var(--tly-sun); border-radius: var(--tly-r); padding: 8px 16px;
+  justify-content: space-between; margin-bottom: 24px; }
+.st-key-demo-band p, .st-key-demo-band [data-testid="stMarkdownContainer"] { margin: 0; }

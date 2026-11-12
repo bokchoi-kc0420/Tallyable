@@ -47,6 +47,16 @@ try {
     try { await page.goto(`http://localhost:${PORT}`); break; } catch (e) { if (i > 60) throw e; }
     await page.waitForTimeout(500);
   }
+  await page.getByText("Welcome to Tallyable").waitFor({ timeout: 60000 });
+  await shot("0-club-name");
+  await page.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Sunrise Hiking Club");
+  const startBalance = page.getByPlaceholder("0.00").first();
+  await startBalance.fill("1000");
+  await startBalance.press("Tab");
+  await page.getByRole("button", { name: "Add club" }).click();
+  await idle();
+  await shot("0-club-home-empty");
+  await page.getByRole("button", { name: "New event" }).click();
   await page.getByText("Start a new event").waitFor({ timeout: 60000 });
   await shot("0-start-empty");
   for (const name of ["Jamie Lee", "Sam Park"]) {  // Continue waits for at least one member
@@ -62,7 +72,7 @@ try {
   await idle();
   await page.getByRole("button", { name: "Apply to all" }).click();
   await idle();
-  await page.getByRole("button", { name: "Draft rows" }).click();
+  await page.getByRole("button", { name: /^Read \d+ receipts?$/ }).click();
   await page.getByRole("button", { name: /Go to Review/ }).waitFor({ timeout: 60000 });
   await shot("1-upload-drafted");
 
@@ -91,10 +101,10 @@ try {
   await idle();
   await shot("2-review-R11-left-out");
 
-  await page.getByRole("button", { name: /Approve the \d+ with no flags/ }).click();
+  await page.getByRole("button", { name: /Approve all \d+/ }).click();
   await idle();
   for (let n = 0; n < 15; n++) {  // approve the flagged ones too, with a note, so Push opens up
-    const left = page.locator('[data-testid="stSidebar"] label').filter({ hasText: "⏳" });
+    const left = page.locator('[data-testid="stSidebar"] label').filter({ hasText: "schedule" });  // the drafted icon (Material "schedule")
     if (!(await left.count())) break;
     await left.first().click();
     await idle();
@@ -112,23 +122,25 @@ try {
   await shot("3-summary");
   const panel = page.locator(".tly-money").first();
   await shot("3-summary-money", panel);
-  await page.getByRole("button", { name: /Push to/ }).click();
+  await page.getByRole("button", { name: "Save and get Excel" }).click();  // no Google Sheet: saving is the push
   await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
   await shot("3-summary-done-card", page.locator(".st-key-books-in"));
   await firstAmount.fill("520");  // an edit after Push: the card asks to push again
   await firstAmount.press("Enter");
   await page.locator(".st-key-push-stale").waitFor({ timeout: 30000 });
   await shot("3-summary-stale", page.locator(".st-key-push-stale"));
-  await page.getByRole("button", { name: "Push again" }).click();
+  await page.getByRole("button", { name: "Save again" }).click();
   await page.locator(".st-key-books-in").waitFor({ timeout: 60000 });
 
   await step("Close out");
+  await page.getByRole("heading", { name: "Who's owed" }).hover();  // header link icon must stay hidden
   await shot("4-close-out");
+  await shot("4-whos-owed", page.locator(".st-key-whos-owed"));
   await page.getByText(/Left out of the books/).click();
   await shot("4-close-out-left-out");
   await page.getByRole("button", { name: "Mark paid" }).first().click();
   await idle();
-  await shot("4-close-out-undo", page.locator(".st-key-undo-paid").locator("xpath=../../..").first());
+  await shot("4-close-out-undo", page.locator(".st-key-whos-owed"));
   await page.getByRole("combobox", { name: /^Funder/ }).scrollIntoViewIfNeeded();
   await page.getByRole("combobox", { name: /^Funder/ }).click();
   await page.waitForTimeout(500);
@@ -136,14 +148,59 @@ try {
   await page.keyboard.press("Escape");
   await shot("4-close-out-finish-button", page.locator(".st-key-finish-row"));
   await page.getByRole("button", { name: "Finish event" }).click();
-  await page.locator(".st-key-finish-page").waitFor({ timeout: 30000 });
-  await page.waitForTimeout(700);
+  await page.locator(".tly-confetti").waitFor({ timeout: 30000 });  // added last, once the page is built
+  await page.waitForTimeout(1400);
   await page.screenshot({ path: join(OUT, "5-finish-confetti.png") });  // mid-fall, so no idle wait
   await page.waitForTimeout(4500);
   await shot("5-finish");
   await shot("5-finish-card", page.locator(".st-key-finish-page"));
   await page.getByText(/Past events/).click();
   await shot("5-finish-sidebar", page.locator('[data-testid="stSidebar"]'));
+  const clubMenu = page.locator('.st-key-club-menu [data-testid="stPopoverButton"]');
+  await clubMenu.click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "7-club-menu.png") });
+  await page.getByRole("button", { name: "Club home", exact: true }).click();
+  await idle();
+  await shot("7-club-home");
+  await page.getByRole("button", { name: "Club settings" }).click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "7-club-settings.png") });
+  await page.keyboard.press("Escape");
+  await clubMenu.click();
+  await page.getByRole("button", { name: "New club" }).click();
+  await page.getByText("Let's set up your club!").waitFor({ timeout: 30000 });
+  const dialog = page.getByRole("dialog");
+  await dialog.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Chess & Coffee");
+  for (const who of ["Jamie Lee", "Sam Park"]) {
+    await dialog.getByPlaceholder("Add someone, e.g. Jamie Lee").fill(who);
+    await dialog.getByPlaceholder("Add someone, e.g. Jamie Lee").press("Enter");
+    await idle();
+  }
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(OUT, "7-new-club-popup.png") });
+  await dialog.getByRole("button", { name: "Add club" }).click();
+  await idle();
+  await shot("7-club-home-new-club");
+  // A brand-new club has no event yet, so the sidebar shows no steps to click (only New event).
+  await clubMenu.click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "7-club-menu-two-clubs.png") });
+  await page.keyboard.press("Escape");
+  await clubMenu.click();
+  await page.locator(".st-key-club-home button").click();
+  await idle();
+  await page.getByRole("button", { name: "Club settings" }).click();
+  await page.getByRole("button", { name: "Delete club" }).click();
+  await page.getByText("This can't be undone!").waitFor({ timeout: 30000 });
+  await page.screenshot({ path: join(OUT, "7-delete-club.png") });
+  await page.getByRole("button", { name: "Keep it" }).click({ force: true });
+  await idle();
+  await page.goto(`http://localhost:${PORT}`);  // a new tab with two clubs asks which one
+  await page.getByText("Which club are you doing the books for?").waitFor({ timeout: 60000 });
+  await shot("8-which-club");
+  await page.getByRole("button", { name: "Open Sunrise Hiking Club" }).click();
+  await idle();
   await page.locator('[data-testid="stSidebarCollapseButton"] button').click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: join(OUT, "6-sidebar-collapsed.png") });

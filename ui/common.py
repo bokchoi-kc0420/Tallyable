@@ -15,21 +15,39 @@ from treasurer.post import LocalCsvSink, event_totals
 from treasurer.sheets import GoogleSheetsSink
 
 ROOT = Path(__file__).parent.parent
-OUT = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
+BASE = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
+MODE_FILE = BASE / "mode.txt"  # "demo" or "real": which folder a new tab opens (none yet: demo)
 FAKE = ROOT / "fake_event"
 ART = ROOT / "assets"
-RUN_LOG = OUT / "run_log.csv"
-SESSION_FILE = OUT / "session.json"
-PAST = OUT / "events"  # one saved file per event, so a closed event can be reopened later
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
-ICON = {Status.DRAFTED: "⏳ drafted", Status.APPROVED: "✅ approved", Status.REJECTED: "➖ left out",
-        Status.POSTED: "📤 posted"}
+# Drawn (Material) icons, never emoji: they match the rest of the UI and take the theme colors.
+ICON = {Status.DRAFTED: ":material/schedule:", Status.APPROVED: ":green[:material/check_circle:]",
+        Status.REJECTED: ":gray[:material/remove_circle:]", Status.POSTED: ":green[:material/cloud_done:]"}
+FLAG_ICON = ":orange[:material/flag:]"
 STATUS_CHIP = {Status.DRAFTED: ("drafted", "wait"), Status.APPROVED: ("approved", "ok"),
                Status.REJECTED: ("left out", "no"), Status.POSTED: ("in the books", "post")}
-# Tally's pose on the walker bar for each step (Kevin's picks). Close out keeps the original.
+# Tally's pose on the walker bar for each step (Kevin's picks), one per step.
 TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small.png",
-         "3. Summary": "tally-summary-small.png", "4. Close out": "mascot-small.png"}
+         "3. Summary": "tally-summary-small.png", "4. Close out": "tally-calculator.png"}
 ss = st.session_state
+
+
+def is_demo() -> bool:
+    """Demo (sample club, fake receipts) or real (your club). Each tab keeps the mode it opened in,
+    so a switch in one tab can't send another tab's event into the wrong folder."""
+    if "demo_mode" not in ss:
+        ss.demo_mode = not MODE_FILE.exists() or MODE_FILE.read_text().strip() == "demo"  # a new install opens the demo
+    return ss.demo_mode
+
+
+def out() -> Path:
+    """This mode's own data folder. Demo and real never share a file."""
+    return BASE / ("demo" if is_demo() else "real")
+
+
+def past() -> Path:
+    """One saved file per event, so a closed event can be reopened later."""
+    return out() / "events"
 
 
 def load_cloud_secrets() -> dict | None:
@@ -101,10 +119,12 @@ def get_sink():
     try:
         from ui.connect import linked
         link = linked() or {}
-        return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(OUT / "transactions.csv"), None
+        if not link and not is_demo():  # real books only go to a sheet linked in the app, never the .env test sheet
+            return LocalCsvSink(out() / "transactions.csv"), None
+        return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(out() / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
-        return LocalCsvSink(OUT / "transactions.csv"), ("Couldn't open the Google Sheet, so the books are saved on "
-                                                        f"this computer for now. ({e})")
+        return LocalCsvSink(out() / "transactions.csv"), ("Couldn't open the Google Sheet, so your books come out as "
+                                                        f"an Excel file for now. ({e})")
 
 
 def saved_reimbursements(sink) -> list[dict]:
@@ -116,6 +136,11 @@ def saved_reimbursements(sink) -> list[dict]:
 
 
 @st.cache_data
+def plural(n: int, word: str) -> str:
+    """'1 receipt', '14 receipts'."""
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
 def mascot_uri(file: str = "mascot-small.png") -> str:
     return "data:image/png;base64," + base64.b64encode((ART / file).read_bytes()).decode()
 
@@ -138,13 +163,16 @@ def guide(title: str, body: str, *, key: str, tip: bool = False, to: str | None 
     return bubble
 
 
-def loading(slot, title: str, detail: str, frac: float | None) -> None:
-    """Tally's loading card, drawn into an st.empty() slot. frac None = a bar that just runs."""
+def loading(slot, title: str, detail: str, frac: float | None, rows: list[str | None] = (),
+            pose: str = "tally-magnify.png") -> None:
+    """Tally's loading card, drawn into an st.empty() slot. frac None = a bar that just runs.
+    rows: one line per item being read, a finished one as text and a waiting one (None) as a skeleton."""
     bar = (f'<div class="bar"><i style="width:{max(frac, 0.04) * 100:.0f}%"></i></div>' if frac is not None
            else '<div class="bar run"><i></i></div>')
-    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri("tally-review-small.png")}" alt="">'
-                  f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}</div></div>',
-                  unsafe_allow_html=True)
+    lines = "".join(f"<li>{html.escape(r)}</li>" if r else '<li class="sk"></li>' for r in rows)
+    slot.markdown(f'<div class="tly-loading" role="status"><img src="{mascot_uri(pose)}" alt="">'
+                  f'<div><b>{html.escape(title)}</b><small>{html.escape(detail)}</small>{bar}'
+                  f'{f"<ul>{lines}</ul>" if lines else ""}</div></div>', unsafe_allow_html=True)
 
 
 def next_step(message: str, label: str, target: str, key: str) -> None:
@@ -251,4 +279,4 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
                 f'<div class="tly-legend">{in_leg}</div><div class="tly-legend">{out_leg}</div></div>',
                 unsafe_allow_html=True)
     if t["income"] <= 0:
-        st.caption("No income entered yet. Add it on the Summary step.")
+        st.caption("No income yet. You can add it on Summary.")

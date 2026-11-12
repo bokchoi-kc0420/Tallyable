@@ -28,7 +28,7 @@ def test_sideways_phone_photo_is_turned_upright():
     f = prepare(jpeg(im, exif=exif), "R01.jpg")
     out = Image.open(io.BytesIO(f.data))
     assert out.size == Image.open(io.BytesIO(R01)).size
-    assert any("Rotated" in w for w in f.warnings)
+    assert f.warnings == []  # turned for you: nothing to check, so it can't hold the receipt out of Approve all
 
 
 def test_blurry_photo_warns_but_does_not_block():
@@ -52,7 +52,7 @@ def test_iphone_heic_photo_converts_to_jpg():
 
 def test_pdf_passes_through_and_fake_pdf_is_refused():
     f = prepare(b"%PDF-1.7 fake receipt", "R16.pdf")
-    assert f.is_pdf and f.filename == "R16.pdf"
+    assert f.media_type == "application/pdf" and f.filename == "R16.pdf"
     with pytest.raises(UnsupportedFile, match="isn't one"):
         prepare(b"hello", "R16.pdf")
 

@@ -16,18 +16,26 @@ def new_app(members: str = MEMBERS) -> AppTest:
     """The app with the club's members already added, as a treasurer would on Upload."""
     from ui.sidebar import DEFAULT_EVENT
     at = AppTest.from_file(APP, default_timeout=30)
+    base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "mode.txt").write_text("demo")  # the fake event's receipts only show in the demo
     at.session_state["event"] = {**DEFAULT_EVENT, "event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)",
                                  "date": date(2026, 11, 14), "attendees": 45, "members": members, "set_up": True}
     return at
 
 
+def draft(at) -> None:
+    """Click Read, tagging every untagged receipt with the first member first (Read waits for tags)."""
+    if at.button(key="read").disabled:
+        next(b for b in at.button if b.label == "Apply to all").click().run()
+    at.button(key="read").click().run()
+
+
 def owed_table(at) -> list[dict]:
-    """Rows of the Payback details table, read back from its HTML."""
+    """Still owed per payer, read back from the Who's owed ledger."""
     import re
-    page = next(m.value for m in at.markdown if "<th" in m.value and ">Owed<" in m.value)
-    heads = re.findall(r"<th(?: [^>]*)?>(.*?)</th>", page)
-    rows = re.findall(r"<tr>(.*?)</tr>", page.split("<tbody>")[1])
-    return [dict(zip(heads, re.findall(r"<td(?: [^>]*)?>(.*?)</td>", r), strict=True)) for r in rows]
+    cells = [re.search(r'data-payer="(.*?)">(.*?)<', m.value) for m in at.markdown]
+    return [{"Payer": c[1], "Owed": c[2]} for c in cells if c]
 
 
 def test_draft_approve_and_fix():
@@ -37,7 +45,7 @@ def test_draft_approve_and_fix():
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value("Member A")
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     assert "R15" in at.session_state["receipts"]  # ids follow file names
 
     at.sidebar.radio[0].set_value("2. Review").run()
@@ -58,23 +66,23 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value("Member A")
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     next(b for b in at.button if b.label == "Approve").click().run()  # R01
 
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.text_input(key="income-Cash").set_value("100.00").run()
-    push = next(b for b in at.button if b.label.startswith("Push to"))
+    push = at.download_button(key="dl-xlsx-row")
     assert push.disabled  # other receipts still drafted
     for rid, r in list(at.session_state["receipts"].items()):
         if rid != "R01":
             at.session_state["receipts"][rid] = r.model_copy(update={"status": Status.REJECTED})
     at.run()
-    next(b for b in at.button if b.label.startswith("Push to")).click().run()
+    at.download_button(key="dl-xlsx-row").click().run()  # no Google Sheet: saving is the push
     assert not at.exception
     assert at.session_state["receipts"]["R01"].status is Status.POSTED
     assert {"Balance Sheet", "General Ledger", "Expense Report", "Receipts"} <= {b.label for b in at.get("download_button")}
-    log = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "run_log.csv"
+    log = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "demo" / "run_log.csv"
     row = list(csv.DictReader(log.open()))[-1]
     assert row["posted"] == "1" and row["minutes_review_to_push"] != ""
 
@@ -93,20 +101,20 @@ def test_one_click_mark_paid_uses_chosen_method():
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value("Member C")
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     r = at.session_state["receipts"]["R01"]
     at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED})
     at.sidebar.radio[0].set_value("4. Close out").run()
-    at.selectbox(key="quick-method").set_value("Venmo").run()
+    at.selectbox(key="method-Member C").set_value("Venmo").run()
     at.button(key="paid-Member C").click().run()
     assert not at.exception
     assert owed_table(at)[0]["Owed"] == "$0.00"
-    rows = list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
+    rows = list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv")).read_text().splitlines()))
     assert rows[-1]["method"] == "Venmo" and rows[-1]["payer"] == "Member C"
     assert not [b for b in at.button if b.key == "paid-Member C"]  # now shows Paid instead
     at.button(key="undo-paid").click().run()  # a misclick can be taken back
     assert owed_table(at)[0]["Owed"] != "$0.00"
-    assert not list(csv.DictReader(open(Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv")))
+    assert not list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv")).read_text().splitlines()))
 
 
 def test_mark_paid_back_updates_owed():
@@ -116,7 +124,7 @@ def test_mark_paid_back_updates_owed():
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value("Member B")
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     r = at.session_state["receipts"]["R01"]
     at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED, "payer": "Member B"})
     at.sidebar.radio[0].set_value("4. Close out").run()
@@ -166,7 +174,7 @@ def test_event_setup_and_start_new_event():
     name.set_value("Winter Social (FAKE)").run()
     assert at.session_state["event"]["event_id"].startswith("EVT-2026-11-14-WINTER")
     at.button[0].click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.run()
     next(t for t in at.sidebar.text_input if t.label == "Event name").set_value("Winter Gala (FAKE)").run()
     assert at.session_state["event"]["name"] == "Winter Gala (FAKE)"  # renaming is fine before Push...
@@ -199,7 +207,7 @@ def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value("Member A")
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     next(b for b in at.button if b.label == "Approve").click().run()
 
@@ -210,7 +218,7 @@ def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
 
 
 def test_corrupt_session_file_is_ignored():
-    out = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    out = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "demo"
     out.mkdir(parents=True, exist_ok=True)
     (out / "session.json").write_text("{not json")
     at = new_app().run()
@@ -225,7 +233,7 @@ def drafted_app(payer="Member A"):
         if sb.key and sb.key.startswith("payer-R"):
             sb.set_value(payer)
     at.run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     return at
 
@@ -235,7 +243,8 @@ def test_approve_moves_to_next_receipt_and_reopen_undoes():
     assert at.sidebar.radio(key="review-pick").value == "R01"
     next(b for b in at.button if b.label == "Approve").click().run()
     assert at.sidebar.radio(key="review-pick").value == "R02"
-    at.sidebar.radio(key="review-pick").set_value("R01").run()
+    at.button(key="review-prev").click().run()  # the arrow goes back to the approved one
+    assert at.sidebar.radio(key="review-pick").value == "R01" and at.button(key="review-prev").disabled
     next(b for b in at.button if b.label == "Reopen").click().run()
     assert at.session_state["receipts"]["R01"].status.value == "drafted"
 
@@ -260,7 +269,7 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
     at.session_state["receipts"]["R01"] = at.session_state["receipts"]["R01"].model_copy(
         update={"status": Status.APPROVED})
     at.sidebar.radio[0].set_value("3. Summary").run()
-    next(b for b in at.button if b.label.startswith("Push to")).click().run()
+    at.download_button(key="dl-xlsx-row").click().run()  # no Google Sheet: saving is the push
     assert not at.exception
     assert any("stopped partway" in e.value for e in at.error)
     assert at.session_state["receipts"]["R01"].status is Status.APPROVED   # not marked posted
@@ -269,12 +278,13 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
 def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert any("14 receipts in" in i.value and "14 still need a payer" in i.value for i in at.markdown)
+    assert any("14 receipts in" in i.value for i in at.markdown)
+    assert any("14 still need a payer" in i.value for i in at.markdown)
     next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
     assert any("Everyone's tagged" in i.value for i in at.markdown)
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     assert not at.exception
     assert {r.payer for r in at.session_state["receipts"].values()} == {"Member C"}
 
@@ -282,7 +292,7 @@ def test_upload_says_what_to_do_and_sets_every_payer_at_once():
 def test_each_step_says_what_comes_next():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     next(b for b in at.button if b.label == "Go to Review →").click().run()
     assert at.sidebar.radio(key="step").value == "2. Review"
     assert not any(b.label == "Go to Summary →" for b in at.button)
@@ -296,19 +306,23 @@ def test_each_step_says_what_comes_next():
     next(b for b in at.button if b.label == "Go to Summary →").click().run()
     assert at.sidebar.radio(key="step").value == "3. Summary"
     assert any("Review" in m.value and "✓" in m.value for m in at.markdown)  # step bar marks review done
-    next(b for b in at.button if b.label.startswith("Push to")).click().run()
-    assert not at.exception
     next(b for b in at.button if b.label == "Next: Close out").click().run()
     assert at.sidebar.radio(key="step").value == "4. Close out"
 
 
-def test_drafting_the_same_photos_twice_reads_them_once():
+def test_photos_already_read_are_not_read_again():
     at = new_app().run()
-    for _ in range(2):
-        next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-        next(b for b in at.button if b.label == "Draft rows").click().run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    draft(at)
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    assert not [b for b in at.button if b.key == "read"]  # nothing new: Go to Review is the next step
     assert len(at.session_state["receipts"]) == 14
-    assert "Skipped 14 I'd already read" in at.session_state["last_draft"]
+    from treasurer.reader import make_extractor
+    from ui.upload import read_one
+    photo, data = at.session_state["images"]["R01"]
+    import hashlib
+    f, r, problem, repeat = read_one(make_extractor()[0], "copy.jpg", photo, "EVT", "R99", {hashlib.sha256(photo).hexdigest(): "R01"})
+    assert r is None and problem is None and repeat == "R01"  # the same photo under another name is skipped, not paid for twice
 
 
 def test_a_finished_event_can_be_reopened_later():
@@ -334,6 +348,8 @@ def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
     assert any("Fill in Place and Item" in e.value for e in at.error) and not at.session_state["receipts"]
     next(t for t in at.text_input if t.label == "Place").set_value("Campus Market")
     next(t for t in at.text_input if t.label == "Item").set_value("Ice")
+    next(b for b in at.button if b.label == "Add").click().run()  # no total yet: a $0 receipt slipped into the books
+    assert any("Type the Total" in e.value for e in at.error) and not at.session_state["receipts"]
     next(t for t in at.text_input if t.label == "Price per unit").set_value("$3.50")
     next(t for t in at.text_input if t.label == "Total").set_value("$3.50")
     next(b for b in at.button if b.label == "Add").click().run()
@@ -345,7 +361,7 @@ def test_manual_purchase_needs_place_and_item_and_takes_dollar_signs():
 def test_summary_warns_about_junk_and_negative_income():
     at = new_app().run()
     at.button[0].click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.button(key="add-source").click().run()  # Zelle
     at.button(key="add-source").click().run()  # Venmo
@@ -369,7 +385,7 @@ def test_empty_review_guide_button_goes_to_upload():
 def test_income_sources_can_be_added_renamed_and_removed():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("3. Summary").run()
     assert at.session_state["event"]["sources"] == "Cash"  # a new event starts with Cash only
     at.button(key="add-source").click().run()
@@ -395,14 +411,14 @@ def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch,
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     for rid in list(at.session_state["receipts"]):
         at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
     at.sidebar.radio[0].set_value("3. Summary").run()
     next(b for b in at.button if b.label == "Push to Google Sheets").click().run()
     assert not at.exception
-    assert any(e.label.startswith("Download a copy instead") for e in at.expander)
+    assert "Download as Excel" in [b.label for b in at.download_button]
     assert [lb.label for lb in at.get("link_button")] == ["Open the sheet"]
 
 
@@ -410,7 +426,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     at.button(key="approve-clean").click().run()
     rs = at.session_state["receipts"]
@@ -426,7 +442,7 @@ def test_my_funder_rules():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     at.button(key="approve-clean").click().run()
     at.sidebar.radio[0].set_value("4. Close out").run()
@@ -439,7 +455,14 @@ def test_my_funder_rules():
 
 
 def test_a_new_event_starts_with_who_is_in_before_upload():
+    base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "mode.txt").write_text("real")  # your own club, not the demo's sample one
     at = AppTest.from_file(APP, default_timeout=30).run()
+    assert any("Welcome to Tallyable" in h.value for h in at.html)  # the club comes first
+    at.text_input(key="club-first-name").set_value("Sunrise Hiking Club").run()
+    at.button(key="club-first-add").click().run()
+    at.sidebar.button(key="new-event").click().run()
     assert at.header[0].value == "Start a new event"
     assert at.button(key="start-go").disabled  # nobody in yet
     at.text_input(key="new-member").set_value("Jamie Lee").run()  # Enter adds the name
@@ -447,17 +470,17 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
     at.button(key="start-go").click().run()
     assert at.header[0].value == "Upload receipts"
     assert at.session_state["event"]["members"] == "Jamie Lee"
-    assert at.session_state["event"]["event_id"] == f"EVT-{date.today().isoformat()}-SPRINGPICNIC"  # blank start: today
+    assert at.session_state["event"]["event_id"].startswith(f"EVT-{date.today().isoformat()}-SPRINGPICNIC-")  # blank start: today
     at.button(key="edit-members").click().run()  # back to change who's in
     assert at.header[0].value == "Start a new event"
-    at.button(key="rm-member-0").click().run()
+    at.pills(key="roster").unselect("Jamie Lee").run()  # tap to leave someone out
     assert at.session_state["event"]["members"] == ""
 
 
 def test_a_forgotten_member_can_be_added_after_drafting():
     at = new_app("Jamie Lee").run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    next(b for b in at.button if b.label == "Draft rows").click().run()
+    draft(at)
     event_id = at.session_state["event"]["event_id"]
     at.button(key="edit-members").click().run()
     at.text_input(key="start-name").set_value("Fall Mixer, renamed")  # renaming is fine: the id stays
@@ -503,3 +526,83 @@ def test_connect_catches_a_viewer_only_share(monkeypatch):
     assert "Editor, not Viewer" in connect.check({"book": "x"})
     monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True))
     assert connect.check({"book": "x"}) is None
+
+
+def test_read_waits_for_every_payer():
+    at = new_app().run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    assert at.button(key="read").label == "Read 14 receipts" and at.button(key="read").disabled
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    assert not at.button(key="read").disabled
+
+
+def test_delete_event_removes_it_for_good():
+    at = drafted_app()
+    at.sidebar.button(key="delete-event").click().run()
+    at.button(key="delete-yes").click().run()
+    assert not at.exception
+    assert at.session_state["receipts"] == {}
+    assert not any("Fall Mentor Mixer" in m.value for m in at.sidebar.markdown)
+
+
+def test_club_members_fill_each_new_event_and_settings_hold_the_year():
+    at = new_app("Kevin, Mitch Lee").run()  # an older event: the club list starts from it
+    at.button(key="club-home").click().run()
+    at.text_input(key="club-new").set_value("Sam Cho").run()
+    next(n for n in at.number_input if n.label == "Started the year with ($)").set_value(420.0).run()  # Club settings
+    at.sidebar.button(key="new-event").click().run()
+    at.button(key="confirm-new-yes").click().run()
+    assert at.session_state["event"]["members"] == "Kevin, Mitch Lee, Sam Cho"
+    assert at.session_state["event"]["start_balance"] == 420.0
+    at.pills(key="roster").unselect("Mitch Lee").run()
+    assert at.session_state["event"]["members"] == "Kevin, Sam Cho"
+
+
+def test_each_club_keeps_its_own_members_events_and_balance():
+    at = new_app("Kevin, Mitch Lee").run()  # an older event becomes "My club"
+    at.sidebar.button(key="new-event").click().run()
+    at.button(key="confirm-new-yes").click().run()  # the older event is saved under My club
+    at.button(key="club-menu-new").click().run()  # the New club pop-up
+    at.text_input(key="new-club-name").set_value("Chess Club").run()
+    at.text_input(key="new-club-who").set_value("Dana Cho").run()  # the crew can join in the pop-up
+    at.button(key="new-club-add").click().run()
+    assert any("Chess Club" in h.value for h in at.html)
+    at.sidebar.button(key="new-event").click().run()
+    assert at.session_state["event"]["members"] == "Dana Cho"
+    assert at.session_state["event"]["club"] == "chess-club"
+    assert not any("Past events" in e.label for e in at.sidebar.expander)  # My club's event isn't Chess Club's
+    at.button(key="club-pick-my-club").click().run()
+    assert at.session_state["event"]["name"] == "Fall Mentor Mixer (FAKE)"  # back to My club's open event
+    fresh = AppTest.from_file(APP, default_timeout=30).run()  # a new tab with two clubs asks which one
+    assert fresh.header[0].value == "Which club are you doing the books for?"
+
+
+def test_club_home_steps_open_the_event_and_clubs_can_be_deleted():
+    at = new_app().run()
+    at.button(key="club-home").click().run()
+    at.sidebar.radio(key="step-home").set_value("1. Upload").run()  # the event's own step: used to do nothing
+    assert at.session_state["view"] == "event"
+    at.button(key="club-menu-new").click().run()
+    at.text_input(key="new-club-name").set_value("Chess Club").run()
+    at.button(key="new-club-add").click().run()
+    at.button(key="club-menu-new").click().run()  # the same name again opens it, no second Chess Club
+    at.text_input(key="new-club-name").set_value("chess club").run()
+    at.button(key="new-club-add").click().run()
+    from ui import club
+    assert [c["name"] for c in club.clubs().values()] == ["My club", "Chess Club"]
+    at.button(key="delete-club").click().run()
+    at.button(key="club-delete-yes").click().run()
+    assert not at.exception
+    assert [c["name"] for c in club.clubs().values()] == ["My club"]
+    assert club.current() == "my-club"
+
+
+def test_a_pushed_receipt_can_be_reopened_and_fixed():
+    at = drafted_app()
+    r = at.session_state["receipts"]["R01"]
+    at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.POSTED})  # as after a push
+    at.run()
+    reopen = next(b for b in at.button if b.label == "Reopen")
+    assert not reopen.disabled  # it used to lock for good: "change it in the sheet"
+    reopen.click().run()
+    assert at.session_state["receipts"]["R01"].status is Status.DRAFTED

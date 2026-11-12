@@ -74,12 +74,22 @@ class ExtractedItem(BaseModel):
 
 class ExtractedReceipt(BaseModel):
     place: str
-    date: str = Field(description="YYYY-MM-DD")
+    date: str = Field(description="YYYY-MM-DD, or empty if the receipt shows no date")
     items: list[ExtractedItem]
     tax: str = "0.00"
     tip: str = "0.00"
     total: str = Field(description="Total exactly as printed or handwritten")
     unreadable_note: str | None = None
+    proof: Literal["receipt", "cart", "estimate", "pending_charge"] = Field(
+        default="receipt", description="receipt: a final receipt or a placed order. cart: a shopping cart before "
+        "checkout. estimate: a price quoted before the service (a ride not taken yet). pending_charge: a bank or "
+        "card app showing a charge, not the seller's receipt.")
+
+
+# Not proof that money was spent: the treasurer decides, Tally only says so on Review.
+NOT_FINAL = {"cart": "This is a cart before checkout, not a final receipt - ask for the order confirmation.",
+             "estimate": "This is a price estimate, not a final receipt - ask for the receipt from after the ride or service.",
+             "pending_charge": "This is a bank charge, not the seller's receipt - ask for the receipt if there is one."}
 
 
 def _money(text: str, field: str, filename: str) -> Decimal:
@@ -140,16 +150,21 @@ class ClaudeExtractor:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
+        note = "; ".join(filter(None, [NOT_FINAL.get(x.proof), x.unreadable_note])) or None
+        if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
+            x.date = date.today().isoformat()
+            note = "; ".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
         try:
             d = date.fromisoformat(x.date)
-            items = [LineItem(category=i.category, item=i.item, unit=max(i.unit, 1),
-                              price=_money(i.price, "price", filename), returned=i.returned) for i in x.items]
+            # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
+            items = [LineItem(category=i.category, item=i.item, unit=i.unit,
+                              price=_money(i.price, "price", filename), returned=i.returned) for i in x.items if i.unit > 0]
             return Receipt(
                 receipt_id=receipt_id, event_id=event_id, place=x.place, date=d,
                 payer=None,  # payer comes from the upload tag, never from the AI
                 items=items, tax=_money(x.tax, "tax", filename), tip=_money(x.tip, "tip", filename),
                 total=_money(x.total, "total", filename), image_file=filename,
-                image_hash=hashlib.sha256(image).hexdigest(), review_note=x.unreadable_note,
+                image_hash=hashlib.sha256(image).hexdigest(), review_note=note,
             )
         except ValueError as e:  # bad date, no items, negative money
             raise ExtractionError(f"Claude's reading of {filename} did not fit the receipt format: {e}") from e
