@@ -206,15 +206,16 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
         if len(joinable) > 1 and not ss.get("joining"):
             st.button("One receipt, several screenshots? Join them", type="tertiary", key="join-start",
                       on_click=ss.update, kwargs={"joining": True})
-    groups = {parts[0][0]: parts for parts in bundles(todo)}
+    groups = {parts[0][0]: parts for parts in bundles(sources)}  # read ones too: a joined card stays one card
     joined = {name for parts in groups.values() for name, _ in parts[1:]}
+    unread_names = {name for name, _ in todo}
     with st.container(key="photo-grid"):
-        for n, (name, data) in enumerate(sources):
+        for n, (name, _) in enumerate(sources):
             if name not in joined:
-                photo_card(n, groups.get(name, [(name, data)]), pick=ss.get("joining") and name in joinable)
+                photo_card(n, groups[name], pick=ss.get("joining") and name in joinable, unread=name in unread_names)
 
 
-def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool) -> None:
+def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool) -> None:
     """One receipt on Upload: its photo (or its screenshots side by side) and who paid."""
     name = parts[0][0]
     with st.container(border=True, key=f"who-wide-{n}" if len(parts) > 1 else f"who-{n}"):
@@ -230,7 +231,8 @@ def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool) -> None:
             with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
                 st.markdown(f'<b>{html.escape(name)}</b> <span class="tly-joined">{len(parts)} screenshots · 1 receipt</span>',
                             unsafe_allow_html=True)
-                st.button("Split", type="tertiary", key=f"split-{name}", on_click=split, args=(name,))
+                if unread:  # once read it's one receipt in the books: Leave out on Review is the way back
+                    st.button("Split", type="tertiary", key=f"split-{name}", on_click=split, args=(name,))
         st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],),
                      label_visibility="collapsed" if len(parts) > 1 else "visible")
 
