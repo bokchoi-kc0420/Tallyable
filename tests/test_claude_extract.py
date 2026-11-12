@@ -47,6 +47,13 @@ def test_no_date_uses_today_and_says_so():  # a phone order screen with no date 
     assert r.date == date.today() and "No date" in r.review_note
 
 
+def test_qty_zero_line_is_not_charged():  # Dollar Tree: "Bag Fee 0 0.10 0.00N" was counted as $0.10
+    items = [ExtractedItem(item="Mini cups", category="Other", unit=2, price="1.50"),
+             ExtractedItem(item="Bag Fee", category="Other", unit=0, price="0.10")]
+    r = ClaudeExtractor(client=FakeClient(reading(items=items))).extract(b"x", "R01.jpg", "EVT", "R01")
+    assert [i.item for i in r.items] == ["Mini cups"]
+
+
 def test_reader_uses_stub_in_tests():
     from treasurer.reader import make_extractor
     assert make_extractor()[1] == "stub"

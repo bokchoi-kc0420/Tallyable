@@ -146,8 +146,9 @@ class ClaudeExtractor:
             note = "; ".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
         try:
             d = date.fromisoformat(x.date)
-            items = [LineItem(category=i.category, item=i.item, unit=max(i.unit, 1),
-                              price=_money(i.price, "price", filename), returned=i.returned) for i in x.items]
+            # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
+            items = [LineItem(category=i.category, item=i.item, unit=i.unit,
+                              price=_money(i.price, "price", filename), returned=i.returned) for i in x.items if i.unit > 0]
             return Receipt(
                 receipt_id=receipt_id, event_id=event_id, place=x.place, date=d,
                 payer=None,  # payer comes from the upload tag, never from the AI
