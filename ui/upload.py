@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -219,6 +220,8 @@ def show(event: EventInfo) -> None:
     ex, reader = make_extractor()
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
+    elif not is_demo() and os.getenv("TALLYABLE_EXTRACTOR", "").lower() == "stub":  # start.bat, not the key
+        st.warning("You opened the free version - close it and open start-with-claude.bat to read real receipts.")
     elif not is_demo():
         st.warning("Tally can't read real receipts yet: add your ANTHROPIC_API_KEY to .env. "
                    "Until then, add each purchase by hand at the bottom.")

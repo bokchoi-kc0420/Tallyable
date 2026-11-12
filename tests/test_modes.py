@@ -15,7 +15,12 @@ def test_demo_and_real_never_share_data():
     at.text_input(key="club-first-name").set_value("Chess Club").run()
     at.button(key="club-first-add").click().run()
     at.button(key="home-go").click().run()
+    at.text_input(key="new-member").set_value("Dana Cho").run()
+    at.text_input(key="start-name").set_value("Chess Night").run()
+    at.button(key="start-go").click().run()
+    assert at.header[0].value == "Upload receipts"
     assert not [b for b in at.button if b.label.startswith("Use the fake event")]  # no fake receipts in real mode
+    assert any("free version" in w.value for w in at.warning)  # start.bat's stand-in, not a missing key
 
     at.button(key="club-home").click().run()
     at.button(key="to-demo").click().run()
