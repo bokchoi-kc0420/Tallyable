@@ -175,7 +175,8 @@ def demo_band() -> None:
         return
     with st.container(key="demo-band", horizontal=True, vertical_alignment="center"):
         st.markdown("**You're in the demo** - a sample club with fake receipts. Play around, nothing here is real!")
-        st.button("Back to my club", icon=":material/arrow_forward:", icon_position="right", key="to-real",
+        label = "Back to my club" if (BASE / "real" / "clubs.json").exists() else "Set up my club"
+        st.button(label, icon=":material/arrow_forward:", icon_position="right", key="to-real",
                   on_click=switch_mode, args=(False,))
 
 

@@ -9,7 +9,9 @@ APP = str(Path(__file__).parent.parent / "app.py")
 
 def test_demo_and_real_never_share_data():
     base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
-    at = AppTest.from_file(APP, default_timeout=30).run()  # a new install opens in real mode: set up your club
+    at = AppTest.from_file(APP, default_timeout=30).run()  # a new install opens the demo
+    assert any("Demo mode" in h.value for h in at.sidebar.html)
+    at.button(key="to-real").click().run()  # "Set up my club"
     at.text_input(key="club-first-name").set_value("Chess Club").run()
     at.button(key="club-first-add").click().run()
     at.button(key="home-go").click().run()

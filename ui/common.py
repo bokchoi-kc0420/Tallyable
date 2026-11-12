@@ -16,7 +16,7 @@ from treasurer.sheets import GoogleSheetsSink
 
 ROOT = Path(__file__).parent.parent
 BASE = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
-MODE_FILE = BASE / "mode.txt"  # "demo" or "real": which folder a new tab opens
+MODE_FILE = BASE / "mode.txt"  # "demo" or "real": which folder a new tab opens (none yet: demo)
 FAKE = ROOT / "fake_event"
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
@@ -36,7 +36,7 @@ def is_demo() -> bool:
     """Demo (sample club, fake receipts) or real (your club). Each tab keeps the mode it opened in,
     so a switch in one tab can't send another tab's event into the wrong folder."""
     if "demo_mode" not in ss:
-        ss.demo_mode = MODE_FILE.exists() and MODE_FILE.read_text().strip() == "demo"
+        ss.demo_mode = not MODE_FILE.exists() or MODE_FILE.read_text().strip() == "demo"  # a new install opens the demo
     return ss.demo_mode
 
 
