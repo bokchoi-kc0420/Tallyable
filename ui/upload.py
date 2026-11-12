@@ -222,6 +222,9 @@ def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool)
     with st.container(border=True, key=f"who-wide-{n}" if len(parts) > 1 else f"who-{n}"):
         if pick:
             st.checkbox(f"Join {name}", key=f"pick-{name}", label_visibility="collapsed")
+        elif unread:  # once read, Leave out on Review is the way to take it back
+            st.button("", icon=":material/close:", key=f"drop-{name}", help=f"Remove {name}", on_click=remove,
+                      args=([part for part, _ in parts],))
         for col, (part, data) in zip(st.columns(len(parts)), parts, strict=True):
             pic = thumbnail(data, part)
             if pic:
@@ -248,6 +251,13 @@ def join(names: list[str]) -> None:
         ss.joins[part] = names[0]
         ss.joins.update({k: names[0] for k, v in ss.joins.items() if v == part})  # a joined card joins as a whole
     stop_joining()
+
+
+def remove(names: list[str]) -> None:
+    """Callback: take a photo off the page before it's read. The uploader can't be told to let go
+    of a file, so the name is remembered instead, until the file leaves the uploader."""
+    ss.removed = ss.get("removed", set()) | set(names)
+    ss.demo = [p for p in ss.get("demo", []) if p.name not in names]
 
 
 def split(name: str) -> None:
@@ -323,7 +333,9 @@ def show(event: EventInfo) -> None:
     if is_demo() and st.button("Use the fake event's 14 receipts instead"):  # fake receipts never reach real books
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
-    sources = [(f.name, f.getvalue()) for f in files] if files else [(p.name, p.read_bytes()) for p in ss.get("demo", [])]
+    ss.removed = ss.get("removed", set()) & {f.name for f in files or []}  # picked again later: it's back
+    sources = ([(f.name, f.getvalue()) for f in files if f.name not in ss.removed] if files else
+               [(p.name, p.read_bytes()) for p in ss.get("demo", [])])
 
     tagged_with()
     todo = bundles(unread(sources))

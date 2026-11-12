@@ -16,7 +16,7 @@ from .models import cell_decimal as D
 from .views import DARK, INK, MUTED, RED, TINT, TINT2, VIEW_NOTE, View, is_returned, num
 
 HEADER = ["Place", "Category", "Items", "Unit", "Price($)", "VAT (TAX)", "TIP", "Total", "Paid by"]
-WIDTHS = [112, 62, 172, 38, 72, 72, 60, 78, 88]  # 754 px: a letter page, portrait
+WIDTHS = [112, 72, 162, 38, 72, 72, 60, 78, 88]  # 754 px: a letter page, portrait
 TOP = 8  # rows above the first receipt: note, title, event line, gap, cards (2), gap, header
 
 
@@ -78,8 +78,10 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
         view.look(top, bottom, 8, 9, align="center", **({"bold": True, "color": RED} if not f["payer"] else {}))
         view.look(top, bottom, 7, 8, bold=True)
         view.look(top, bottom, 0, 9, border="box")
-        if bottom - top == 1:
-            view.heights[top] = 34  # room for the two-line place and payer cells
+        lines = -(-len(f["place"]) // 15) + 1  # the bold place wraps at about 15 letters, then its date line
+        tall = -(-lines * 17 // (bottom - top))
+        if tall > 21:  # taller rows, so a long place name (or a one-line receipt) isn't cut off
+            view.heights.update(dict.fromkeys(range(top, bottom), tall))
     last = len(rows)
     rows.append(["Total expenses", "", "", "", "", "", "", num(total), ""])
     extras = _breakdowns(rows, by_cat, by_payer)
