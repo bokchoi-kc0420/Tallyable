@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import io
 import os
 import time
@@ -115,11 +116,11 @@ def read_one(ex, parts: list[tuple[str, bytes]], event_id: str, rid: str, seen: 
 
 
 def bundles(todo: list[tuple[str, bytes]]) -> list[list[tuple[str, bytes]]]:
-    """Unread uploads as receipts: a screenshot tagged "Same receipt as" joins that file, in upload order."""
-    out = {name: [(name, data)] for name, data in todo if ss.get(f"part-{name}") not in dict(todo)}
+    """Unread uploads as receipts: screenshots joined on the page go with their first file, in upload order."""
+    out = {name: [(name, data)] for name, data in todo if ss.joins.get(name) not in dict(todo)}
     for name, data in todo:
         if name not in out:
-            out[ss[f"part-{name}"]].append((name, data))
+            out[ss.joins[name]].append((name, data))
     return list(out.values())
 
 
@@ -188,7 +189,8 @@ def tagged_with() -> None:
 
 
 def who_paid(sources: list[tuple[str, bytes]]) -> None:
-    """Step 2 of the page: set everyone at once, then fix the odd one on its photo."""
+    """Step 2 of the page: set everyone at once, then fix the odd one on its photo.
+    An order that came as several screenshots is joined here into one card, before it's read."""
     st.subheader("Who paid")
     c = st.columns([3, 1, 2], vertical_alignment="bottom")
     everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
@@ -197,33 +199,62 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
             ss[f"payer-{name}"] = everyone
         retag([name for name, _ in sources])
         st.rerun()
-    st.caption("Peek at the photos so you know which is which!")
-    grid = st.columns(4)
-    for n, (name, data) in enumerate(sources):
-        with grid[n % 4].container(border=True, key=f"who-{n}"):
-            pic = thumbnail(data, name)
+    todo = unread(sources)
+    joinable = [name for name, _ in todo if not name.lower().endswith(".pdf")]  # a PDF already holds every page
+    with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
+        st.caption("Peek at the photos so you know which is which!")
+        if len(joinable) > 1 and not ss.get("joining"):
+            st.button("One receipt, several screenshots? Join them", type="tertiary", key="join-start",
+                      on_click=ss.update, kwargs={"joining": True})
+    groups = {parts[0][0]: parts for parts in bundles(todo)}
+    joined = {name for parts in groups.values() for name, _ in parts[1:]}
+    with st.container(key="photo-grid"):
+        for n, (name, data) in enumerate(sources):
+            if name not in joined:
+                photo_card(n, groups.get(name, [(name, data)]), pick=ss.get("joining") and name in joinable)
+
+
+def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool) -> None:
+    """One receipt on Upload: its photo (or its screenshots side by side) and who paid."""
+    name = parts[0][0]
+    with st.container(border=True, key=f"who-wide-{n}" if len(parts) > 1 else f"who-{n}"):
+        if pick:
+            st.checkbox(f"Join {name}", key=f"pick-{name}", label_visibility="collapsed")
+        for col, (part, data) in zip(st.columns(len(parts)), parts, strict=True):
+            pic = thumbnail(data, part)
             if pic:
-                st.image(pic, width="stretch", alt=f"Receipt photo {name}")
+                col.image(pic, width="stretch", alt=f"Receipt photo {part}")
             else:
-                st.markdown('<div class="tly-nothumb">PDF</div>', unsafe_allow_html=True)
-            if ss.get(f"part-{name}"):
-                st.caption(name)  # its payer is the one on the receipt it joins
-            else:
-                st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],))
-            same_receipt(name, sources)
+                col.markdown('<div class="tly-nothumb">PDF</div>', unsafe_allow_html=True)
+        if len(parts) > 1:
+            with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
+                st.markdown(f'<b>{html.escape(name)}</b> <span class="tly-joined">{len(parts)} screenshots · 1 receipt</span>',
+                            unsafe_allow_html=True)
+                st.button("Split", type="tertiary", key=f"split-{name}", on_click=split, args=(name,))
+        st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],),
+                     label_visibility="collapsed" if len(parts) > 1 else "visible")
 
 
-def same_receipt(name: str, sources: list[tuple[str, bytes]]) -> None:
-    """For an order that came as several screenshots: join this one to another, before it's read.
-    One level only: a file that others joined can't join something else."""
-    todo = [n for n, _ in unread(sources) if not n.lower().endswith(".pdf")]
-    picked = {ss.get(f"part-{n}") for n in todo}
-    options = [""] + [n for n in todo if n != name and not ss.get(f"part-{n}")]
-    key = f"part-{name}"
-    if ss.get(key) not in options:
-        ss[key] = ""
-    if name in todo and len(todo) > 1:
-        st.selectbox("Same receipt as", options, key=key, format_func=lambda n: n or "Its own receipt", disabled=name in picked)
+def picked(sources: list[tuple[str, bytes]]) -> list[str]:
+    return [name for name, _ in sources if ss.get(f"pick-{name}")]
+
+
+def join(names: list[str]) -> None:
+    """Callback: the ticked screenshots become one receipt, under the first one's name and payer."""
+    for part in names[1:]:
+        ss.joins[part] = names[0]
+        ss.joins.update({k: names[0] for k, v in ss.joins.items() if v == part})  # a joined card joins as a whole
+    stop_joining()
+
+
+def split(name: str) -> None:
+    ss.joins = {part: first for part, first in ss.joins.items() if first != name}
+
+
+def stop_joining() -> None:
+    ss.joining = False
+    for k in [k for k in ss if str(k).startswith("pick-")]:
+        del ss[k]
 
 
 def unread(sources: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
@@ -236,7 +267,17 @@ def next_up(todo: list[list[tuple[str, bytes]]], ex, reader: str, event: EventIn
     """The page's last step, pinned to the bottom of the screen: read the photos once everyone's
     tagged, then the way on to Review. Only one of the two shows, so there's one filled button."""
     with st.container(key="upload-next"):
-        if todo:
+        if ss.get("joining"):
+            names = picked([part for parts in todo for part in parts[:1]])
+            with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
+                title = f"{len(names)} picked" if names else "Tap the screenshots that go together"
+                st.markdown(f'<p class="tly-done-title">{title}</p><p class="tly-done-sub">They\'ll be read together as '
+                            'one receipt.</p>', unsafe_allow_html=True)
+                with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center"):
+                    st.button("Cancel", type="tertiary", key="join-cancel", on_click=stop_joining)
+                    st.button("Join into one receipt", type="primary", key="join", disabled=len(names) < 2,
+                              on_click=join, args=(names,))
+        elif todo:
             untagged = sum(1 for parts in todo if not ss.get(f"payer-{parts[0][0]}"))
             with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
                 title, sub = ((f"{untagged} still need{'s' if untagged == 1 else ''} a payer",

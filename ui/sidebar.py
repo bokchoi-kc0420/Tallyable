@@ -118,7 +118,7 @@ def open_past(path: Path) -> None:
         return
     ss.update(saved)
     ss.pop("ticket-color", None)
-    ss.failed, ss.skipped = {}, {}
+    ss.failed, ss.skipped, ss.joins = {}, {}, {}
     ss.pop("last_draft", None)
     ss.pop("_saved", None)
     ss.pop("_saved_photos", None)

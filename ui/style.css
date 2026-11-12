@@ -202,7 +202,16 @@
 @keyframes tly-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
 
 /* Who paid grid with photos */
-[class*="st-key-who-"] { padding: 8px; gap: 8px; }
+.st-key-photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; }
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-who-wide-"]), [class*="st-key-who-wide-"] { grid-column: span 2; }
+[class*="st-key-who-"] { padding: 8px; gap: 8px; position: relative; }
+[class*="st-key-who-"]:has(input[type="checkbox"]:checked) { outline: 4px solid var(--tly-forest); }
+[class*="st-key-who-"] [class*="st-key-pick-"] { position: absolute; top: 16px; left: 16px; z-index: 2; width: auto; }
+[class*="st-key-who-"] [class*="st-key-pick-"] label { background: var(--tly-card); border-radius: var(--tly-r-in); padding: 4px; }
+.st-key-join-start button, [class*="st-key-split-"] button { color: var(--tly-forest); text-decoration: underline; text-underline-offset: 4px; }
+[class*="st-key-who-wide-"] b { font-family: var(--tly-head); font-weight: 500; }
+.tly-joined { background: var(--tly-green-tint); color: var(--tly-forest); border-radius: 999px; padding: 0 8px;
+  font-family: var(--tly-head); font-weight: 500; font-size: var(--tly-t-sm); }
 [class*="st-key-who-"] img { border-radius: var(--tly-r-in); max-height: 150px; object-fit: cover; }
 .tly-nothumb { height: 110px; border-radius: var(--tly-r-in); background: var(--tly-paper); display: grid; place-items: center;
   font-family: var(--tly-head); font-weight: 600; color: var(--tly-forest); }
