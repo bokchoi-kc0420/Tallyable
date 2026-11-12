@@ -14,7 +14,7 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
 from ui import club
-from ui.common import PAST, SESSION_FILE, STEPS, reviewed, ss, step_label, step_status
+from ui.common import STEPS, out, past, reviewed, ss, step_label, step_status
 from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
 # A first visit starts from zero: no name, no members. The fake event is one click away on Upload.
@@ -45,7 +45,7 @@ def start_new_event() -> None:
     ss.started = time.time()
     ss.step = STEPS[0]  # the new event opens on its first step, not where the last one ended
     ss.view = "event"
-    session_store.clear(SESSION_FILE)
+    session_store.clear(out() / "session.json")
 
 
 def close_confirm() -> None:
@@ -91,7 +91,7 @@ def confirm_delete() -> None:
         st.rerun()
     if c[1].button("Yes, delete it", type="primary", key="delete-yes", width="stretch"):
         close_delete()
-        session_store.clear(PAST / f"{ss.event['event_id']}.json")
+        session_store.clear(past() / f"{ss.event['event_id']}.json")
         start_new_event()
         ss.pop("_saved", None)
         st.rerun()
@@ -109,8 +109,8 @@ def save_session() -> None:
         return
     photos = (ss.event["event_id"], list(ss.images))  # photos rarely change: rewrite them only when they do
     fresh = photos != ss.get("_saved_photos")
-    session_store.save(SESSION_FILE, state, photos=fresh)
-    session_store.save(PAST / f"{ss.event['event_id']}.json", state, photos=fresh)
+    session_store.save(out() / "session.json", state, photos=fresh)
+    session_store.save(past() / f"{ss.event['event_id']}.json", state, photos=fresh)
     ss._saved, ss._saved_photos = text, photos
 
 
@@ -140,12 +140,12 @@ def reopen() -> None:
 def past_events_box() -> None:
     """Past events in two tabs: Still open (full tickets) and Finished (torn-off stubs)."""
     here = ss.event["event_id"]  # the current event joins once it's finished, with Reopen
-    past = [e for e in session_store.past_events(PAST)
+    saved = [e for e in session_store.past_events(past())
             if club.owns(e) and (e["event_id"] != here or ss.event.get("finished"))]
-    if not past:
+    if not saved:
         return
-    groups = {"open": [e for e in past if not e.get("finished")], "done": [e for e in past if e.get("finished")]}
-    with st.sidebar.expander(f"Past events ({len(past)})", icon=":material/confirmation_number:"):
+    groups = {"open": [e for e in saved if not e.get("finished")], "done": [e for e in saved if e.get("finished")]}
+    with st.sidebar.expander(f"Past events ({len(saved)})", icon=":material/confirmation_number:"):
         names = {"open": f"Still open · {len(groups['open'])}", "done": f"Finished · {len(groups['done'])}"}
         tab = st.segmented_control("Show", list(names), format_func=names.get, key="past-tab", width="stretch",
                                    label_visibility="collapsed", default="open" if groups["open"] else "done")

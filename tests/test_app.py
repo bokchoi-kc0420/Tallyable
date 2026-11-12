@@ -16,6 +16,9 @@ def new_app(members: str = MEMBERS) -> AppTest:
     """The app with the club's members already added, as a treasurer would on Upload."""
     from ui.sidebar import DEFAULT_EVENT
     at = AppTest.from_file(APP, default_timeout=30)
+    base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "mode.txt").write_text("demo")  # the fake event's receipts only show in the demo
     at.session_state["event"] = {**DEFAULT_EVENT, "event_id": "EVT-FAKE-01", "name": "Fall Mentor Mixer (FAKE)",
                                  "date": date(2026, 11, 14), "attendees": 45, "members": members, "set_up": True}
     return at
@@ -79,7 +82,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     assert not at.exception
     assert at.session_state["receipts"]["R01"].status is Status.POSTED
     assert {"Balance Sheet", "General Ledger", "Expense Report", "Receipts"} <= {b.label for b in at.get("download_button")}
-    log = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "run_log.csv"
+    log = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "demo" / "run_log.csv"
     row = list(csv.DictReader(log.open()))[-1]
     assert row["posted"] == "1" and row["minutes_review_to_push"] != ""
 
@@ -106,12 +109,12 @@ def test_one_click_mark_paid_uses_chosen_method():
     at.button(key="paid-Member C").click().run()
     assert not at.exception
     assert owed_table(at)[0]["Owed"] == "$0.00"
-    rows = list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv").read_text().splitlines()))
+    rows = list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv")).read_text().splitlines()))
     assert rows[-1]["method"] == "Venmo" and rows[-1]["payer"] == "Member C"
     assert not [b for b in at.button if b.key == "paid-Member C"]  # now shows Paid instead
     at.button(key="undo-paid").click().run()  # a misclick can be taken back
     assert owed_table(at)[0]["Owed"] != "$0.00"
-    assert not list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "reimbursements.csv").read_text().splitlines()))
+    assert not list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv")).read_text().splitlines()))
 
 
 def test_mark_paid_back_updates_owed():
@@ -215,7 +218,7 @@ def test_a_new_tab_reopens_the_saved_session_on_the_same_step():
 
 
 def test_corrupt_session_file_is_ignored():
-    out = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    out = Path(os.environ["TALLYABLE_OUTPUT_DIR"]) / "demo"
     out.mkdir(parents=True, exist_ok=True)
     (out / "session.json").write_text("{not json")
     at = new_app().run()
@@ -449,6 +452,9 @@ def test_my_funder_rules():
 
 
 def test_a_new_event_starts_with_who_is_in_before_upload():
+    base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "mode.txt").write_text("real")  # your own club, not the demo's sample one
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert any("Welcome to Tallyable" in h.value for h in at.html)  # the club comes first
     at.text_input(key="club-first-name").set_value("Sunrise Hiking Club").run()

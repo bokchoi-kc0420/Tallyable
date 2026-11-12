@@ -67,12 +67,12 @@ def test_start_the_next_event_from_the_finish_page():
     assert at.sidebar.radio(key="step").value == "1. Upload"
 
 
-def test_club_balance_adds_this_years_saved_events(tmp_path):
+def test_club_balance_adds_this_years_saved_events(tmp_path, monkeypatch):
     from treasurer import session_store
     from treasurer.sheets import EventInfo
     from ui import finish
 
-    finish.PAST = tmp_path
+    monkeypatch.setattr(finish, "past", lambda: tmp_path)
     old = {"event": {"event_id": "EVT-A", "name": "A", "date": date(2026, 10, 1)}, "receipts": {}, "images": {},
            "income": {"Cash": "50.00"}}
     last_year = {**old, "event": {"event_id": "EVT-B", "name": "B", "date": date(2025, 10, 1)}}

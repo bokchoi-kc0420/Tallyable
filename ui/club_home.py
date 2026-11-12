@@ -10,8 +10,8 @@ import streamlit as st
 
 from treasurer.ledger_view import school_year
 from ui import club, connect
-from ui.common import STEPS, get_sink, mascot_uri, reviewed, ss, usd
-from ui.home import badge, balance, year_events
+from ui.common import STEPS, get_sink, is_demo, mascot_uri, reviewed, ss, usd
+from ui.home import badge, balance, demo_band, year_events
 from ui.sidebar import start_new_event
 from ui.tickets import PALETTE, _vars
 
@@ -143,6 +143,10 @@ def crew(me: dict) -> None:
 def show() -> None:
     me = club.load()
     events = year_events()
+    if is_demo():
+        demo_band()
     hero(me, events)
     tickets(events)
     crew(me)
+    if not is_demo():
+        demo_band()

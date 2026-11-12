@@ -17,7 +17,7 @@ from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, loc
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
 from ui import connect, done_card
-from ui.common import RUN_LOG, dec, get_sink, go, guide, html_table, loading, md, money_panel, saved_reimbursements, ss, step_bar, usd
+from ui.common import dec, get_sink, go, guide, html_table, loading, md, money_panel, out, saved_reimbursements, ss, step_bar, usd
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
                   "Grants and funding", "Donations", "Fundraiser", "Other"]
@@ -134,7 +134,7 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
     if written:
         now, flags = time.time(), run_checks(receipts)
         ex, reader = make_extractor()
-        log_run(RUN_LOG, {
+        log_run(out() / "run_log.csv", {
             "event_id": event.event_id, "reader": reader, "model": getattr(ex, "model", "stub"),
             "receipts": len(receipts), "posted": len(written), "edits": ss.edits,
             "overrides": sum(1 for r in receipts if r.review_note and r.status is not Status.REJECTED
@@ -226,7 +226,7 @@ def show(event: EventInfo) -> None:
     s[0].metric("Minutes in tool", f"{(time.time() - ss.started) / 60:.1f}")
     s[1].metric("Edits to drafts", ss.edits)
     s[2].metric("Flags open", sum(1 for fl in run_checks(receipts).values() for f in fl if f.severity is Severity.BLOCK))
-    runs = read_runs(RUN_LOG)
+    runs = read_runs(out() / "run_log.csv")
     if runs:
-        st.caption(f"Past runs, from {RUN_LOG}")
+        st.caption(f"Past runs, from {out() / 'run_log.csv'}")
         st.dataframe(pd.DataFrame(runs), width="stretch", hide_index=True)
