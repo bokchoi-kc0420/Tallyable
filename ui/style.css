@@ -342,6 +342,12 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* Helper sentences inside cards one size down, so boxes stay short */
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p { font-size: var(--tly-t-sm); line-height: 1.45; }
 
+/* The bar is the page's last thing and the page is at least a screen tall, so the bar sits on the
+   bottom edge of the screen whether the page is short or long. */
+[data-testid="stMainBlockContainer"]:has(.st-key-upload-next, .st-key-finish-next) { display: flex; flex-direction: column;
+  min-height: 100vh; padding-bottom: 0; }
+[data-testid="stMainBlockContainer"]:has(.st-key-upload-next, .st-key-finish-next) > [data-testid="stVerticalBlock"] { flex: 1; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { margin-top: auto; }
 /* Upload: the page's last step stays pinned to the bottom of the screen, so a pile of photos never hides it */
 [data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { position: sticky; bottom: 0; z-index: 5; padding: 8px 0;
   background: var(--tly-page); }

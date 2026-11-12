@@ -331,8 +331,6 @@ def show(event: EventInfo) -> None:
               f"**Read {plural(len(todo), 'receipt')}** at the bottom."), key="loaded", tip=True)
     if sources:
         who_paid(sources)
-    next_up(sources, ex, reader, event)
-
     for name, (data, reason) in list(ss.failed.items()):
         st.error(md(f"{name}: {reason}"))
         with st.expander(f"Enter {name} by hand"):
@@ -342,3 +340,4 @@ def show(event: EventInfo) -> None:
 
     with st.expander("Add a purchase with no photo (cash, lost receipt)"):
         manual_form("manual", event)
+    next_up(sources, ex, reader, event)  # last, so it's the bar along the bottom of the screen

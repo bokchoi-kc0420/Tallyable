@@ -210,7 +210,7 @@ def test_ledger_can_live_in_its_own_google_sheet(approved):
     ledger_book.add_worksheet("Sheet1", 1000, 26)  # what a new Google Sheet comes with
     sink = GoogleSheetsSink(books, ledger_book)
     sink.post(approved, EVENT, INCOME)
-    sink.record_reimbursement(Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle"))
+    sink.record_reimbursements([Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle")])
     assert list(ledger_book.tabs) == [LEDGER]  # the blank Sheet1 is gone
     assert LEDGER not in books.tabs and "Receipts" in books.tabs
     receipts = books.tabs["Receipts"].cells
@@ -229,7 +229,7 @@ def test_a_payback_leaves_the_ledger_alone(approved):
     sink = GoogleSheetsSink(book)
     sink.post(approved, EVENT, INCOME)
     before = book.tabs[LEDGER].cells
-    sink.record_reimbursement(Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle"))
+    sink.record_reimbursements([Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle")])
     assert book.tabs[LEDGER].cells == before  # it settles an expense the ledger already counts
     assert totals_by_payer(sink.reimbursements(), EVENT.event_id) == {"Member A": Decimal("31.07")}
     sink.undo_reimbursement(EVENT.event_id)                    # a misclicked Mark paid
