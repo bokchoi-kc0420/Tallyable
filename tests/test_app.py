@@ -290,8 +290,32 @@ def test_photos_already_read_are_not_read_again():
     from ui.upload import read_one
     photo, data = at.session_state["images"]["R01"]
     import hashlib
-    f, r, problem, repeat = read_one(make_extractor()[0], "copy.jpg", photo, "EVT", "R99", {hashlib.sha256(photo).hexdigest(): "R01"})
+    seen = {hashlib.sha256(photo).hexdigest(): "R01"}
+    f, r, problem, repeat = read_one(make_extractor()[0], [("copy.jpg", photo)], "EVT", "R99", seen)
     assert r is None and problem is None and repeat == "R01"  # the same photo under another name is skipped, not paid for twice
+
+
+def test_screenshots_joined_on_upload_are_read_as_one():
+    at = new_app().run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    assert not [c for c in at.checkbox if c.key.startswith("pick-")]  # nothing extra on the cards until asked
+    at.button(key="join-start").click().run()
+    assert at.button(key="join").disabled
+    at.checkbox(key="pick-R01.jpg").check()
+    at.checkbox(key="pick-R02.jpg").check().run()
+    at.button(key="join").click().run()
+    assert at.button(key="read").label == "Read 13 receipts"
+    at.button(key="split-R01.jpg").click().run()
+    assert at.button(key="read").label == "Read 14 receipts"  # Split undoes it
+    at.button(key="join-start").click().run()
+    at.checkbox(key="pick-R01.jpg").check()
+    at.checkbox(key="pick-R02.jpg").check().run()
+    at.button(key="join").click().run()
+    at.button(key="read").click().run()
+    assert len(at.session_state["receipts"]) == 13 and "R02" not in at.session_state["receipts"]
+    assert any("2 screenshots" in n for n in at.session_state["notes"]["R01"])
+    assert not [b for b in at.button if b.key == "read"]  # the joined screenshot isn't left over to read alone
 
 
 def test_a_finished_event_can_be_reopened_later():

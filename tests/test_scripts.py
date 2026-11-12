@@ -17,7 +17,7 @@ class PaidStub(StubExtractor):
         super().__init__(key)  # stub misreads are keyed to main-set ids, so holdout reads clean
         self.usage = []
 
-    def extract(self, image, filename, event_id, receipt_id):
+    def extract(self, image, filename, event_id, receipt_id, more=()):
         self.usage.append({"receipt_id": receipt_id, "model": self.model, "input": 2000, "output": 500})
         return super().extract(image, filename, event_id, receipt_id)
 

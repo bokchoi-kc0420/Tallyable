@@ -75,3 +75,11 @@ def test_discount_prices_parse_as_negative():
     from treasurer.claude_extract import _money
     for text in ("-$4.00", "$-4.00", "−4.00", "($4.00)"):
         assert _money(text, "price", "x.png") == Decimal("-4.00")
+
+
+def test_more_screenshots_go_in_the_same_call():
+    client = FakeClient(reading())
+    ClaudeExtractor(client=client).extract(b"a", "cart-1.png", "EVT", "R01", more=[(b"b", "cart-2.jpg")])
+    *images, ask = client.calls[0]["messages"][0]["content"]
+    assert [i["source"]["media_type"] for i in images] == ["image/png", "image/jpeg"]
+    assert "ONE receipt" in ask["text"]

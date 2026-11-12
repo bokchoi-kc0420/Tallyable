@@ -86,3 +86,18 @@ def prepare(data: bytes, filename: str) -> Prepared:
     buf = io.BytesIO()
     im.convert("RGB").save(buf, "JPEG", quality=90)
     return Prepared(buf.getvalue(), Path(name).stem + ".jpg", "image/jpeg", warnings)
+
+
+def stack(parts: list[bytes]) -> bytes:
+    """Screenshots of one receipt, top to bottom as one JPG: what Review and the photo PDF show."""
+    ims = [Image.open(io.BytesIO(d)).convert("RGB") for d in parts]
+    w = min(im.width for im in ims)
+    ims = [im.resize((w, round(im.height * w / im.width))) for im in ims]
+    out = Image.new("RGB", (w, sum(im.height for im in ims)), "white")
+    y = 0
+    for im in ims:
+        out.paste(im, (0, y))
+        y += im.height
+    buf = io.BytesIO()
+    out.save(buf, "JPEG", quality=90)
+    return buf.getvalue()

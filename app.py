@@ -39,6 +39,7 @@ ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to t
 ss.setdefault("notes", {})      # receipt_id -> photo warnings (blurry, rotated)
 ss.setdefault("failed", {})     # file name -> (bytes, reason) for files that could not be read
 ss.setdefault("skipped", {})    # file name -> receipt id it repeats, so a photo uploaded twice is read once
+ss.setdefault("joins", {})      # screenshot file name -> the file it was joined to on Upload (one receipt)
 ss.setdefault("started", time.time())
 ss.setdefault("edits", 0)
 ss.setdefault("drafted_at", None)    # first Draft click, for the run log
