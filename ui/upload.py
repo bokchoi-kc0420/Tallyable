@@ -11,7 +11,7 @@ from pathlib import Path
 import streamlit as st
 
 from treasurer.extract import ExtractionError
-from treasurer.images import UPLOAD_TYPES, UnsupportedFile, prepare
+from treasurer.images import UPLOAD_TYPES, Prepared, UnsupportedFile, prepare, stack
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
@@ -93,34 +93,47 @@ def thumbnail(data: bytes, name: str) -> bytes | None:
         return None
 
 
-def read_one(ex, name: str, data: bytes, event_id: str, rid: str, seen: dict) -> tuple:
-    """One upload, on a worker thread (so no Streamlit calls here): (photo, receipt, problem, repeat).
-    `repeat` is the id of the receipt a photo already read became: it isn't read (or paid for) twice."""
+def read_one(ex, parts: list[tuple[str, bytes]], event_id: str, rid: str, seen: dict) -> tuple:
+    """One receipt, on a worker thread (so no Streamlit calls here): (photo, receipt, problem, repeat).
+    `repeat` is the id of the receipt a photo already read became: it isn't read (or paid for) twice.
+    Several screenshots are read together as one receipt, and kept as one tall photo."""
     try:
-        f = prepare(data, name)
+        fs = [prepare(data, name) for name, data in parts]
     except UnsupportedFile as e:
         return None, None, str(e), None
+    f = fs[0]
+    if len(fs) > 1:
+        f = Prepared(stack([x.data for x in fs]), f.filename, "image/jpeg", [w for x in fs for w in x.warnings])
     repeat = seen.get(hashlib.sha256(f.data).hexdigest())
     if repeat:
         return f, None, None, repeat
     try:
-        return f, ex.extract(f.data, f.filename, event_id, rid), None, None
+        more = [(x.data, x.filename) for x in fs[1:]]
+        return f, ex.extract(fs[0].data, fs[0].filename, event_id, rid, more), None, None
     except ExtractionError as e:
         return f, None, f"{e} You can type it in by hand below.", None
 
 
-def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> None:
+def bundles(todo: list[tuple[str, bytes]]) -> list[list[tuple[str, bytes]]]:
+    """Unread uploads as receipts: a screenshot tagged "Same receipt as" joins that file, in upload order."""
+    out = {name: [(name, data)] for name, data in todo if ss.get(f"part-{name}") not in dict(todo)}
+    for name, data in todo:
+        if name not in out:
+            out[ss[f"part-{name}"]].append((name, data))
+    return list(out.values())
+
+
+def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str) -> None:
     """Read the uploads into drafted receipts, a few at a time, with Tally's loading card while it works."""
     bar = st.empty()
     loading(bar, "Tally is reading your receipts", f"Starting on {plural(len(sources), 'receipt')}...", 0.0)
     seen = {hashlib.sha256(b).hexdigest(): rid for rid, (b, _) in ss.images.items()}
     rids: list[str] = []
-    for name, _ in sources:
-        rids.append(next_id(name, rids))
+    for parts in sources:
+        rids.append(next_id(parts[0][0], rids))
     done: list[str] = []  # the last few read show as lines, the ones still waiting as skeleton lines
     with ThreadPoolExecutor(READERS) as pool:
-        jobs = [pool.submit(read_one, ex, name, data, event_id, rid, seen)
-                for (name, data), rid in zip(sources, rids, strict=True)]
+        jobs = [pool.submit(read_one, ex, parts, event_id, rid, seen) for parts, rid in zip(sources, rids, strict=True)]
         for n, job in enumerate(as_completed(jobs), start=1):
             r = job.result()[1]
             if r:
@@ -128,7 +141,8 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
             loading(bar, "Tally is reading your receipts", f"{n} of {len(sources)} read", n / len(sources),
                     done[-3:] + [None] * min(len(sources) - n, 3))
     skipped = 0
-    for (name, _), rid, job in zip(sources, rids, jobs, strict=True):  # in upload order, so R01 stays first
+    for parts, rid, job in zip(sources, rids, jobs, strict=True):  # in upload order, so R01 stays first
+        name = parts[0][0]
         f, r, problem, repeat = job.result()
         if problem:
             ss.failed[name] = ((f.data, f.media_type) if f else None, problem)
@@ -140,6 +154,10 @@ def draft(sources: list[tuple[str, bytes]], ex, reader: str, event_id: str) -> N
         ss.receipts[rid] = r.model_copy(update={"payer": ss.get(f"payer-{name}") or None, "image_file": name})
         ss.images[rid] = (f.data, f.media_type)
         notes = f.warnings + ([f"Reader's note: {r.review_note}"] if r.review_note else [])
+        if len(parts) > 1:
+            notes.append(f"Read from {len(parts)} screenshots as one receipt. Check that nothing is counted twice.")
+        for part, _ in parts[1:]:
+            ss.skipped[part] = rid  # read as part of this receipt, so it isn't read again on its own
         if notes:
             ss.notes[rid] = notes
         ss.failed.pop(name, None)
@@ -188,7 +206,24 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
                 st.image(pic, width="stretch", alt=f"Receipt photo {name}")
             else:
                 st.markdown('<div class="tly-nothumb">PDF</div>', unsafe_allow_html=True)
-            st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],))
+            if ss.get(f"part-{name}"):
+                st.caption(name)  # its payer is the one on the receipt it joins
+            else:
+                st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],))
+            same_receipt(name, sources)
+
+
+def same_receipt(name: str, sources: list[tuple[str, bytes]]) -> None:
+    """For an order that came as several screenshots: join this one to another, before it's read.
+    One level only: a file that others joined can't join something else."""
+    todo = [n for n, _ in unread(sources) if not n.lower().endswith(".pdf")]
+    picked = {ss.get(f"part-{n}") for n in todo}
+    options = [""] + [n for n in todo if n != name and not ss.get(f"part-{n}")]
+    key = f"part-{name}"
+    if ss.get(key) not in options:
+        ss[key] = ""
+    if name in todo and len(todo) > 1:
+        st.selectbox("Same receipt as", options, key=key, format_func=lambda n: n or "Its own receipt", disabled=name in picked)
 
 
 def unread(sources: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
@@ -197,12 +232,12 @@ def unread(sources: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
     return [(name, data) for name, data in sources if name not in seen]
 
 
-def next_up(todo: list[tuple[str, bytes]], ex, reader: str, event: EventInfo) -> None:
+def next_up(todo: list[list[tuple[str, bytes]]], ex, reader: str, event: EventInfo) -> None:
     """The page's last step, pinned to the bottom of the screen: read the photos once everyone's
     tagged, then the way on to Review. Only one of the two shows, so there's one filled button."""
     with st.container(key="upload-next"):
         if todo:
-            untagged = sum(1 for name, _ in todo if not ss.get(f"payer-{name}"))
+            untagged = sum(1 for parts in todo if not ss.get(f"payer-{parts[0][0]}"))
             with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
                 title, sub = ((f"{untagged} still need{'s' if untagged == 1 else ''} a payer",
                                "Tap who paid on each photo, or set them all at once.") if untagged else
@@ -242,7 +277,7 @@ def show(event: EventInfo) -> None:
     sources = [(f.name, f.getvalue()) for f in files] if files else [(p.name, p.read_bytes()) for p in ss.get("demo", [])]
 
     tagged_with()
-    todo = unread(sources)
+    todo = bundles(unread(sources))
     if todo:
         guide(f"{plural(len(todo), 'receipt')} in!", md(f"Tag who paid for each one, then hit "
               f"**Read {plural(len(todo), 'receipt')}** at the bottom."), key="loaded", tip=True)

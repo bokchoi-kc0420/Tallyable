@@ -102,6 +102,15 @@ def _money(text: str, field: str, filename: str) -> Decimal:
         raise ExtractionError(f"Claude returned a bad {field} for {filename}: {text!r}") from e
 
 
+def _source(data: bytes, filename: str) -> dict:
+    ext = filename.lower().rsplit(".", 1)[-1]
+    b64 = base64.standard_b64encode(data).decode()
+    if ext == "pdf":  # Claude reads PDFs directly
+        return {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}
+    media = {"png": "image/png", "webp": "image/webp", "gif": "image/gif"}.get(ext, "image/jpeg")
+    return {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+
+
 class ClaudeExtractor:
     def __init__(self, client: anthropic.Anthropic | None = None, model: str = MODEL, effort: str = EFFORT):
         self._client = client or anthropic.Anthropic()
@@ -109,14 +118,12 @@ class ClaudeExtractor:
         self.effort = effort
         self.usage: list[dict] = []  # per-receipt token counts
 
-    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str) -> Receipt:
-        ext = filename.lower().rsplit(".", 1)[-1]
-        b64 = base64.standard_b64encode(image).decode()
-        if ext == "pdf":  # Claude reads PDFs directly
-            source = {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}
-        else:
-            media = {"png": "image/png", "webp": "image/webp", "gif": "image/gif"}.get(ext, "image/jpeg")
-            source = {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
+                more: list[tuple[bytes, str]] = ()) -> Receipt:
+        sources = [_source(data, name) for data, name in [(image, filename), *more]]
+        ask = "Transcribe this receipt." if not more else (
+            f"These {len(sources)} files are screenshots of ONE receipt or order, in order. Transcribe them as a "
+            "single receipt: an item that shows on two screenshots is listed once, and `total` is the one order total.")
         try:
             resp = self._client.beta.messages.parse(
                 model=self.model,
@@ -126,10 +133,7 @@ class ClaudeExtractor:
                 output_config={"effort": self.effort},
                 betas=["server-side-fallback-2026-07-01"],
                 fallbacks="default",  # if a safety check declines, the API retries on another model
-                messages=[{"role": "user", "content": [
-                    source,
-                    {"type": "text", "text": "Transcribe this receipt."},
-                ]}],
+                messages=[{"role": "user", "content": [*sources, {"type": "text", "text": ask}]}],
             )
         except anthropic.AuthenticationError as e:
             raise ExtractionError("Claude rejected the API key. Check ANTHROPIC_API_KEY in .env.") from e
