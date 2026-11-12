@@ -4,6 +4,7 @@ from __future__ import annotations
 import html
 from collections import Counter
 from datetime import date
+from decimal import Decimal
 
 import streamlit as st
 
@@ -32,7 +33,7 @@ def save_payback(sink, payback: Reimbursement) -> bool:
 def undo_last(sink, last: dict, event_id: str) -> None:
     """Take back this event's latest payback, for a misclicked Mark paid."""
     label = f"Undo last payback: {usd(dec(str(last['amount'])))} to {last['payer']}"
-    if not st.button(label, key="undo-paid", icon=":material/undo:", type="tertiary"):
+    if not st.button(label, key="undo-paid", icon=":material/undo:"):
         return
     try:
         sink.undo_reimbursement(event_id)
@@ -42,34 +43,74 @@ def undo_last(sink, last: dict, event_id: str) -> None:
     st.rerun()
 
 
-def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, last: dict | None) -> None:
-    """One row per payer: initials, what they fronted, what's still owed, and Mark paid."""
-    owing = [x for x in lines if x.owed > 0]
+# Six coins fly up and out of the Paid cell; --x/--y is where each lands, --w its delay (style.css).
+COINS = '<span class="tly-coins" aria-hidden="true">' + "".join(
+    f'<i style="--x:{x}px;--y:{y}px;--w:{w}s">$</i>'
+    for x, y, w in [(-56, -64, 0), (-24, -88, .05), (8, -96, .1), (40, -80, .03), (64, -56, .08), (-8, -48, .12)]) + "</span>"
+LEDGER = [1.6, 0.9, 1.1, 1.1, 1.1, 1.5, 1.3]  # Person, Receipts, Fronted, Paid back, Still owed, Paid with, button
+
+
+def cell(col, text: str, cls: str = "") -> None:
+    col.markdown(f'<p class="tly-led {cls}">{text}</p>', unsafe_allow_html=True)
+
+
+def paid_with(col, payer: str) -> tuple[str, str] | None:
+    """Method (and a note for Other) for one row's Mark paid. None while Other has no note yet."""
+    method = col.selectbox("Paid with", METHODS, key=f"method-{payer}", label_visibility="collapsed")
+    if method != "Other":
+        return method, ""
+    note = col.text_input("How?", key=f"note-{payer}", placeholder="How? e.g. club card",
+                          label_visibility="collapsed").strip()
+    return (method, note) if note else None
+
+
+def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: list[dict]) -> None:
+    """The payback ledger: one line per payer with what they fronted, got back and are still owed,
+    how they were paid, and Mark paid. A total line under it, like the books."""
     st.subheader("Who's owed")
-    cap = st.columns([3, 2], vertical_alignment="bottom")
-    cap[0].caption(f"Paid someone back? Hit Mark paid and it's saved to {sink.label}!")
-    quick = cap[1].selectbox("Paid back with", METHODS, key="quick-method") if owing else METHODS[0]
     counts = Counter((r.payer or "").strip() or "(no payer)" for r in done)
-    for x in lines:
-        row = st.columns([0.5, 2, 1.1, 1.5], vertical_alignment="center")
-        initials = "".join(w[0] for w in x.payer.split()[:2] if w[0].isalnum()).upper() or "?"
-        row[0].markdown(f'<span class="tly-avatar">{html.escape(initials)}</span>', unsafe_allow_html=True)
-        n = counts[x.payer]
-        row[1].markdown(md(f"**{x.payer}**  \n:gray[{n} receipt{'s' if n != 1 else ''} · fronted {usd(x.fronted)}]"))
-        row[2].markdown(f'<span class="tly-owed">{md(usd(x.owed))}</span>', unsafe_allow_html=True)
+    last = {str(p["payer"]): p for p in paybacks}
+    head = st.columns(LEDGER, vertical_alignment="bottom")
+    for col, (label, cls) in zip(head, [("Person", ""), ("Receipts", "num"), ("Fronted", "num"), ("Paid back", "num"),
+                                        ("Still owed", "num"), ("Paid with", ""), ("", "")], strict=True):
+        cell(col, label, f"head {cls}")
+    for x in lines:  # rows never move: Mark paid leaves the person where they were
+        row = st.columns(LEDGER, vertical_alignment="center")
+        cell(row[0], f"<b>{html.escape(x.payer)}</b>")
+        cell(row[1], str(counts[x.payer]), "num")
+        cell(row[2], usd(x.fronted), "num")
+        cell(row[3], usd(x.reimbursed), "num")
+        cell(row[4], f'<b data-payer="{html.escape(x.payer)}">{usd(x.owed)}</b>', "num")
         if x.owed <= 0:
-            row[3].markdown(":green-badge[✓ Paid]")
+            p = last.get(x.payer)
+            cell(row[5], html.escape(f"{p['method']}, {date.fromisoformat(str(p['date'])):%b} "
+                                     f"{date.fromisoformat(str(p['date'])).day}") if p else "", "soft")
+            pop = ss.get("just_paid") == x.payer  # coins burst out once, right after Mark paid
+            # data-for makes each payer's burst its own markup, so it plays for every payer, not just the first.
+            coins = COINS.replace('class="tly-coins"', f'class="tly-coins" data-for="{html.escape(x.payer)}"')
+            cell(row[6], f'<span class="tly-paid-pop">✓ Paid</span>{coins}' if pop else "✓ Paid", "paid")
             continue
         if x.payer == "(no payer)":
-            row[3].caption("Set a payer in Review")
+            cell(row[5], "Set a payer in Review", "soft")
             continue
-        if not row[3].button("Mark paid", key=f"paid-{x.payer}", icon=":material/check:", width="stretch",
+        how = paid_with(row[5], x.payer)
+        if not row[6].button("Mark paid", key=f"paid-{x.payer}", type="primary", width="stretch", disabled=not how,
                              help=f"Records {md('$' + str(x.owed))} paid back to {x.payer} today."):
             continue
-        if save_payback(sink, Reimbursement(event_id, x.payer, date.today(), x.owed, quick, "")):
+        if save_payback(sink, Reimbursement(event_id, x.payer, date.today(), x.owed, *how)):
+            ss.just_paid = x.payer
             st.rerun()
-    if last:
-        undo_last(sink, last, event_id)
+    ss.pop("just_paid", None)
+    tot = st.columns(LEDGER, vertical_alignment="center")
+    cell(tot[0], "Total", "total")
+    cell(tot[1], str(sum(counts[x.payer] for x in lines)), "total num")
+    for col, field in zip(tot[2:5], ["fronted", "reimbursed", "owed"], strict=True):
+        cell(col, usd(sum((getattr(x, field) for x in lines), Decimal("0"))), "total num")
+    for col in tot[5:]:
+        cell(col, "", "total")
+    st.caption(f"Each Mark paid is saved to {sink.label}.")
+    if paybacks:
+        undo_last(sink, paybacks[-1], event_id)
 
 
 def payback_form(sink, owing: list, event_id: str) -> None:
@@ -83,6 +124,9 @@ def payback_form(sink, owing: list, event_id: str) -> None:
         when = c[3].date_input("Date", value=date.today())
         note = st.text_input("Note (optional)")
         if not st.form_submit_button("Mark paid back"):
+            return
+        if method == "Other" and not note.strip():
+            st.error("Paid some other way? Add a note on how, so the books say where the money went.")
             return
         owed = next(x.owed for x in owing if x.payer == who)
         amt, problem = validate(who, amount or str(owed), owed)
@@ -98,7 +142,7 @@ def my_funder() -> co.RulePack:
     """A form for the club's own funder rules. Saved with the event so it's filled in next time."""
     saved = ss.event.get("funder", {})
     with st.container(border=True, key="my-funder"):
-        st.caption("Fill in what your funder asks for. Leave a box empty if they don't have that rule.")
+        st.caption("Fill in whatever your funder asks for. If they don't have a rule, leave it blank.")
         f1 = st.columns(3)
         fname = f1[0].text_input("Funder name", saved.get("name", ""), placeholder="e.g. Student Government")
         fmax = f1[1].text_input("Biggest grant ($)", saved.get("max", ""), placeholder="no limit")
@@ -142,7 +186,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     if due:
         st.caption(f"{pack.name}: report due {due.isoformat()}")
     if not flags:
-        st.success(f"No {pack.name} rule flags.")
+        st.success(f"No {pack.name} rules broken.")
     for f in flags:
         {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
     for note in pack.notes:
@@ -170,7 +214,7 @@ def show(event: EventInfo) -> None:
         st.warning(f"Still need a look, so they're not counted yet: {', '.join(waiting)}")
     else:
         with st.container(key="mascot-cheer"):
-            st.image(str(ART / "tally-cheer.png"), width=170)
+            st.image(str(ART / "tally-thumbs-up.png"), width=170)  # the finish page has the flag
         left_out = len(ss.receipts) - len(done)
         cheer = f"All {len(done)} receipts approved!" if not left_out else f"All reviewed! {len(done)} approved, {left_out} left out."
         st.markdown(f'<p class="tly-cheer">{cheer}</p>', unsafe_allow_html=True)
@@ -182,15 +226,11 @@ def show(event: EventInfo) -> None:
     reimbursed = totals_by_payer(paybacks, event.event_id)
     lines = co.payer_summary(done, reimbursed)
     owing = [x for x in lines if x.owed > 0]
-    left, right = st.columns([5, 3], gap="medium")
-    with left.container(border=True):
-        whos_owed(sink, done, lines, event.event_id, paybacks[-1] if paybacks else None)
-    with right.container(border=True):
+    with st.container(border=True, key="whos-owed"):
+        whos_owed(sink, done, lines, event.event_id, paybacks)
+    with st.container(border=True, key="money-box"):
         st.subheader("Money in vs out")
         money_panel(done, {k: dec(v) for k, v in ss.income.items()})
-    with st.expander("Payback details"):
-        html_table([{"Payer": x.payer, "Fronted": usd(x.fronted), "Paid back": usd(x.reimbursed),
-                     "Owed": usd(x.owed)} for x in lines], numeric=("Fronted", "Paid back", "Owed"))
     left_out = [r for r in ss.receipts.values() if r.status is Status.REJECTED]
     if left_out:
         with st.expander(f"Left out of the books ({len(left_out)})"):
@@ -200,7 +240,7 @@ def show(event: EventInfo) -> None:
     if owing:
         payback_form(sink, owing, event.event_id)
     else:
-        st.success("Everyone has been paid back.")
+        st.success("Everyone's been paid back!")
     funder_rules(event, done, reimbursed)
     photos(event, done, lines)
     finish.finish_button(lines)
@@ -213,6 +253,7 @@ def photos(event: EventInfo, done: list[Receipt], lines) -> None:
     owed = {x.payer: x.owed for x in lines}
     paid = {r.receipt_id: ("Not yet" if owed.get(r.payer or "(no payer)", 0) > 0 else "Yes") if r.payer else ""
             for r in done}
+    images = ss.images  # the PDF is built when the button is clicked, not on every visit (0.7s with phone photos)
     st.download_button("Download receipt photos (PDF)", icon=":material/photo_library:", key="dl-photos",
-                       file_name=f"{event.event_id}_receipt_photos.pdf", mime="application/pdf",
-                       data=receipts_pdf(done, ss.images, paid))
+                       file_name=f"{event.event_id}_receipt_photos.pdf", mime="application/pdf", on_click="ignore",
+                       data=lambda: receipts_pdf(done, images, paid))

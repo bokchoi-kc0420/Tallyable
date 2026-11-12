@@ -13,10 +13,8 @@ from decimal import Decimal
 import streamlit as st
 
 from treasurer.models import Receipt, Status
-from treasurer.post import TX_FIELDS
-from treasurer.sheets import EventInfo, local_transactions, local_views
-from treasurer.xlsx_export import book_xlsx
-from ui.common import go, mascot_uri, md, saved_reimbursements, ss, usd
+from treasurer.sheets import EventInfo
+from ui.common import go, mascot_uri, md, ss, usd
 
 
 def fingerprint() -> str:
@@ -39,21 +37,26 @@ def counts_line(receipts: list[Receipt], income: dict[str, Decimal]) -> str:
 
 
 def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], push) -> None:
-    """Draw the card if this event was pushed. `push` re-runs the push for the stale variant."""
+    """Draw the card once the books are out: pushed, or downloaded as Excel. `push` re-runs the push for the stale variant."""
     at = ss.event.get("pushed_at")
-    if not at:
-        return
-    if ss.event.get("pushed_sig") != fingerprint():
+    on_sheets = sink.label == "Google Sheets"
+    if at and ss.event.get("pushed_sig") != fingerprint():
+        again = "Push again" if on_sheets else "Save again"
         with st.container(border=True, key="push-stale"):
             c = st.columns([3.2, 1.4], vertical_alignment="center")
             c[0].markdown(f'<p class="tly-done-title">You changed something since {at}.</p>'
-                          '<p class="tly-done-sub">Push again so your books match!</p>', unsafe_allow_html=True)
-            if c[1].button("Push again", type="primary", icon=":material/upload:", key="push-again", width="stretch"):
+                          f'<p class="tly-done-sub">{again} so your books match!</p>', unsafe_allow_html=True)
+            if c[1].button(again, type="primary", icon=":material/upload:", key="push-again", width="stretch"):
                 push()
         return
-    on_sheets = sink.label == "Google Sheets"
-    title = "Books are in!" if on_sheets else "Your book is ready!"
-    where = f"went to your Google Sheet at {at}." if on_sheets else f"are saved on this computer as of {at}."
+    if at and on_sheets:
+        title, where = "Books are in!", f"went to your Google Sheet at {at}."
+    elif at:
+        title, where = "Your book is ready!", f"are saved, and your Excel file downloaded at {at}."
+    elif ss.event.get("excel_at"):
+        title, where = "Your Excel file is downloaded!", f"are in it, as of {ss.event['excel_at']}."
+    else:
+        return
     with st.container(border=True, key="books-in"):
         art, body = st.columns([1, 5.2], vertical_alignment="center")
         art.html(f'<img class="tly-done-art" src="{mascot_uri("tally-cheer.png")}" alt="">')
@@ -63,14 +66,8 @@ def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
         with body.container(horizontal=True, key="books-in-buttons"):
             st.button("Next: Close out", type="primary", icon=":material/arrow_forward:", icon_position="right",
                       on_click=go, args=("4. Close out",), key="to-closeout")
-            if on_sheets and getattr(sink, "url", None):
+            if at and on_sheets and getattr(sink, "url", None):
                 st.link_button("Open the sheet", sink.url, icon=":material/arrow_outward:", icon_position="right")
-            elif not on_sheets:
-                views = local_views(receipts, event, income, saved_reimbursements(sink))
-                st.download_button("Download the whole book (Excel)", icon=":material/download:", key="dl-xlsx-done",
-                                   data=book_xlsx(views, local_transactions(receipts), TX_FIELDS),
-                                   file_name=f"{event.event_id}_books.xlsx",
-                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     if ss.get("format_errors"):
         st.warning(md("Your numbers are in the sheet, but Google wouldn't apply the colors and layout on: "
                       + "; ".join(ss.format_errors) + ". Send this to whoever set up Tallyable."))

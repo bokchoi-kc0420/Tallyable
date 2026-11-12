@@ -2,7 +2,7 @@
 
 `LocalCsvSink` is the fallback when Google Sheets is not set up (see sheets.py).
 The sink is idempotent: a receipt id that was already posted is skipped,
-so clicking Push twice never double-counts.
+so clicking Push twice never double-counts. A reopened receipt is replaced.
 """
 from __future__ import annotations
 
@@ -38,26 +38,24 @@ class LocalCsvSink:
     def __init__(self, path: Path):
         self.path = path
 
-    def posted_ids(self) -> set[tuple[str, str]]:
-        """(event_id, receipt_id) pairs already written. Keyed by event too, because every
-        event starts its receipt ids over at R01."""
-        if not self.path.exists():
-            return set()
-        with open(self.path, newline="") as fh:
-            return {(row["event_id"], row["receipt_id"]) for row in csv.DictReader(fh)}
-
-    label = "this computer"  # shown to the treasurer: "Push to this computer"
+    label = "your Excel file"  # shown to the treasurer: "Each Mark paid is saved to your Excel file"
 
     def post(self, receipts: list[Receipt], event=None, income=None) -> list[str]:
-        """Write approved, not-yet-posted receipts. Returns the ids written."""
-        done = self.posted_ids()
+        """Write approved, not-yet-posted receipts. A receipt reopened after a push is no longer
+        "posted": its old rows are dropped, so a fixed receipt replaces the wrong one.
+        Returns the ids written."""
+        reopened = {(r.event_id, r.receipt_id) for r in receipts if r.status is not Status.POSTED}
+        kept = []
+        if self.path.exists():
+            with open(self.path, newline="") as fh:
+                kept = [row for row in csv.DictReader(fh) if (row["event_id"], row["receipt_id"]) not in reopened]
+        done = {(row["event_id"], row["receipt_id"]) for row in kept}
         todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
-        new_file = not self.path.exists()
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.path, "a", newline="") as fh:
+        with open(self.path, "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=TX_FIELDS)
-            if new_file:
-                w.writeheader()
+            w.writeheader()
+            w.writerows(kept)
             for r in todo:
                 w.writerows(transaction_rows(r))
         return [r.receipt_id for r in todo]

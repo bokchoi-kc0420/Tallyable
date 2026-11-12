@@ -132,11 +132,11 @@ def check_funder_rules(event: Event, receipts: list[Receipt], pack: RulePack,
                               f"{r.receipt_id}: check whether {', '.join(maybe)} counts as a decoration"))
         # Rule 6, purchase window (ORG): only purchases from the 42 days before the
         # application date can be reimbursed.
-        if pack.purchase_window_days is not None and applied_on is not None:
-            if (applied_on - r.date).days > pack.purchase_window_days:
-                flags.append(Flag("outside_window", Severity.BLOCK,
-                                  f"{r.receipt_id}: bought {r.date}, more than "
-                                  f"{pack.purchase_window_days} days before applying on {applied_on}"))
+        if (pack.purchase_window_days is not None and applied_on is not None
+                and (applied_on - r.date).days > pack.purchase_window_days):
+            flags.append(Flag("outside_window", Severity.BLOCK,
+                              f"{r.receipt_id}: bought {r.date}, more than "
+                              f"{pack.purchase_window_days} days before applying on {applied_on}"))
         # Rule 7, receipt required: funders need a receipt for every purchase. In the app,
         # a missing photo only WARNS, but for a funder it BLOCKS.
         if not r.image_file:

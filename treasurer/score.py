@@ -49,10 +49,6 @@ def _norm(v):
     return " ".join(unicodedata.normalize("NFKC", v).casefold().split())
 
 
-def _similar(a: str, b: str) -> float:
-    return SequenceMatcher(None, _norm(a), _norm(b)).ratio()
-
-
 def align(truth_items: list, draft_items: list, min_similarity: float = 0.5) -> list[tuple[int, int | None]]:
     """Pair each true line with the draft line that best matches it.
 
@@ -64,7 +60,7 @@ def align(truth_items: list, draft_items: list, min_similarity: float = 0.5) -> 
     pairs = []
     for ti, t in enumerate(truth_items):
         for di, d in enumerate(draft_items):
-            s = _similar(t.item, d.item) + (0.3 if t.price == d.price else 0) - 0.01 * abs(ti - di)
+            s = SequenceMatcher(None, _norm(t.item), _norm(d.item)).ratio() + (0.3 if t.price == d.price else 0) - 0.01 * abs(ti - di)
             pairs.append((s, ti, di))
     taken_t, taken_d, out = set(), set(), {}
     for s, ti, di in sorted(pairs, reverse=True):

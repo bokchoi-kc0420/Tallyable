@@ -64,7 +64,8 @@ def check_duplicates(receipts: list[Receipt]) -> dict[str, list[Flag]]:
     """Flag the LATER receipt of each pair, naming the earlier one.
 
     A pair is a duplicate if the image bytes match, or if place, date and
-    total match within one event (catches a re-photographed receipt).
+    total match within one event (catches a re-photographed receipt). The same payer with
+    the same total within a day gets a softer "Check" flag.
     """
     out: dict[str, list[Flag]] = {}
     seen: list[Receipt] = []
@@ -79,6 +80,13 @@ def check_duplicates(receipts: list[Receipt]) -> dict[str, list[Flag]]:
                 why = "same image" if same_image else "same place, date and total"
                 out.setdefault(r.receipt_id, []).append(
                     Flag("possible_duplicate", Severity.BLOCK, f"Possible duplicate of {s.receipt_id} ({why})"))
+                break
+            # One purchase sent as two proofs (a paper receipt and a bank screenshot) reads with two place
+            # names and dates a day apart. Different payers with the same total are different purchases.
+            if r.payer and r.payer == s.payer and abs(r.total - s.total) <= TOLERANCE and abs((r.date - s.date).days) <= 1:
+                out.setdefault(r.receipt_id, []).append(Flag(
+                    "possible_duplicate", Severity.WARN,
+                    f"{r.payer} has the same total on {s.receipt_id}, a day apart or less. Same purchase sent twice?"))
                 break
         seen.append(r)
     return out

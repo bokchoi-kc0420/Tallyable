@@ -140,8 +140,13 @@ def test_push_writes_tidy_tabs_and_is_idempotent(approved):
     assert len(written) == len(approved)
     n_rows = len(book.tabs[TX].cells)
     assert n_rows == 1 + sum(len(r.items) for r in approved)
-    assert sink.post(approved, EVENT, INCOME) == []          # second click writes nothing
+    posted = [r.model_copy(update={"status": Status.POSTED}) for r in approved]  # what the app does after a push
+    assert sink.post(posted, EVENT, INCOME) == []            # second click writes nothing
     assert len(book.tabs[TX].cells) == n_rows
+    fixed = approved[0].model_copy(update={"place": "Fixed Place"})  # reopened, edited, approved again
+    assert sink.post([fixed, *posted[1:]], EVENT, INCOME) == [fixed.receipt_id]
+    places = [row[3] for row in book.tabs[TX].cells[1:]]  # the place column
+    assert len(places) == n_rows - 1 and places.count("Fixed Place") == len(fixed.items)  # replaced, not added
     assert len(book.tabs[EVENTS].cells) == 2                  # event upserted, not duplicated
 
 
@@ -402,3 +407,14 @@ def test_a_pasted_sheet_link_is_used_over_env(monkeypatch, tmp_path):
     monkeypatch.setenv("TALLYABLE_LEDGER_SHEET_ID", "ledger-from-env")  # ignored: the linked book has no ledger link
     GoogleSheetsSink.from_env(tmp_path, linked={"book": sid})
     assert opened == [sid]
+
+
+def test_events_sharing_a_name_get_their_own_expense_tab():
+    from treasurer.expense_view import expense_tab_title
+    events = [{"event_id": "EVT-2026-10-03-PICNIC-AAAA", "name": "Picnic", "date": "2026-10-03"},
+              {"event_id": "EVT-2026-11-11-PICNIC-BBBB", "name": "picnic", "date": "2026-11-11"},
+              {"event_id": "EVT-2026-11-11-PICNIC-CCCC", "name": "Picnic", "date": "2026-11-11"},
+              {"event_id": "EVT-2026-11-12-MIXER-DDDD", "name": "Mixer", "date": "2026-11-12"}]
+    titles = [expense_tab_title(e, events) for e in events]
+    assert len({t.lower() for t in titles}) == 4  # Sheets refuses a repeat, caps aside
+    assert titles[0] == "Expense Report: Picnic (Oct 3)" and titles[3] == "Expense Report: Mixer"
