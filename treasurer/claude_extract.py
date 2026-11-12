@@ -74,7 +74,7 @@ class ExtractedItem(BaseModel):
 
 class ExtractedReceipt(BaseModel):
     place: str
-    date: str = Field(description="YYYY-MM-DD")
+    date: str = Field(description="YYYY-MM-DD, or empty if the receipt shows no date")
     items: list[ExtractedItem]
     tax: str = "0.00"
     tip: str = "0.00"
@@ -140,6 +140,10 @@ class ClaudeExtractor:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
+        note = x.unreadable_note
+        if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
+            x.date = date.today().isoformat()
+            note = "; ".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
         try:
             d = date.fromisoformat(x.date)
             items = [LineItem(category=i.category, item=i.item, unit=max(i.unit, 1),
@@ -149,7 +153,7 @@ class ClaudeExtractor:
                 payer=None,  # payer comes from the upload tag, never from the AI
                 items=items, tax=_money(x.tax, "tax", filename), tip=_money(x.tip, "tip", filename),
                 total=_money(x.total, "total", filename), image_file=filename,
-                image_hash=hashlib.sha256(image).hexdigest(), review_note=x.unreadable_note,
+                image_hash=hashlib.sha256(image).hexdigest(), review_note=note,
             )
         except ValueError as e:  # bad date, no items, negative money
             raise ExtractionError(f"Claude's reading of {filename} did not fit the receipt format: {e}") from e
