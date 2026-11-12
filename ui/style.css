@@ -372,3 +372,5 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-nav-count { margin: 0; font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-md); color: var(--tly-ink); }
 .st-key-review-nav [data-testid="stMarkdownContainer"] { margin: 0; }
 .st-key-review-nav [data-testid="stMarkdown"] { align-self: center; }
+/* A photo's Fullscreen button sits on the photo, not above it where it covered the next-receipt arrow */
+[data-testid="stFullScreenFrame"]:has(img) [data-testid="stElementToolbar"] { top: 8px !important; right: 8px; }

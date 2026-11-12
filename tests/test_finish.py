@@ -91,3 +91,12 @@ def test_new_event_from_the_sidebar_opens_on_the_first_step():
     at.sidebar.button(key="new-event").click().run()  # a finished event needs no confirm
     assert at.sidebar.radio(key="step").value == "1. Upload"  # was stuck on Close out
     assert at.header[0].value == "Start a new event"
+
+
+def test_upload_says_so_when_the_photos_were_already_read():
+    at = new_app().run()
+    upload_and_draft(at)
+    del at.session_state["last_draft"]  # as after coming back to the event later...
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()  # ...and picking them again
+    assert any("Nothing new to read" in m.value and "R01.jpg" in m.value for m in at.markdown)
+    assert at.button(key="to-review")
