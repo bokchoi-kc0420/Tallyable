@@ -79,7 +79,8 @@ def edit_form(rid: str, flags: list) -> None:
     if r.status is not Status.DRAFTED:  # decided: one card says what happened, the flags are done with
         label, tone = STATUS_CHIP[r.status]
         why = f" · {html.escape(r.review_note)}" if r.review_note else ""
-        undo = "" if r.status is Status.POSTED else "<br><small>Changed your mind? Hit Reopen.</small>"
+        undo = ("<br><small>Spot a mistake? Hit Reopen, fix it, then Push again.</small>" if r.status is Status.POSTED
+                else "<br><small>Changed your mind? Hit Reopen.</small>")
         st.markdown(f'<div class="tly-decided {tone}"><b>{label.capitalize()}</b>{why}{undo}</div>',
                     unsafe_allow_html=True)
     for n, f in enumerate(flags if r.status is Status.DRAFTED else []):
@@ -126,19 +127,16 @@ def edit_form(rid: str, flags: list) -> None:
                          help="Needed to approve a receipt with a red flag, and to leave one out. "
                               "It's saved with the receipt, so you can explain the call later.")
     b1, b2, b3 = st.columns(3)
-    locked = r.status is Status.POSTED
-    if locked:
-        st.caption("This one's already in the books, so change it in the sheet's Transactions tab.")
     decided = r.status is not Status.DRAFTED
-    approve = b1.button("Approve", type="primary", disabled=locked or decided or not can_approve(flags, note))
-    leave_out = b2.container(key="leave-out").button("Leave out", disabled=locked or decided or not note.strip(),
+    approve = b1.button("Approve", type="primary", disabled=decided or not can_approve(flags, note))
+    leave_out = b2.container(key="leave-out").button("Leave out", disabled=decided or not note.strip(),
                           help="Not a club expense (a duplicate, a personal buy, another event). "
                                "Write why in the note first.")
     if approve or leave_out:
         set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
         st.rerun()
-    if b3.button("Reopen", disabled=locked or not decided, help="Undo an approve or leave out"):
+    if b3.button("Reopen", disabled=not decided, help="Undo an approve or leave out, or fix one that's already in the books"):
         set_status(rid, Status.DRAFTED)
         st.rerun()
 
@@ -179,6 +177,14 @@ def show() -> None:
                                 f"{ICON[Status.REJECTED]} left out · {ICON[Status.POSTED]} posted · {FLAG_ICON} has a flag")
     left, right = st.columns([2, 3])
     with left:
+        # Back and forward through the same list as the sidebar, so an approved receipt is one click away.
+        i = ids.index(rid)
+        with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center", key="review-nav"):
+            st.button("", icon=":material/arrow_back:", key="review-prev", help="Previous receipt", disabled=i == 0,
+                      on_click=ss.__setitem__, args=("review-pick", ids[i - 1]))
+            st.markdown(f'<p class="tly-nav-count">{i + 1} of {len(ids)}</p>', unsafe_allow_html=True)
+            st.button("", icon=":material/arrow_forward:", key="review-next", help="Next receipt", disabled=i == len(ids) - 1,
+                      on_click=ss.__setitem__, args=("review-pick", ids[(i + 1) % len(ids)]))
         photo(rid)
     with right:
         edit_form(rid, flags[rid])

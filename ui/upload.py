@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -35,7 +36,7 @@ def next_id(filename: str | None = None, taken: tuple | list = ()) -> str:
 def manual_form(key: str, event: EventInfo, image_file: str | None = None, data: tuple[bytes, str] | None = None) -> None:
     """Type a one-item receipt by hand. Used for lost receipts and for photos the
     reader could not handle. With `image_file`, the photo stays attached as evidence."""
-    with st.form(key):
+    with st.form(key, enter_to_submit=False):  # a stray Enter used to add a half-typed $0 receipt
         c = st.columns(3)
         place = c[0].text_input("Place")
         d = c[1].date_input("Date", value=event.date)
@@ -54,6 +55,9 @@ def manual_form(key: str, event: EventInfo, image_file: str | None = None, data:
             return
         if not place.strip() or not item.strip():
             st.error("Fill in Place and Item, then click Add.")
+            return
+        if dec(total) <= 0:
+            st.error("Type the Total from the receipt, then click Add.")
             return
         rid = next_id(image_file)
         try:
@@ -219,6 +223,8 @@ def show(event: EventInfo) -> None:
     ex, reader = make_extractor()
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
+    elif not is_demo() and os.getenv("TALLYABLE_EXTRACTOR", "").lower() == "stub":  # start.bat, not the key
+        st.warning("You opened the free version - close it and open start-with-claude.bat to read real receipts.")
     elif not is_demo():
         st.warning("Tally can't read real receipts yet: add your ANTHROPIC_API_KEY to .env. "
                    "Until then, add each purchase by hand at the bottom.")

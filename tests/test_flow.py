@@ -50,9 +50,25 @@ def test_push_is_idempotent(tmp_path, truth):
     sink = LocalCsvSink(tmp_path / "tx.csv")
     approved = [r.model_copy(update={"status": Status.APPROVED}) for r in list(truth.values())[:3]]
     assert sink.post(approved) == ["R01", "R02", "R03"]
-    assert sink.post(approved) == []  # second click writes nothing
+    posted = [r.model_copy(update={"status": Status.POSTED}) for r in approved]  # what the app does after a push
+    assert sink.post(posted) == []  # second click writes nothing
     lines = (tmp_path / "tx.csv").read_text().strip().splitlines()
     assert len(lines) == 1 + sum(len(r.items) for r in approved)
+
+
+def test_a_reopened_receipt_replaces_its_old_rows(tmp_path, truth):
+    """Kevin's first real run: a $0 receipt was pushed and could not be fixed."""
+    sink = LocalCsvSink(tmp_path / "tx.csv")
+    first, other = [r.model_copy(update={"status": Status.APPROVED}) for r in list(truth.values())[:2]]
+    sink.post([first, other])
+    fixed = first.model_copy(update={"place": "Fixed Place"})  # reopened, edited, approved again
+    assert sink.post([fixed, other.model_copy(update={"status": Status.POSTED})]) == ["R01"]
+    text = (tmp_path / "tx.csv").read_text()
+    assert "Fixed Place" in text and first.place not in text
+    assert len(text.strip().splitlines()) == 1 + len(first.items) + len(other.items)
+    left_out = fixed.model_copy(update={"status": Status.REJECTED})  # reopened and left out: gone from the books
+    sink.post([left_out, other.model_copy(update={"status": Status.POSTED})])
+    assert "Fixed Place" not in (tmp_path / "tx.csv").read_text()
 
 
 def test_next_event_with_same_receipt_ids_still_posts(tmp_path, truth):
