@@ -126,16 +126,16 @@ def open_past(path: Path) -> None:
     ss.view = "event"
 
 
-def reopen() -> None:
-    """Button callback: un-finish this event and go back to Close out."""
-    ss.event = {**ss.event, "finished": False}
+def show_finished() -> None:
+    """Button callback: the finished event on screen, opened on its finish page like any other stub.
+    Reopen and Add a missed receipt live there."""
     ss.step = "4. Close out"
     ss.view = "event"
 
 
 def past_events_box() -> None:
     """Past events in two tabs: Still open (full tickets) and Finished (torn-off stubs)."""
-    here = ss.event["event_id"]  # the current event joins once it's finished, with Reopen
+    here = ss.event["event_id"]  # the current event joins once it's finished
     saved = [e for e in session_store.past_events(past())
             if club.owns(e) and (e["event_id"] != here or ss.event.get("finished"))]
     if not saved:
@@ -158,8 +158,8 @@ def past_events_box() -> None:
                 st.markdown(art, unsafe_allow_html=True)
                 # The whole ticket or stub is the button: an invisible one laid over it (finish.css).
                 here_now = e["event_id"] == here
-                st.button("Reopen", key=f"open-past-{n}", on_click=reopen if here_now else open_past,
-                          args=() if here_now else (e["path"],), help=f"Reopen {e['name']}")
+                st.button("Open", key=f"open-past-{n}", on_click=show_finished if here_now else open_past,
+                          args=() if here_now else (e["path"],), help=f"Open {e['name']}")
 
 
 def leave_home() -> None:

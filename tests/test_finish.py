@@ -44,7 +44,7 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     page = " ".join(h.value for h in at.get("html"))
     assert "is closed out!" in page and "Set your starting balance" in page  # never set: no made-up balance
     assert any("1 person still owed" in m.value for m in at.markdown)  # honest about Member A
-    assert any(b.label == "Reopen" for b in at.sidebar.button)  # its stub sits in Past events
+    assert any(b.label == "Open" for b in at.sidebar.button)  # its stub sits in Past events
     assert any('class="tly-stub"' in m.value for m in at.sidebar.markdown)  # finished = torn-off stub
     hidden = ".st-key-event-group { display: none; }"
     assert any(hidden in h.value for h in at.get("html"))  # its ticket left the sidebar
@@ -127,6 +127,11 @@ def test_add_a_missed_receipt_reopens_on_upload_and_shows_the_way_back():
     at.button(key="add-missed").click().run()
     assert at.sidebar.radio[0].value == "1. Upload" and not at.session_state["event"]["finished"]
     assert any("Adding a missed receipt" in m.value for m in at.markdown)
+    at.session_state["view"] = "club"  # left halfway: Club home says it's being finished AGAIN
+    at.run()
+    assert any("REOPENED FOR A MISSED RECEIPT" in h.value for h in at.get("html"))
+    at.session_state["view"] = "event"
+    at.run()
     at.sidebar.radio[0].set_value("4. Close out").run()
     assert any("Pay them back" in m.value for m in at.markdown)  # the trail follows every step
     at.button(key="finish-event").click().run()
@@ -142,3 +147,29 @@ def test_remove_takes_a_photo_off_upload_before_its_read():
     at.button(key="read").click().run()
     assert "R02" not in at.session_state["receipts"]
     assert not [b for b in at.button if (b.key or "").startswith("drop-")]  # read ones: Leave out on Review
+
+
+def test_last_school_years_event_is_locked():
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    at.session_state["event"] = {**at.session_state["event"], "date": date(2025, 10, 1)}
+    at.run()
+    keys = {b.key for b in at.button}
+    assert "add-missed" not in keys and "reopen-event" not in keys
+    assert any("2025–2026 school year" in c.value for c in at.caption)
+
+
+def test_a_must_fix_receipt_is_booked_with_a_picked_reason_not_a_throwaway_note():
+    at = new_app().run()
+    upload_and_draft(at)
+    at.sidebar.radio[0].set_value("2. Review").run()
+    at.sidebar.radio(key="review-pick").set_value("R02").run()  # its math doesn't add up
+    approve = at.button(key="approve-R02")
+    assert approve.label.startswith("Book the receipt's $") and approve.disabled
+    at.text_input(key="note-R02").set_value("ok").run()
+    assert at.button(key="approve-R02").disabled  # a typed note alone no longer waves it through
+    at.selectbox(key="why-R02").set_value("Photo is cut off").run()
+    at.button(key="approve-R02").click().run()
+    r = at.session_state["receipts"]["R02"]
+    assert r.status is Status.APPROVED and r.review_note == "Photo is cut off - ok"

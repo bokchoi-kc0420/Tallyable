@@ -188,6 +188,8 @@ class GoogleSheetsSink:
         ev_header = [h for h in ev_ws.row_values(1) if h]
         self._tidy_format(ev_ws, ev_header, len(events) + 1, money=set(ev_header) - set(BASE_EVENT_FIELDS))
         self._tidy_format(reimb_ws, REIMB_FIELDS, len(reimb) + 1)
+        for book in {id(b): b for b in (self.book, self.ledger_book)}.values():
+            _drop_blank_sheet1(book)  # once per push, not per tab or per payback: each check is a trip to Google
         self._apply_format()
         return [r.receipt_id for r in todo]
 
@@ -216,7 +218,8 @@ class GoogleSheetsSink:
         """A payback shows on the Receipts tab. The ledger has no row for it: it settles an
         expense already counted there."""
         reimb = ws.get_all_records()
-        events, tx = self._records(EVENTS, EVENT_FIELDS), self._records(TX, TX_FIELDS)
+        tabs = {w.title: w for w in self.book.worksheets()}  # one lookup for both tabs: each one is a trip to Google
+        events, tx = (tabs[t].get_all_records() if t in tabs else [] for t in (EVENTS, TX))
         self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
         self._tidy_format(ws, REIMB_FIELDS, len(reimb) + 1)
         self._apply_format()
@@ -256,7 +259,6 @@ class GoogleSheetsSink:
         if view.grid:
             ws.update(values=view.grid, range_name="A1", value_input_option="RAW")
         self._pending.append((book, title, fmt.view_requests(ws.id, view)))
-        _drop_blank_sheet1(book)
 
 
 
