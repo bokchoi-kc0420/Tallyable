@@ -71,11 +71,12 @@ def test_club_balance_adds_this_years_saved_events(tmp_path, monkeypatch):
     from ui import finish
 
     monkeypatch.setattr(finish, "past", lambda: tmp_path)
-    old = {"event": {"event_id": "EVT-A", "name": "A", "date": date(2026, 10, 1)}, "receipts": {}, "images": {},
-           "income": {"Cash": "50.00"}}
-    last_year = {**old, "event": {"event_id": "EVT-B", "name": "B", "date": date(2025, 10, 1)}}
-    session_store.save(tmp_path / "a.json", old)
-    session_store.save(tmp_path / "b.json", last_year)
+    old = {"event": {"event_id": "EVT-A", "name": "A", "date": date(2026, 10, 1), "finished": True}, "receipts": {},
+           "images": {}, "income": {"Cash": "50.00"}}
+    last_year = {**old, "event": {"event_id": "EVT-B", "name": "B", "date": date(2025, 10, 1), "finished": True}}
+    still_open = {**old, "event": {"event_id": "EVT-D", "name": "D", "date": date(2026, 11, 1)}}  # not finished: not counted
+    for name, saved in [("a", old), ("b", last_year), ("d", still_open)]:
+        session_store.save(tmp_path / f"{name}.json", saved)
     ev = EventInfo("EVT-C", "C", date(2026, 11, 14), 10, start_balance=Decimal("1000"))
     assert finish.club_balance(ev, Decimal("-20")) == Decimal("1030")
 
@@ -160,16 +161,22 @@ def test_last_school_years_event_is_locked():
     assert any("2025–2026 school year" in c.value for c in at.caption)
 
 
-def test_a_must_fix_receipt_is_booked_with_a_picked_reason_not_a_throwaway_note():
+def test_a_must_fix_receipt_says_what_it_books_and_no_payer_cant_be_booked():
     at = new_app().run()
     upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
     at.sidebar.radio(key="review-pick").set_value("R02").run()  # its math doesn't add up
     approve = at.button(key="approve-R02")
-    assert approve.label.startswith("Book the receipt's $") and approve.disabled
-    at.text_input(key="note-R02").set_value("ok").run()
-    assert at.button(key="approve-R02").disabled  # a typed note alone no longer waves it through
-    at.selectbox(key="why-R02").set_value("Photo is cut off").run()
+    assert approve.label.startswith("Book $") and not approve.disabled
+    at.selectbox(key="payer-R02").set_value("").run()
+    assert at.button(key="approve-R02").disabled  # nobody to pay back
+    at.selectbox(key="payer-R02").set_value("Member A").run()
     at.button(key="approve-R02").click().run()
-    r = at.session_state["receipts"]["R02"]
-    assert r.status is Status.APPROVED and r.review_note == "Photo is cut off - ok"
+    assert at.session_state["receipts"]["R02"].status is Status.APPROVED
+
+
+def test_club_balance_on_club_home_waits_for_finish(monkeypatch):
+    from ui import home
+    monkeypatch.setattr(home.club, "load", lambda: {"start_balance": 300})
+    events = [{"net": Decimal("50"), "finished": True}, {"net": Decimal("-225"), "finished": False}]
+    assert home.balance(events) == Decimal("350")

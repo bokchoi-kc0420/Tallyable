@@ -24,9 +24,11 @@ def year_events() -> list[dict]:
 
 
 def balance(events: list[dict]) -> Decimal | None:
-    """Starting balance plus every event's net this year. None until the starting balance is typed."""
+    """Starting balance plus every FINISHED event's net this year: an event still open would move the
+    number with every approve. None until the starting balance is typed."""
     start = club.load()["start_balance"]
-    return None if start is None else Decimal(str(start)) + sum((e["net"] for e in events), Decimal("0"))
+    done = sum((e["net"] for e in events if e["finished"]), Decimal("0"))
+    return None if start is None else Decimal(str(start)) + done
 
 
 def badge(name: str, size: str = "") -> str:

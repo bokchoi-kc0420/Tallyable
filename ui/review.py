@@ -19,11 +19,6 @@ FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "returned_item": (":material/undo:", "Returned item"),
              "not_final": (":material/receipt_long:", "Not a final receipt"),
              "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
-# Why a treasurer books a receipt with a Must fix flag still open. "Other" needs the note typed.
-REASONS = {"math_error": ["Photo is cut off", "Discount or fee not shown"],
-           "not_final": ["No final receipt exists"],
-           "possible_duplicate": ["Bought twice - both are real"]}
-OTHER = "Other (type it in the note)"
 FLAG_TONE = {Severity.BLOCK: ("block", "Must fix"), Severity.WARN: ("warn", "Check"), Severity.INFO: ("info", "FYI")}
 
 
@@ -91,7 +86,7 @@ def look_card(rid: str, flags: list) -> None:
             st.markdown(f"{icon} **{title}** <span class='tly-flagpill {FLAG_TONE[f.severity][0]}'>{FLAG_TONE[f.severity][1]}"
                         f"</span>\n\n<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
         if notes:
-            lines = "".join(f"<li>{md(html.escape(n))}</li>" for n in notes)
+            lines = "".join(f"<li>{html.escape(n)}</li>" for n in notes)
             st.markdown(f"<ul class='tly-notes'>{lines}</ul>", unsafe_allow_html=True)
 
 
@@ -113,11 +108,14 @@ def edit_form(rid: str, flags: list) -> None:
     d = c2.date_input("Date", r.date, key=f"date-{rid}")
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
     payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
-    df = pd.DataFrame([{"category": i.category, "item": i.item, "unit": i.unit, "price": float(i.price),
-                        "returned": i.returned} for i in r.items])
-    columns = {"category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"]),
-               "item": "Item", "unit": "Qty", "returned": "Returned",
-               "price": st.column_config.NumberColumn("Price", format="%.2f")}
+    df = pd.DataFrame([{"unit": i.unit, "item": i.item, "price": float(i.price), "category": i.category,
+                        "returned": i.returned} for i in r.items], columns=["unit", "item", "price", "category", "returned"])
+    # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
+    columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
+               "item": st.column_config.TextColumn("Item", width=200),
+               "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
+               "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
+               "returned": st.column_config.CheckboxColumn("Returned", width=80)}
     edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns)
     c1, c2, c3 = st.columns(3)
     tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
@@ -141,25 +139,21 @@ def edit_form(rid: str, flags: list) -> None:
     st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
     decided = r.status is not Status.DRAFTED
     blocked = not decided and not can_approve(flags)
-    reason = None
-    if blocked:  # a picked reason, so a throwaway note ("ok") can't wave a red flag through
-        picks = [x for f in flags for x in REASONS.get(f.code, [])] + [OTHER]
-        reason = st.selectbox("Booking it with a red flag? Pick why", picks, index=None, key=f"why-{rid}",
-                              placeholder="Pick a reason",
-                              help="Saved with the receipt, so you can explain the call later.")
     note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
                          placeholder="Why you're leaving this out (duplicate, personal...), or anything to remember",
                          help="Needed to leave a receipt out. It's saved with the receipt.")
-    why = " - ".join(x for x in (reason if reason != OTHER else None, note.strip()) if x)
     b1, b2, b3 = st.columns([1.7, 1, 1])  # room for the long label
     # With a red flag open, the button says what it will do: the receipt's own total goes in the books.
-    approve = b1.button(f"Book the receipt's {usd(r.posted_amount)}" if blocked else "Approve", type="primary",
-                        key=f"approve-{rid}", disabled=decided or (blocked and not (reason and why)))
+    # No payer is the one flag that can't be booked past: nobody would get paid back.
+    no_payer = any(f.code == "missing_payer" for f in flags)
+    approve = b1.button(f"Book {usd(r.posted_amount)} anyway" if blocked else "Approve", type="primary",
+                        key=f"approve-{rid}", disabled=decided or no_payer,
+                        help="Pick who paid first." if no_payer and not decided else None)
     leave_out = b2.container(key="leave-out").button("Leave out", disabled=decided or not note.strip(),
                           help="Not a club expense (a duplicate, a personal buy, another event). "
                                "Write why in the note first.")
     if approve or leave_out:
-        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=(why if approve else note.strip()) or None)
+        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
         st.rerun()
     if b3.button("Reopen", disabled=not decided, help="Undo an approve or leave out, or fix one that's already in the books"):

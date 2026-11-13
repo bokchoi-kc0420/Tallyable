@@ -166,10 +166,9 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
     ss.next_pick = next((rid for rid in rids if rid in ss.receipts), None)  # Review opens on the first one just read
     ss.demo = []
     ss.drafted_at = ss.drafted_at or time.time()
-    cost = f" (about ${ex.cost():.3f} in API calls)" if reader == "claude" else ""
     n = len(ss.receipts)
     what, them = (f"all {n} receipts", "them") if n > 1 else ("your receipt", "it")
-    ss.last_draft = f"**Done! I read {what}{cost}.** Now make sure I got {them} right."
+    ss.last_draft = f"**Done! I read {what}.** Now make sure I got {them} right."
     if skipped:
         ss.last_draft += f" (Skipped {skipped} I'd already read.)"
 
