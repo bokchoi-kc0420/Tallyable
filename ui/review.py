@@ -142,7 +142,8 @@ def edit_form(rid: str, flags: list) -> None:
     note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
                          placeholder="Why you're leaving this out (duplicate, personal...), or anything to remember",
                          help="Needed to leave a receipt out. It's saved with the receipt.")
-    b1, b2, b3 = st.columns([1.7, 1, 1])  # room for the long label
+    # One row, each button as wide as its label, so Leave out sits right beside Approve whatever the label says.
+    b1 = b2 = b3 = st.container(horizontal=True, key="decide")
     # With a red flag open, the button says what it will do: the receipt's own total goes in the books.
     # No payer is the one flag that can't be booked past: nobody would get paid back.
     no_payer = any(f.code == "missing_payer" for f in flags)
