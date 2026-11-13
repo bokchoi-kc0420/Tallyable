@@ -189,10 +189,10 @@ def show() -> None:
         return
     labels = {x: f"{ICON[ss.receipts[x].status]} {x} · {ss.receipts[x].place}" + (f" {FLAG_ICON}" if needs_look(x, flags) else "")
               for x in ids}
-    if ss.get("next_pick") in ids:  # set by "Approve" so the next receipt opens by itself
-        ss["review-pick"] = ss.pop("next_pick")
-    elif ss.get("review-pick") not in ids:
-        ss["review-pick"] = ids[0]
+    # next_pick is set by "Approve" so the next receipt opens by itself. The pick is written back on every run:
+    # the labels change as you edit (place, status), and Streamlit then forgets a pick it wasn't just handed.
+    pick = ss.pop("next_pick") if ss.get("next_pick") in ids else ss.get("review-pick")
+    ss["review-pick"] = pick if pick in ids else ids[0]
     rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
                            help=f"{ICON[Status.DRAFTED]} to review · {ICON[Status.APPROVED]} approved · "
                                 f"{ICON[Status.REJECTED]} left out · {ICON[Status.POSTED]} posted · {FLAG_ICON} has a flag")
