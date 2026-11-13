@@ -213,6 +213,9 @@ def test_ledger_can_live_in_its_own_google_sheet(approved):
     sink.record_reimbursements([Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle")])
     assert list(ledger_book.tabs) == [LEDGER]  # the blank Sheet1 is gone
     assert LEDGER not in books.tabs and "Receipts" in books.tabs
+    paid_before = {r[2]: r[6] for r in books.tabs["Receipts"].cells[3:]}
+    assert paid_before["R01"] == "Not yet"  # a payback only saves its own row: no redraw, so it's quick
+    sink.refresh_receipts()  # Finish event catches the tab up
     receipts = books.tabs["Receipts"].cells
     paid = {r[2]: r[6] for r in receipts[3:]}
     # Member A was paid $31.07: that settles R01 ($31.07, the oldest), not R04 or R10

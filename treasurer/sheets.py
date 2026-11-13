@@ -197,31 +197,31 @@ class GoogleSheetsSink:
         return self._records(REIMB, REIMB_FIELDS)
 
     def record_reimbursements(self, paybacks: list) -> None:
-        """Append to the Reimbursements tab and rebuild the Receipts tab: once, however many paybacks."""
+        """Append to the Reimbursements tab, and nothing else: redrawing the Receipts tab on every payback
+        cost ~15 trips to Google, and a few paybacks in a minute hit its limit (a 40 second freeze).
+        refresh_receipts catches the tab up when the event is finished; a push redraws it too."""
         rows = [r.row() for r in paybacks]
         ws = self._tab(REIMB, REIMB_FIELDS)
         ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS] for row in rows],
                        value_input_option="RAW")
-        self._refresh_receipts(ws)
 
     def undo_reimbursement(self, event_id: str) -> None:
-        """Delete this event's most recent payback (a misclicked Mark paid) and rebuild the Receipts tab."""
+        """Delete this event's most recent payback (a misclicked Mark paid)."""
         ws = self._tab(REIMB, REIMB_FIELDS)
         rows = ws.get_all_records()
         last = max((i for i, r in enumerate(rows) if str(r["event_id"]) == event_id), default=None)
         if last is None:
             return
         ws.delete_rows(last + 2)  # +1 for the header, +1 because sheet rows count from 1
-        self._refresh_receipts(ws)
 
-    def _refresh_receipts(self, ws) -> None:
-        """A payback shows on the Receipts tab. The ledger has no row for it: it settles an
-        expense already counted there."""
-        reimb = ws.get_all_records()
-        tabs = {w.title: w for w in self.book.worksheets()}  # one lookup for both tabs: each one is a trip to Google
-        events, tx = (tabs[t].get_all_records() if t in tabs else [] for t in (EVENTS, TX))
+    def refresh_receipts(self) -> None:
+        """Redraw the Receipts tab so its Paid back column shows the paybacks. The ledger has no row
+        for a payback: it settles an expense already counted there."""
+        tabs = {w.title: w for w in self.book.worksheets()}  # one lookup for all three tabs: each is a trip to Google
+        reimb, events, tx = (tabs[t].get_all_records() if t in tabs else [] for t in (REIMB, EVENTS, TX))
         self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
-        self._tidy_format(ws, REIMB_FIELDS, len(reimb) + 1)
+        if REIMB in tabs:
+            self._tidy_format(tabs[REIMB], REIMB_FIELDS, len(reimb) + 1)
         self._apply_format()
 
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
