@@ -80,6 +80,9 @@ class LocalCsvSink:
                 w.writeheader()
             w.writerows(r.row() for r in paybacks)
 
+    def refresh_receipts(self) -> None:
+        """Nothing to redraw: the Excel book is built fresh each time it's downloaded."""
+
     def undo_reimbursement(self, event_id: str) -> None:
         """Delete this event's most recent payback (a misclicked Mark paid)."""
         rows = self.reimbursements()

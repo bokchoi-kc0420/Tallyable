@@ -58,6 +58,11 @@ def payback_lines(sink, event: EventInfo) -> list:
 def set_finished(done: bool, step: str = "4. Close out", late: bool = False) -> None:
     """Button callback: finish (or reopen) the event and save it, so Past events shows it right away.
     late: reopened to add a missed receipt, so every step shows the way back to the finish."""
+    if done and ss.event.get("pushed_at"):  # paybacks only save their own row: the sheet's Receipts tab catches up here
+        try:
+            get_sink()[0].refresh_receipts()
+        except Exception as e:
+            ss.finish_note = f"Finished, but the sheet's Receipts tab didn't update ({e}). Push again on Summary to redraw it."
     ss.event = {**ss.event, "finished": done, "late": late}
     ss.pop("last_draft", None)  # "Done! I read all 14" is old news on a reopened Upload
     ss.revisit = False  # just finished: the next step is Club home, not Reopen
@@ -135,6 +140,8 @@ def show(event: EventInfo) -> None:
     # Last school year's books are closed: a late receipt would change a year that's already reported.
     # 60 days of grace, so a July event can still take a receipt found in August.
     locked = school_year(event.date) != school_year(date.today()) and (date.today() - event.date).days > 60
+    if ss.get("finish_note"):
+        st.warning(ss.pop("finish_note"))
     with st.container(border=True, key="finish-page"):
         st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-flag.png")}" alt="">'
                 f'<h2>{html.escape(event.name)} is closed out!</h2>'

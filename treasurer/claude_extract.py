@@ -46,8 +46,10 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 - Keep `unreadable_note` to ONE short plain sentence, 15 words at most, saying what the
   treasurer should check. Do not repeat numbers that are already in the fields, and do not
   explain how you worked.
-- `price` is the unit price before tax. `unit` is the quantity. If only a line total is
-  printed, put it in price with unit 1.
+- `price` is the unit price before tax. `unit` is the quantity. If a quantity and a line total are
+  printed but no unit price (a shopping cart), keep the quantity in `unit` and put the line
+  total divided by the quantity in `price`: the one calculation you may do. If only a line
+  total is printed with no quantity, put it in price with unit 1.
 - `total` is the total as printed, even if it is handwritten or looks wrong. On an order
   screenshot it is the order total actually charged.
 - Fees (delivery, service, bag, small-order) are their own lines, category Other.

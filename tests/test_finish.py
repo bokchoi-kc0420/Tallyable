@@ -180,3 +180,13 @@ def test_club_balance_on_club_home_waits_for_finish(monkeypatch):
     monkeypatch.setattr(home.club, "load", lambda: {"start_balance": 300})
     events = [{"net": Decimal("50"), "finished": True}, {"net": Decimal("-225"), "finished": False}]
     assert home.balance(events) == Decimal("350")
+
+
+def test_finish_catches_the_books_up_on_paybacks(monkeypatch):
+    from treasurer.post import LocalCsvSink
+    calls = []
+    monkeypatch.setattr(LocalCsvSink, "refresh_receipts", lambda self: calls.append(1))
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    assert calls == [1]  # paybacks only save their own row; Finish redraws the sheet's Receipts tab once
