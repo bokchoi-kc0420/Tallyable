@@ -173,6 +173,9 @@ def my_funder() -> co.RulePack:
 
 def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None:
     st.subheader("Funder rules")
+    if ss.event.get("late"):
+        st.info("A receipt added after closing out changes the totals. If you already sent your funder a report, "
+                "send the new numbers.")
     funder = st.selectbox("Funder", ["No funder", "My funder's rules", *EXAMPLES], key="funder",
                           help="Rules from whoever funds your event: student government, a department, a sponsor. "
                                "The examples are real rules from one student government, to show how it works.")

@@ -9,7 +9,7 @@ from decimal import Decimal
 import streamlit as st
 
 from treasurer.ledger_view import school_year
-from ui import club, connect
+from ui import club, connect, done_card
 from ui.common import STEPS, get_sink, is_demo, mascot_uri, reviewed, ss, usd
 from ui.home import badge, balance, demo_band, year_events
 from ui.sidebar import start_new_event
@@ -23,7 +23,7 @@ def next_step() -> tuple[str, list[tuple[bool, str]], str, str | None]:
     if ev.get("finished") or (not ev.get("set_up") and not rs):
         return ("Start your next event", [(False, "Name it and choose who paid"), (False, "Upload the receipts")],
                 "Start an event", None if ev.get("finished") else STEPS[0])
-    n, checked, pushed = len(rs), reviewed(), bool(ev.get("pushed_at"))
+    n, checked, pushed = len(rs), reviewed(), ev.get("pushed_sig") == done_card.fingerprint()
     items = [(n > 0, f"{n} receipt{'s' if n != 1 else ''} in" if n else "Upload the receipts"),
              (n > 0 and checked == n, "Every receipt checked" if n and checked == n else
               f"Check {n - checked} more receipt{'s' if n - checked != 1 else ''}"),
@@ -62,7 +62,9 @@ def hero(me: dict, events: list[dict]) -> None:
         with st.container(key="hero-next"):
             title, items, label, target = next_step()
             checks = "".join(f'<li class="{"done" if done else ""}">{html.escape(text)}</li>' for done, text in items)
-            st.html(f'<p class="tly-kick">YOUR NEXT STEP</p><p class="tly-next-title">{html.escape(title)}</p>'
+            # Reopened for a missed receipt and left halfway: say so, or it reads like an event never finished.
+            kick = "REOPENED FOR A MISSED RECEIPT" if ss.event.get("late") else "YOUR NEXT STEP"
+            st.html(f'<p class="tly-kick">{kick}</p><p class="tly-next-title">{html.escape(title)}</p>'
                     f'<ul class="tly-checks">{checks}</ul>'
                     f'<img class="tly-hero-clip" src="{mascot_uri("tally-clipboard.png")}" alt="">')
             st.button(f"{label} →", key="home-go", type="primary", on_click=go, args=(target,))

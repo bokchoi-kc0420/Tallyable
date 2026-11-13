@@ -54,9 +54,9 @@ def check_tax_rate(r: Receipt) -> list[Flag]:
 
 # A cart or an estimate can change before anyone pays, so it blocks like a math error: the treasurer waits
 # for the real receipt, or writes a note to count it as is. A bank charge is real money, so it only asks.
-NOT_FINAL = {"cart": (Severity.BLOCK, "A cart before checkout. Ask for the order confirmation, or add a note to count it as is."),
+NOT_FINAL = {"cart": (Severity.BLOCK, "A cart before checkout. Ask for the order confirmation, or pick a reason below to count it."),
              "estimate": (Severity.BLOCK, "A price estimate. Ask for the receipt from after the ride or service, "
-                                          "or add a note to count it as is."),
+                                          "or pick a reason below to count it."),
              "pending_charge": (Severity.WARN, "A bank charge, not the seller's receipt. Ask for the receipt if there is one.")}
 
 

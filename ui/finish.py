@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import random
+from datetime import date
 from decimal import Decimal
 
 import streamlit as st
@@ -127,6 +128,9 @@ def show(event: EventInfo) -> None:
     left_out = sum(1 for r in ss.receipts.values() if r.status is Status.REJECTED)
     count = f"{len(done)} receipt{'s' if len(done) != 1 else ''}" + (f" ({left_out} left out)" if left_out else "")
     paid = "everyone paid back" if not any(x.owed > 0 for x in lines) else "paybacks still open"
+    # Last school year's books are closed: a late receipt would change a year that's already reported.
+    # 60 days of grace, so a July event can still take a receipt found in August.
+    locked = school_year(event.date) != school_year(date.today()) and (date.today() - event.date).days > 60
     with st.container(border=True, key="finish-page"):
         st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-flag.png")}" alt="">'
                 f'<h2>{html.escape(event.name)} is closed out!</h2>'
@@ -140,12 +144,13 @@ def show(event: EventInfo) -> None:
                     row[0].markdown(f'<p class="tly-open-item"><i class="tly-warn">!</i>{html.escape(text)}</p>',
                                    unsafe_allow_html=True)
                     row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
-                                  icon_position="right", on_click=set_finished, args=(False, step))
+                                  icon_position="right", on_click=set_finished, args=(False, step), disabled=locked)
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
             st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
             st.button("Start the next event", key="next-event", on_click=next_event)
-            st.button("Add a missed receipt", key="add-missed", icon=":material/add:", on_click=set_finished,
-                      args=(False, "1. Upload", True))
+            if not locked:
+                st.button("Add a missed receipt", key="add-missed", icon=":material/add:", on_click=set_finished,
+                          args=(False, "1. Upload", True))
         # The downloads sit a row lower and quieter, so the two ways on don't compete with them.
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-downloads"):
             ledger = getattr(getattr(sink, "ledger_book", None), "url", None)
@@ -167,7 +172,11 @@ def show(event: EventInfo) -> None:
             st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf", on_click="ignore",
                                type="tertiary", icon=":material/download:",
                                file_name=f"{event.event_id}_receipt_photos.pdf", data=lambda: receipts_pdf(done, images, state))
-    st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
-              on_click=set_finished, args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
+    if locked:
+        st.caption(f"Locked: this event is from the {school_year(event.date).replace('-', '–')} school year, "
+                   "so it can't be reopened or take new receipts.")
+    else:
+        st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:", on_click=set_finished,
+                  args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
     if ss.pop("confetti", False):  # last, so it falls once the whole page is built
         st.html(confetti())

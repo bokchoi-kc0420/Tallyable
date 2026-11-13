@@ -19,6 +19,11 @@ FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "returned_item": (":material/undo:", "Returned item"),
              "not_final": (":material/receipt_long:", "Not a final receipt"),
              "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
+# Why a treasurer books a receipt with a Must fix flag still open. "Other" needs the note typed.
+REASONS = {"math_error": ["Photo is cut off", "Discount or fee not shown"],
+           "not_final": ["No final receipt exists"],
+           "possible_duplicate": ["Bought twice - both are real"]}
+OTHER = "Other (type it in the note)"
 FLAG_TONE = {Severity.BLOCK: ("block", "Must fix"), Severity.WARN: ("warn", "Check"), Severity.INFO: ("info", "FYI")}
 
 
@@ -134,18 +139,27 @@ def edit_form(rid: str, flags: list) -> None:
             st.rerun()  # re-run checks on the edited values
 
     st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
-    note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
-                         placeholder="Why you're approving a red flag, or leaving this out (duplicate, personal...)",
-                         help="Needed to approve a receipt with a red flag, and to leave one out. "
-                              "It's saved with the receipt, so you can explain the call later.")
-    b1, b2, b3 = st.columns(3)
     decided = r.status is not Status.DRAFTED
-    approve = b1.button("Approve", type="primary", disabled=decided or not can_approve(flags, note))
+    blocked = not decided and not can_approve(flags)
+    reason = None
+    if blocked:  # a picked reason, so a throwaway note ("ok") can't wave a red flag through
+        picks = [x for f in flags for x in REASONS.get(f.code, [])] + [OTHER]
+        reason = st.selectbox("Booking it with a red flag? Pick why", picks, index=None, key=f"why-{rid}",
+                              placeholder="Pick a reason",
+                              help="Saved with the receipt, so you can explain the call later.")
+    note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
+                         placeholder="Why you're leaving this out (duplicate, personal...), or anything to remember",
+                         help="Needed to leave a receipt out. It's saved with the receipt.")
+    why = " - ".join(x for x in (reason if reason != OTHER else None, note.strip()) if x)
+    b1, b2, b3 = st.columns([1.7, 1, 1])  # room for the long label
+    # With a red flag open, the button says what it will do: the receipt's own total goes in the books.
+    approve = b1.button(f"Book the receipt's {usd(r.posted_amount)}" if blocked else "Approve", type="primary",
+                        key=f"approve-{rid}", disabled=decided or (blocked and not (reason and why)))
     leave_out = b2.container(key="leave-out").button("Leave out", disabled=decided or not note.strip(),
                           help="Not a club expense (a duplicate, a personal buy, another event). "
                                "Write why in the note first.")
     if approve or leave_out:
-        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
+        set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=(why if approve else note.strip()) or None)
         ss.next_pick = next_drafted(rid)
         st.rerun()
     if b3.button("Reopen", disabled=not decided, help="Undo an approve or leave out, or fix one that's already in the books"):
