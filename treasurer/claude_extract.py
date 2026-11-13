@@ -43,6 +43,9 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 - Never invent a line (no "tax", "fee" or "adjustment" line that is not on the paper).
 - If part of the receipt is folded, torn, blurry or cut off, set `unreadable_note`
   to say where, and leave out what you cannot see. Do not guess.
+- Keep `unreadable_note` to ONE short plain sentence, 15 words at most, saying what the
+  treasurer should check. Do not repeat numbers that are already in the fields, and do not
+  explain how you worked.
 - `price` is the unit price before tax. `unit` is the quantity. If only a line total is
   printed, put it in price with unit 1.
 - `total` is the total as printed, even if it is handwritten or looks wrong. On an order

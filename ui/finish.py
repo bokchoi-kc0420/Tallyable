@@ -46,6 +46,9 @@ def open_items(lines: list) -> list[tuple[str, str]]:
     return items
 
 
+REOPEN_HELP = "Back to Close out. It leaves Past events until you finish again."
+
+
 def payback_lines(sink, event: EventInfo) -> list:
     done = [r for r in ss.receipts.values() if r.counts]
     paybacks = [p for p in saved_reimbursements(sink) if str(p["event_id"]) == event.event_id]
@@ -57,6 +60,7 @@ def set_finished(done: bool, step: str = "4. Close out", late: bool = False) -> 
     late: reopened to add a missed receipt, so every step shows the way back to the finish."""
     ss.event = {**ss.event, "finished": done, "late": late}
     ss.pop("last_draft", None)  # "Done! I read all 14" is old news on a reopened Upload
+    ss.revisit = False  # just finished: the next step is Club home, not Reopen
     ss.confetti = done  # once, right after Finish event: not on every visit to the page
     ss.step = step
     save_session()
@@ -90,7 +94,7 @@ def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
         return None
     year = school_year(event.date)
     others = [e["net"] for e in session_store.past_nets(past())
-              if club.owns(e) and e["event_id"] != event.event_id and school_year(e["date"]) == year]
+              if club.owns(e) and e["finished"] and e["event_id"] != event.event_id and school_year(e["date"]) == year]
     return event.start_balance + sum(others, Decimal("0")) + net
 
 
@@ -146,7 +150,13 @@ def show(event: EventInfo) -> None:
                     row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
                                   icon_position="right", on_click=set_finished, args=(False, step), disabled=locked)
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
-            st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
+            # Back from Past events it's usually to change something, so Reopen leads. Right after finishing, home does.
+            lead = bool(ss.get("revisit")) and not locked
+            if lead:
+                st.button("Reopen this event", key="reopen-event", type="primary", icon=":material/undo:",
+                          on_click=set_finished, args=(False,), help=REOPEN_HELP)
+            st.button("Back to club home", type="secondary" if lead else "primary", key="to-home", icon=":material/home:",
+                      on_click=go_home)
             st.button("Start the next event", key="next-event", on_click=next_event)
             if not locked:
                 st.button("Add a missed receipt", key="add-missed", icon=":material/add:", on_click=set_finished,
@@ -175,8 +185,8 @@ def show(event: EventInfo) -> None:
     if locked:
         st.caption(f"Locked: this event is from the {school_year(event.date).replace('-', '–')} school year, "
                    "so it can't be reopened or take new receipts.")
-    else:
+    elif not lead:
         st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:", on_click=set_finished,
-                  args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
+                  args=(False,), help=REOPEN_HELP)
     if ss.pop("confetti", False):  # last, so it falls once the whole page is built
         st.html(confetti())

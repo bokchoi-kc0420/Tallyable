@@ -124,6 +124,7 @@ def open_past(path: Path) -> None:
     ss.pop("_saved_photos", None)
     ss.step = "4. Close out" if ss.receipts else STEPS[0]
     ss.view = "event"
+    ss.revisit = True  # came back to an old event: its finish page leads with Reopen
 
 
 def show_finished() -> None:
@@ -131,6 +132,7 @@ def show_finished() -> None:
     Reopen and Add a missed receipt live there."""
     ss.step = "4. Close out"
     ss.view = "event"
+    ss.revisit = True
 
 
 def past_events_box() -> None:
