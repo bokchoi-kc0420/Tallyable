@@ -328,13 +328,13 @@ div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-famil
 p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: var(--tly-soft); margin: -8px 0 8px; }
 .tly-live { position: relative; padding-top: 80px; max-width: 460px; margin: 0 auto; }  /* keeps its size when the sidebar folds */
 .tly-live img { position: absolute; right: 8px; top: -16px; width: 88px; transform: rotate(8deg); z-index: 2; }
-.tly-live .bubble { position: absolute; left: 0; top: 12px; max-width: calc(100% - 120px); background: var(--tly-card);
+.tly-live .bubble { position: absolute; right: 112px; top: 16px; max-width: calc(100% - 112px); background: var(--tly-card);
   border: 2px solid var(--tly-ink); border-radius: var(--tly-r); padding: 8px 16px; font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-ink); }
-.tly-live .bubble::after { content: ""; position: absolute; right: 26px; bottom: -8px; width: 12px; height: 12px;
-  background: var(--tly-card); border-right: 2px solid var(--tly-ink); border-bottom: 2px solid var(--tly-ink); transform: rotate(45deg); }
+.tly-live .bubble::after { content: ""; position: absolute; right: -8px; top: calc(50% - 7px); width: 12px; height: 12px;
+  background: var(--tly-card); border-right: 2px solid var(--tly-ink); border-top: 2px solid var(--tly-ink); transform: rotate(45deg); }  /* points at Tally */
 .tly-live .tk { transform: rotate(-3deg); filter: drop-shadow(0 4px 0 rgba(31,42,34,.14)); }  /* a mask cuts off box-shadow */
 .tly-live .tly-event { --tp: 104px; --tb: 3px; --tn: 10px; --ts: 5px; }
-.tly-live .tly-event .stamp { right: 24px; top: calc(100% - 72px); transform: rotate(-14deg) scale(1.5); }
+.tly-live .tly-event .stamp { right: 24px; top: calc(100% - 64px); transform: rotate(-14deg) scale(1.25); }
 .tly-live .tly-event .stub { padding: 16px 0; } .tly-live .tly-event .stub span { font-size: var(--tly-t-sm); }
 .tly-live .tly-event .stub b { font-size: var(--tly-t-2xl); } .tly-live .tly-event .info { padding: 16px 96px 16px 24px; }
 .tly-live .tly-event .info b { font-size: var(--tly-t-xl); } .tly-live .tly-event .info small { font-size: var(--tly-t-sm); }
