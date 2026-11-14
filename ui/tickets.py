@@ -8,6 +8,8 @@ import html
 import re
 from datetime import date
 
+from ui import club
+
 # name -> (color, text color). Light colors get dark text so they stay readable.
 PALETTE = {"Forest": ("#1C5C36", "#FFFFFF"), "Teal": ("#1F7A73", "#FFFFFF"), "Navy": ("#2F4B7C", "#FFFFFF"),
            "Plum": ("#6B4E8A", "#FFFFFF"), "Berry": ("#B0413E", "#FFFFFF"), "Terracotta": ("#C8673C", "#FFFFFF"),
@@ -42,7 +44,14 @@ def ticket(d: date, name: str, receipts: int, color: str | None = None) -> str:
     """An event as a ticket: a date stub in the event's color, then the name and receipt count."""
     return (f'<div class="tly-event" style="{_vars(color)}"><div class="stub"><span>{d.strftime("%b").upper()}</span>'
             f'<b>{d.day}</b><span>{d.year}</span></div><div class="info"><b>{html.escape(name)}</b>'
-            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small></div></div>')
+            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small>{stamp()}</div></div>')
+
+
+def stamp() -> str:
+    """The club's initials in a double ring, inked on the ticket's right end (style.css). A club logo can take its place later."""
+    name = club.load().get("name") or ""
+    return (f'<span class="stamp" aria-hidden="true"><b>{html.escape(club.initials(name))}</b>'
+            f'<i>{html.escape(name.upper())}</i></span>')
 
 
 def stub(d: date, name: str, color: str | None = None) -> str:
@@ -79,6 +88,6 @@ def rip(d: date, name: str, receipts: int, color: str | None = None) -> str:
     bits = "".join(f'<i style="--y:{y}px;--bx:{x}px;--by:{f}px;--d:{passed[y // 4]:.0f}ms"></i>'
                    for y, x, f in [(8, 9, -14), (28, -7, 16), (44, 11, 12), (60, -6, 18)])  # paper bits off the tear
     return (f'<div class="tly-rip" aria-hidden="true" style="{_vars(color)}"><div class="blur"></div><div class="tk">'
-            f'<div class="shade"><div class="body"><b>{html.escape(name)}</b>'
-            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small></div></div>'
+            f'<div class="shade"><div class="body"><div class="info"><b>{html.escape(name)}</b>'
+            f'<small>{receipts} receipt{"s" if receipts != 1 else ""}</small>{stamp()}</div></div></div>'
             f'<div class="shade"><div class="stubw">{bands}</div></div>{bits}</div></div><script>{RIP_JS}</script>')
