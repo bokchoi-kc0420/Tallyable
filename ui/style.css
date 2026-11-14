@@ -328,7 +328,7 @@ div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-famil
 p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: var(--tly-soft); margin: -8px 0 8px; }
 .tly-live { position: relative; padding-top: 80px; max-width: 460px; margin: 0 auto; }  /* keeps its size when the sidebar folds */
 .tly-live img { position: absolute; right: 8px; top: -16px; width: 88px; transform: rotate(8deg); z-index: 2; }
-.tly-live .bubble { position: absolute; right: 112px; top: 16px; max-width: calc(100% - 112px); background: var(--tly-card);
+.tly-live .bubble { position: absolute; right: 88px; top: 16px; max-width: calc(100% - 88px); background: var(--tly-card);
   border: 2px solid var(--tly-ink); border-radius: var(--tly-r); padding: 8px 16px; font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-ink); }
 /* The tail points at Tally: an ink point with a white one inside it, so the outline runs into it without a seam. */
 .tly-live .bubble::before, .tly-live .bubble::after { content: ""; position: absolute; clip-path: polygon(0 0, 100% 50%, 0 100%); }
