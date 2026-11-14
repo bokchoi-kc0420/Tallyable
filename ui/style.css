@@ -13,6 +13,8 @@
   --tly-forest: #1C5C36; --tly-forest-2: #3F8A5A; --tly-forest-3: #6FAE82; --tly-done: #DDEBD9; --tly-green-tint: #E6F0E2; --tly-green-line: #CFE3D2; --tly-sage: #8FB38A;
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
+  /* the torn zigzag edge of a ticket stub (the sidebar ticket and the ticket rip) */
+  --tly-zig: polygon(0 0,100% 0%,calc(100% - 8px) 6%,100% 12%,calc(100% - 8px) 18%,100% 24%,calc(100% - 8px) 30%,100% 36%,calc(100% - 8px) 42%,100% 48%,calc(100% - 8px) 54%,100% 60%,calc(100% - 8px) 66%,100% 72%,calc(100% - 8px) 78%,100% 84%,calc(100% - 8px) 90%,100% 96%,calc(100% - 8px) 100%,0 100%);
   --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
@@ -73,7 +75,7 @@
   border-radius: var(--tly-r); overflow: hidden; background: var(--tly-card); }
 .tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 8px 8px 8px 0;
   background: var(--tly-c, var(--tly-forest)); color: var(--tly-ct, var(--tly-white)); font-family: var(--tly-head);
-  clip-path: polygon(0 0,100% 0%,calc(100% - 8px) 6%,100% 12%,calc(100% - 8px) 18%,100% 24%,calc(100% - 8px) 30%,100% 36%,calc(100% - 8px) 42%,100% 48%,calc(100% - 8px) 54%,100% 60%,calc(100% - 8px) 66%,100% 72%,calc(100% - 8px) 78%,100% 84%,calc(100% - 8px) 90%,100% 96%,calc(100% - 8px) 100%,0 100%); }
+  clip-path: var(--tly-zig); }
 .tly-event .stub span { font-size: var(--tly-t-xs); letter-spacing: .1em; } .tly-event .stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
 .tly-event .info { padding: 8px 16px 8px 8px; display: grid; gap: 4px; align-content: center; }
 .tly-event .info b { font-family: var(--tly-head); font-size: var(--tly-t-lg); line-height: 1.2; color: var(--tly-ink); }

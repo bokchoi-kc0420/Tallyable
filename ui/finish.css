@@ -52,6 +52,13 @@
 [class*="st-key-past-"]:hover .tly-stub, [class*="st-key-past-"]:hover .tly-event { transform: translateY(-3px); }
 .tly-warn { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%;
   border: 2px solid var(--tly-sun-deep); color: var(--tly-sun-ink); font: 700 var(--tly-t-xs)/1 var(--tly-head); font-style: normal; vertical-align: 1px; }
+/* Confetti once the stub has landed in Past events (1.6s in) */
+.tly-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 999999; overflow: hidden; }
+.tly-confetti i { position: absolute; top: -16px; width: 8px; height: 13px; border-radius: 4px; opacity: 0;
+  animation: tly-fall var(--d) cubic-bezier(.25,.6,.45,1) calc(var(--w) + 1.6s) forwards; }
+@keyframes tly-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); }
+  85% { opacity: 1; } 100% { opacity: 0; transform: translateY(105vh) rotate(var(--r)); } }
+@media (prefers-reduced-motion: reduce) { .tly-confetti { display: none; } }
 /* The ticket rip when an event is finished (ui/tickets.py rip), about 1.9s: the page blurs and the ticket comes to the
    middle 0-.3 · the tear runs down the perforation .38-.83 (a band of the stub swings away only once the tear has passed
    it) · pulled apart .83-1.03 · the stub flies into Past events 1.03-1.58 while the blur clears · the rest recoils,
@@ -79,8 +86,7 @@
   73% { opacity: .9; } 79%, 100% { transform: translate(30px,300px) rotate(22deg); opacity: 0; } }
 .tly-rip .stubw, .tly-rip .band, .tly-rip .stub { width: 70px; }
 .tly-rip .stub { background: var(--tly-c); color: var(--tly-ct); border-radius: var(--tly-r) 0 0 var(--tly-r); display: grid;
-  place-content: center; text-align: center; line-height: 1; padding-right: 8px;
-  clip-path: polygon(0 0,100% 0%,calc(100% - 8px) 6%,100% 12%,calc(100% - 8px) 18%,100% 24%,calc(100% - 8px) 30%,100% 36%,calc(100% - 8px) 42%,100% 48%,calc(100% - 8px) 54%,100% 60%,calc(100% - 8px) 66%,100% 72%,calc(100% - 8px) 78%,100% 84%,calc(100% - 8px) 90%,100% 96%,calc(100% - 8px) 100%,0 100%); }
+  place-content: center; text-align: center; line-height: 1; padding-right: 8px; clip-path: var(--tly-zig); }
 .tly-rip .stub span { font-size: var(--tly-t-xs); letter-spacing: .1em; } .tly-rip .stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
 /* Band --i is a 5px strip of the stub. When the tear reaches it (--d) it turns 32 degrees about its end on the
    perforation and is pulled left for as long as the tear still runs (--t), so the torn part bends away as one piece. */

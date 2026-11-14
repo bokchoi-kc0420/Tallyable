@@ -151,7 +151,7 @@ try {
   await page.locator(".tly-rip.go").waitFor({ timeout: 30000 });  // added last, once the page is built
   await page.waitForTimeout(700);
   await page.screenshot({ path: join(OUT, "5-finish-rip.png") });  // mid-tear, so no idle wait
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(6500);  // the confetti that follows the rip has fallen
   await shot("5-finish");
   await shot("5-finish-card", page.locator(".st-key-finish-page"));
   await page.getByText(/Past events/).click();

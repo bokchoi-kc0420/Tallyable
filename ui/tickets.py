@@ -52,8 +52,9 @@ def stub(d: date, name: str, color: str | None = None) -> str:
 
 
 RIP_START, RIP_LEN = 380, 450  # ms: when the tear starts, and how long it takes to run down the perforation
-# Puts the ticket on the Past events row it is torn into, and aims the stub's flight at that row's icon
-# (in the centered ticket's own pixels: it is drawn at twice its size there). Reduced motion: no rip at all.
+# Puts the ticket (264 x 76, so its middle is 132, 38) on the Past events row it is torn into, centers it (--cx, --cy),
+# and aims the stub's flight at that row's icon (--fx, --fy, in the centered ticket's own pixels: it is drawn at
+# twice its size there). Reduced motion: no rip at all.
 RIP_JS = """(() => {
   const src = document.querySelector('.tly-rip:not(.go)');
   const row = document.querySelector('[data-testid="stSidebar"] [data-testid="stExpander"] summary');  // its header, open or not

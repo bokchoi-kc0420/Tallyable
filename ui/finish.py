@@ -4,6 +4,7 @@ what to do next. Also the Finish event button at the bottom of Close out, and th
 from __future__ import annotations
 
 import html
+import random
 from datetime import date
 from decimal import Decimal
 
@@ -103,6 +104,16 @@ def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
     return event.start_balance + sum(others, Decimal("0")) + net
 
 
+def confetti() -> str:
+    """Paper bits in the app's colors falling over the page once the ticket rip is done (CSS only, ignores clicks)."""
+    rng = random.Random(7)
+    colors = ["#1C5C36", "#3F8A5A", "#F7BE3F", "#C44536", "#8FB38A", "#6B4E8A"]
+    bits = "".join(f'<i style="left:{rng.uniform(0, 100):.1f}%;background:{rng.choice(colors)};'
+                   f'--d:{rng.uniform(2.2, 3.8):.2f}s;--w:{rng.uniform(0.3, 1.2):.2f}s;--r:{rng.choice([-1, 1]) * 540}deg"></i>'
+                   for _ in range(90))
+    return f'<div class="tly-confetti" aria-hidden="true">{bits}</div>'
+
+
 def tiles(t: dict, balance: Decimal | None) -> str:
     left = t["net"]
     cells = [("Money in", usd(t["income"]), ""), ("Money out", usd(t["expenses"]), ""),
@@ -186,4 +197,4 @@ def show(event: EventInfo) -> None:
         st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:", on_click=set_finished,
                   args=(False,), help=REOPEN_HELP)
     if ss.pop("rip", False):  # last, once the whole page is built: its script looks for the Past events row
-        st.html(rip(event.date, event.name, len(ss.receipts), ss.event.get("color")), unsafe_allow_javascript=True)
+        st.html(rip(event.date, event.name, len(ss.receipts), ss.event.get("color")) + confetti(), unsafe_allow_javascript=True)
