@@ -217,7 +217,8 @@ def show() -> tuple[str, EventInfo]:
     if ss.get("confirm") == "delete":
         confirm_delete()
     event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
-    event_card = event_group.empty()  # filled below, once the event fields are read
+    # Filled below, once the event fields are read. Not st.empty(): that blanks the ticket on every rerun (a flicker).
+    event_card = event_group.container()
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
     with event_group.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:"):
         locked = bool(ss.event.get("pushed_at"))  # the sheet's tabs are named after the event
