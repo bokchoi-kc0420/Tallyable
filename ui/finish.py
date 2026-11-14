@@ -23,6 +23,7 @@ from ui import club, done_card
 from ui.common import dec, get_sink, mascot_uri, past, saved_reimbursements, ss, usd
 from ui.home import go_home
 from ui.sidebar import save_session, start_new_event
+from ui.tickets import rip
 
 FIX = {"2. Review": "Fix in Review", "3. Summary": "Go push", "4. Close out": "Pay back"}
 
@@ -66,7 +67,7 @@ def set_finished(done: bool, step: str = "4. Close out", late: bool = False) -> 
     ss.event = {**ss.event, "finished": done, "late": late}
     ss.pop("last_draft", None)  # "Done! I read all 14" is old news on a reopened Upload
     ss.revisit = False  # just finished: the next step is Club home, not Reopen
-    ss.confetti = done  # once, right after Finish event: not on every visit to the page
+    ss.rip = done  # the ticket rip plays once, right after Finish event: not on every visit to the page
     ss.step = step
     save_session()
 
@@ -104,7 +105,7 @@ def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
 
 
 def confetti() -> str:
-    """Paper bits in the app's colors falling over the page (CSS only, ignores clicks, gone in ~4s)."""
+    """Paper bits in the app's colors falling over the page once the ticket rip is done (CSS only, ignores clicks)."""
     rng = random.Random(7)
     colors = ["#1C5C36", "#3F8A5A", "#F7BE3F", "#C44536", "#8FB38A", "#6B4E8A"]
     bits = "".join(f'<i style="left:{rng.uniform(0, 100):.1f}%;background:{rng.choice(colors)};'
@@ -195,5 +196,5 @@ def show(event: EventInfo) -> None:
     elif not lead:
         st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:", on_click=set_finished,
                   args=(False,), help=REOPEN_HELP)
-    if ss.pop("confetti", False):  # last, so it falls once the whole page is built
-        st.html(confetti())
+    if ss.pop("rip", False):  # last, once the whole page is built: its script looks for the Past events row
+        st.html(rip(event.date, event.name, len(ss.receipts), ss.event.get("color")) + confetti(), unsafe_allow_javascript=True)

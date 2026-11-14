@@ -148,10 +148,10 @@ try {
   await page.keyboard.press("Escape");
   await shot("4-close-out-finish-button", page.locator(".st-key-finish-row"));
   await page.getByRole("button", { name: "Finish event" }).click();
-  await page.locator(".tly-confetti").waitFor({ timeout: 30000 });  // added last, once the page is built
-  await page.waitForTimeout(1400);
-  await page.screenshot({ path: join(OUT, "5-finish-confetti.png") });  // mid-fall, so no idle wait
-  await page.waitForTimeout(4500);
+  await page.locator(".tly-rip.go").waitFor({ timeout: 30000 });  // added last, once the page is built
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: join(OUT, "5-finish-rip.png") });  // mid-tear, so no idle wait
+  await page.waitForTimeout(6500);  // the confetti that follows the rip has fallen
   await shot("5-finish");
   await shot("5-finish-card", page.locator(".st-key-finish-page"));
   await page.getByText(/Past events/).click();
