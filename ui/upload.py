@@ -86,7 +86,9 @@ def thumbnail(data: bytes, name: str) -> bytes | None:
             return None
         from PIL import Image
         im = Image.open(io.BytesIO(f.data)).convert("RGB")
-        im.thumbnail((360, 260))
+        # Sized by width: the card crops the photo to its own width (about 320px), so a height cap left
+        # tall photos narrower than the card and the browser stretched them (blurry). 800 stays sharp on hi-res screens.
+        im.thumbnail((800, 4000))
         out = io.BytesIO()
         im.save(out, "JPEG", quality=80)
         return out.getvalue()
