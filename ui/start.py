@@ -63,10 +63,8 @@ def reaction(name: str) -> str:
     return react(name)
 
 
-def preview(name: str, d, people: int, names: list[str]) -> str:
-    """A: the sidebar ticket, big and tilted, filling in as you type. Tally reacts to the name."""
-    named = name.strip() and name.strip() != "New event"
-    say = reaction(name.strip()) if named else "Name your event!"
+def preview(name: str, d, people: int, names: list[str], say: str) -> str:
+    """A: the sidebar ticket, big and tilted, filling in as you type, with Tally's line about it."""
     dots = "".join(f'<span style="background:{club.AVATARS[n % len(club.AVATARS)]}">{html.escape(club.initials(x))}</span>'
                    for n, x in enumerate(names[:6]))
     t = ticket(d, name.strip() or "New event", 0, ss.event.get("color")).replace(
@@ -99,4 +97,10 @@ def show() -> None:
             ss.event = {**ss.event, "name": name, "date": d, "attendees": people, "set_up": True,
                         "event_id": ss.event["event_id"] if locked or same else event_id_for(name, d)}
             st.rerun()
-    right.html(preview(name, d, people, names))
+    # The ticket is drawn first, with Tally still thinking: his line can take Claude a few seconds, and until the
+    # preview is drawn again Streamlit shows the old one faded out.
+    named = name != "New event"
+    slot = right.empty()
+    slot.html(preview(name, d, people, names, "…" if named else "Name your event!"))
+    if named:
+        slot.html(preview(name, d, people, names, reaction(name)))
