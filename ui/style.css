@@ -334,7 +334,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   background: var(--tly-card); border-right: 2px solid var(--tly-ink); border-bottom: 2px solid var(--tly-ink); transform: rotate(45deg); }
 .tly-live .tk { transform: rotate(-3deg); filter: drop-shadow(0 4px 0 rgba(31,42,34,.14)); }  /* a mask cuts off box-shadow */
 .tly-live .tly-event { --tp: 104px; --tb: 3px; --tn: 10px; --ts: 5px; }
-.tly-live .tly-event .stamp, .tly-rip .stamp { right: 24px; top: calc(50% - 16px); transform: rotate(-14deg) scale(1.5); }
+.tly-live .tly-event .stamp { right: 24px; top: calc(100% - 72px); transform: rotate(-14deg) scale(1.5); }
 .tly-live .tly-event .stub { padding: 16px 0; } .tly-live .tly-event .stub span { font-size: var(--tly-t-sm); }
 .tly-live .tly-event .stub b { font-size: var(--tly-t-2xl); } .tly-live .tly-event .info { padding: 16px 96px 16px 24px; }
 .tly-live .tly-event .info b { font-size: var(--tly-t-xl); } .tly-live .tly-event .info small { font-size: var(--tly-t-sm); }
