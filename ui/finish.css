@@ -74,10 +74,9 @@
   15.8%, 100% { transform: translate(var(--cx), var(--cy)) scale(2); } }
 .tly-rip .shade { position: absolute; inset: 0; filter: drop-shadow(0 4px 0 rgba(31,42,34,.14)); }
 .tly-rip .body, .tly-rip .stub, .tly-rip .stubw, .tly-rip .band { position: absolute; left: 0; top: 0; height: 76px; box-sizing: border-box; }
-.tly-rip .body { width: 264px; border: 2px solid var(--tly-c); border-radius: var(--tly-r); background: var(--tly-card);
-  padding: 0 16px 0 80px; display: grid; align-content: center; gap: 4px; transform-origin: 66px 100%;
-  clip-path: polygon(70px 0,62px 6%,70px 12%,62px 18%,70px 24%,62px 30%,70px 36%,62px 42%,70px 48%,62px 54%,70px 60%,62px 66%,70px 72%,62px 78%,70px 84%,62px 90%,70px 96%,62px 100%,100% 100%,100% 0);
+.tly-rip .body { --mx: 0; --mr: 100%; left: 70px; width: 194px; display: grid; background: var(--tly-c); transform-origin: -4px 100%;
   animation: tly-rip-body 1.9s linear forwards; }
+.tly-rip .info { padding: 0 64px 0 16px; display: grid; align-content: center; gap: 4px; }
 .tly-rip .body b { font-size: var(--tly-t-lg); font-weight: 600; line-height: 1.2; color: var(--tly-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tly-rip .body small { font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-soft); }
 @keyframes tly-rip-body { 0%, 43.7% { transform: none; animation-timing-function: cubic-bezier(.2,.8,.3,1); }
@@ -85,8 +84,8 @@
   49.7% { transform: translate(1px,1px) rotate(.5deg); opacity: 1; animation-timing-function: cubic-bezier(.55,0,.9,.45); }
   73% { opacity: .9; } 79%, 100% { transform: translate(30px,300px) rotate(22deg); opacity: 0; } }
 .tly-rip .stubw, .tly-rip .band, .tly-rip .stub { width: 70px; }
-.tly-rip .stub { background: var(--tly-c); color: var(--tly-ct); border-radius: var(--tly-r) 0 0 var(--tly-r); display: grid;
-  place-content: center; text-align: center; line-height: 1; padding-right: 8px; clip-path: var(--tly-zig); }
+.tly-rip .stub { background: var(--tly-c); color: var(--tly-ct); --mx: 100%; --ml: 0; display: grid;
+  place-content: center; text-align: center; line-height: 1; }
 .tly-rip .stub span { font-size: var(--tly-t-xs); letter-spacing: .1em; } .tly-rip .stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
 /* Band --i is a 5px strip of the stub. When the tear reaches it (--d) it turns 32 degrees about its end on the
    perforation and is pulled left for as long as the tear still runs (--t), so the torn part bends away as one piece. */

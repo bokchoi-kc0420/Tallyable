@@ -13,8 +13,6 @@
   --tly-forest: #1C5C36; --tly-forest-2: #3F8A5A; --tly-forest-3: #6FAE82; --tly-done: #DDEBD9; --tly-green-tint: #E6F0E2; --tly-green-line: #CFE3D2; --tly-sage: #8FB38A;
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
-  /* the torn zigzag edge of a ticket stub (the sidebar ticket and the ticket rip) */
-  --tly-zig: polygon(0 0,100% 0%,calc(100% - 8px) 6%,100% 12%,calc(100% - 8px) 18%,100% 24%,calc(100% - 8px) 30%,100% 36%,calc(100% - 8px) 42%,100% 48%,calc(100% - 8px) 54%,100% 60%,calc(100% - 8px) 66%,100% 72%,calc(100% - 8px) 78%,100% 84%,calc(100% - 8px) 90%,100% 96%,calc(100% - 8px) 100%,0 100%);
   --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
@@ -70,16 +68,37 @@
 .st-key-whos-owed [data-testid="stCaption"], .st-key-whos-owed .stButton { margin-top: 8px; }
 .st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) + [data-testid="stLayoutWrapper"] { border-top: none; }
 .st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.total) { border-top: 2px solid var(--tly-ink); }
-/* Sidebar: the event's ticket. Its date stub has the same torn zigzag edge as the Past events stubs. */
-.tly-event { display: grid; grid-template-columns: 70px 1fr; margin: 4px 0 0; border: 2px solid var(--tly-c, var(--tly-forest));
-  border-radius: var(--tly-r); overflow: hidden; background: var(--tly-card); }
-.tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 8px 8px 8px 0;
-  background: var(--tly-c, var(--tly-forest)); color: var(--tly-ct, var(--tly-white)); font-family: var(--tly-head);
-  clip-path: var(--tly-zig); }
+/* Tickets (shape B, Kevin's pick): a classic admit-one outline. A notch top and bottom at the perforation and small round
+   bites down the short ends, cut with one mask. Each piece sets where its cuts go: --mx the notches, --ml / --mr the bites
+   on the left / right end (off the piece when it has none). The ticket is its color all over; the white .info sits on it,
+   cut a little wider (--tb) so the color shows round it as the outline. */
+.tly-event, .tly-event .info, .tly-stub, .tly-rip .stub, .tly-rip .body, .tly-rip .info {
+  --mn: var(--tn, 8px); --ms: var(--ts, 4px); --mx: -99px; --ml: -99px; --mr: -99px;
+  mask-image: linear-gradient(black 0 0), radial-gradient(circle var(--mn) at var(--mx) 0, black 98%, transparent),
+    radial-gradient(circle var(--mn) at var(--mx) 100%, black 98%, transparent),
+    radial-gradient(circle var(--ms) at var(--ml) 50%, black 98%, transparent),
+    radial-gradient(circle var(--ms) at var(--mr) 50%, black 98%, transparent);
+  mask-size: 100% 100%, 100% 100%, 100% 100%, 100% 16px, 100% 16px; mask-repeat: no-repeat, no-repeat, no-repeat, round, round;
+  mask-composite: subtract, add, add, add, add; }
+.tly-event .info, .tly-rip .info { --mn: calc(var(--tn, 8px) + var(--tb, 2px)); --ms: calc(var(--ts, 4px) + var(--tb, 2px)); --mx: 0; --mr: 100%;
+  border: var(--tb, 2px) solid transparent; border-left: 0; background: linear-gradient(var(--tly-c) 50%, transparent 0) 0 0 / 2px 8px repeat-y,
+  var(--tly-card); background-clip: padding-box; position: relative; }
+.tly-event { --mx: var(--tp, 70px); --ml: 0; --mr: 100%; display: grid; grid-template-columns: var(--tp, 70px) 1fr; margin: 4px 0 0;
+  background: var(--tly-c, var(--tly-forest)); }
+.tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 8px 0;
+  color: var(--tly-ct, var(--tly-white)); font-family: var(--tly-head); }
 .tly-event .stub span { font-size: var(--tly-t-xs); letter-spacing: .1em; } .tly-event .stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
-.tly-event .info { padding: 8px 16px 8px 8px; display: grid; gap: 4px; align-content: center; }
+.tly-event .info { padding: 8px 64px 8px 16px; display: grid; gap: 4px; align-content: center; }
 .tly-event .info b { font-family: var(--tly-head); font-size: var(--tly-t-lg); line-height: 1.2; color: var(--tly-ink); }
 .tly-event .info small { color: var(--tly-soft); }
+/* The club's initials, inked on the right end like a rubber stamp: tilted, faded, in a darker shade of the ticket color. */
+.tly-event .stamp, .tly-rip .stamp { position: absolute; right: 8px; top: calc(50% - 24px); width: 48px; height: 48px; box-sizing: border-box;
+  border: 2px solid; border-radius: 50%; outline: 1px solid; outline-offset: 2px; display: grid; place-content: center; text-align: center;
+  color: color-mix(in srgb, var(--tly-c), var(--tly-ink) 35%); opacity: .4; transform: rotate(-14deg); pointer-events: none;
+  font-family: var(--tly-head); font-weight: 600; line-height: 1; }
+.tly-event .stamp b, .tly-rip .stamp b { font-size: var(--tly-t-md); color: inherit; letter-spacing: .04em; }
+.tly-event .stamp i, .tly-rip .stamp i { font-style: normal; font-size: var(--tly-t-xs); white-space: nowrap; width: 144px; margin-top: 4px;
+  overflow: hidden; transform: scale(.25); transform-origin: 50% 0; justify-self: center; }
 .st-key-edit-event [data-testid="stExpander"] details { border: 2px solid var(--tly-forest); border-radius: var(--tly-r);
   background: var(--tly-green-tint); }
 .st-key-edit-event [data-testid="stExpander"] summary { color: var(--tly-forest); font-weight: 700; }
@@ -188,12 +207,10 @@
   border-radius: 999px; padding: 4px 8px; }
 .tly-status.ok { background: var(--tly-done); color: var(--tly-forest); } .tly-status.no { background: var(--tly-berry-tint); color: var(--tly-berry-deep); }
 .tly-status.wait { background: var(--tly-sun-soft); color: var(--tly-sun-ink); } .tly-status.post { background: var(--tly-forest); color: var(--tly-white); }
-/* Past events: torn-off stubs, all one size, with the zigzag edge where they were ripped. */
-.tly-stub { width: 92px; height: 112px; margin: 0 auto 8px; display: flex; flex-direction: column; justify-content: center;
-  text-align: center; line-height: 1.05; padding: 8px 8px 8px 4px; border-radius: var(--tly-r-in) 0 0 var(--tly-r-in);
-  background: var(--tly-c); color: var(--tly-ct); font-family: var(--tly-head);
-  clip-path: polygon(0 0,100% 0,92% 6%,100% 12%,92% 18%,100% 24%,92% 30%,100% 36%,92% 42%,100% 48%,92% 54%,
-    100% 60%,92% 66%,100% 72%,92% 78%,100% 84%,92% 90%,100% 96%,92% 100%,0 100%); }
+/* Past events: torn-off stubs, all one size, with half a notch on each corner where they were ripped. */
+.tly-stub { --mx: 100%; --ml: 0; width: 92px; height: 112px; margin: 0 auto 8px; display: flex; flex-direction: column;
+  justify-content: center; text-align: center; line-height: 1.05; padding: 8px 4px; background: var(--tly-c); color: var(--tly-ct);
+  font-family: var(--tly-head); }
 .tly-stub span { font-size: var(--tly-t-xs); letter-spacing: .08em; } .tly-stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
 .tly-stub i { font-style: normal; font-size: var(--tly-t-xs); margin-top: 4px; line-height: 1.15; }
 [class*="st-key-past-"] { gap: 0; margin-bottom: 8px; }
@@ -315,10 +332,11 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   border: 2px solid var(--tly-ink); border-radius: var(--tly-r); padding: 8px 16px; font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-ink); }
 .tly-live .bubble::after { content: ""; position: absolute; right: 26px; bottom: -8px; width: 12px; height: 12px;
   background: var(--tly-card); border-right: 2px solid var(--tly-ink); border-bottom: 2px solid var(--tly-ink); transform: rotate(45deg); }
-.tly-live .tly-event { grid-template-columns: 104px 1fr; border-width: 3px; border-radius: var(--tly-r); transform: rotate(-3deg);
-  box-shadow: var(--tly-shadow); }
-.tly-live .tly-event .stub { padding: 16px 16px 16px 0; } .tly-live .tly-event .stub span { font-size: var(--tly-t-sm); }
-.tly-live .tly-event .stub b { font-size: var(--tly-t-2xl); } .tly-live .tly-event .info { padding: 16px; }
+.tly-live .tk { transform: rotate(-3deg); filter: drop-shadow(0 4px 0 rgba(31,42,34,.14)); }  /* a mask cuts off box-shadow */
+.tly-live .tly-event { --tp: 104px; --tb: 3px; --tn: 10px; --ts: 5px; }
+.tly-live .tly-event .stamp, .tly-rip .stamp { right: 24px; top: calc(50% - 16px); transform: rotate(-14deg) scale(1.5); }
+.tly-live .tly-event .stub { padding: 16px 0; } .tly-live .tly-event .stub span { font-size: var(--tly-t-sm); }
+.tly-live .tly-event .stub b { font-size: var(--tly-t-2xl); } .tly-live .tly-event .info { padding: 16px 96px 16px 24px; }
 .tly-live .tly-event .info b { font-size: var(--tly-t-xl); } .tly-live .tly-event .info small { font-size: var(--tly-t-sm); }
 .tly-live .who { display: flex; margin-top: 8px; }
 .tly-live .who span { flex: none; width: 28px; height: 28px; margin-right: -8px; border: 2px solid var(--tly-white); border-radius: 50%; color: var(--tly-white);

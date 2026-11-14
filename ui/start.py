@@ -70,7 +70,7 @@ def preview(name: str, d, people: int, names: list[str], say: str) -> str:
     t = ticket(d, name.strip() or "New event", 0, ss.event.get("color")).replace(
         "<small>0 receipts</small>", f'<small>{people} people · 0 receipts</small><div class="who">{dots}</div>')
     return (f'<div class="tly-live"><div class="bubble">{html.escape(say)}</div>'
-            f'<img src="{mascot_uri("tally-hello.png")}" alt="">{t}'
+            f'<img src="{mascot_uri("tally-hello.png")}" alt=""><div class="tk">{t}</div>'
             '<p>This is the ticket that lands in your sidebar.</p></div>')
 
 
