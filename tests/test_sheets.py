@@ -150,6 +150,14 @@ def test_push_writes_tidy_tabs_and_is_idempotent(approved):
     assert len(book.tabs[EVENTS].cells) == 2                  # event upserted, not duplicated
 
 
+def test_sheet_connected_after_excel_save_still_gets_every_receipt(approved):
+    """Kevin's run: Save and get Excel marked all 6 posted, then he linked a sheet and pushed. Nothing landed."""
+    posted = [r.model_copy(update={"status": Status.POSTED}) for r in approved]
+    book = FakeBook()
+    assert len(GoogleSheetsSink(book).post(posted, EVENT, INCOME)) == len(approved)
+    assert len(book.tabs[TX].cells) == 1 + sum(len(r.items) for r in approved)
+
+
 def test_old_per_term_tabs_are_cleared_on_push(approved):
     book = FakeBook()
     book.add_worksheet("Balance Sheet: Fall 2026", 10, 5)  # from an older version

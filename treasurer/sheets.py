@@ -165,7 +165,7 @@ class GoogleSheetsSink:
         for n in reversed([n for n, key in enumerate(rows_now) if key in reopened]):
             tx_ws.delete_rows(n + 2)  # +1 for the header, +1 because sheet rows count from 1
         done = set(rows_now) - reopened
-        todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
+        todo = [r for r in receipts if r.counts and (r.event_id, r.receipt_id) not in done]  # posted to the other book still lands
         rows = [[_cell(f, row[f]) for f in TX_FIELDS] for r in todo for row in transaction_rows(r)]
         if rows:
             tx_ws.append_rows(rows, value_input_option="RAW")
