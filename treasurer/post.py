@@ -50,7 +50,7 @@ class LocalCsvSink:
             with open(self.path, newline="") as fh:
                 kept = [row for row in csv.DictReader(fh) if (row["event_id"], row["receipt_id"]) not in reopened]
         done = {(row["event_id"], row["receipt_id"]) for row in kept}
-        todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
+        todo = [r for r in receipts if r.counts and (r.event_id, r.receipt_id) not in done]  # posted to the other book still lands
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=TX_FIELDS)
