@@ -194,7 +194,7 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     """Step 2 of the page: set everyone at once, then fix the odd one on its photo.
     An order that came as several screenshots is joined here into one card, before it's read."""
     st.subheader("Who paid")
-    c = st.columns([3, 1, 2], vertical_alignment="bottom")
+    c = st.container(key="tag-all").columns([3, 1, 2], vertical_alignment="bottom")
     everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
     if c[1].button("Apply to all"):
         for name, _ in sources:

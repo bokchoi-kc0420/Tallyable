@@ -47,6 +47,7 @@ try {
     try { await page.goto(`http://localhost:${PORT}`); break; } catch (e) { if (i > 60) throw e; }
     await page.waitForTimeout(500);
   }
+  await page.getByRole("button", { name: "Set up my club" }).click();
   await page.getByText("Welcome to Tallyable").waitFor({ timeout: 60000 });
   await shot("0-club-name");
   await page.getByPlaceholder("e.g. Sunrise Hiking Club").fill("Sunrise Hiking Club");

@@ -1,0 +1,358 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tallyable intro</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0C4226;--text:#1F2A22;--cream:#FAF7E7;--forest:#1C5C36;--dark:#14462A;--line:#E8DFC0;--green:#488B53}
+*{box-sizing:border-box;margin:0}
+body{background:#BFE3F7;font-family:Outfit,sans-serif;color:var(--text);overflow:hidden}
+.stage{position:fixed;left:50%;top:50%;width:1280px;height:800px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--fit,1))}  /* drawn for 1280x800, scaled to fit the window */
+#handoff{position:absolute;left:96px;top:216px;z-index:96;text-decoration:none;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .4s,transform .4s cubic-bezier(.3,1.6,.5,1)}
+#handoff.on{opacity:1;transform:none;pointer-events:auto}#handoff:hover{filter:brightness(1.08)}
+.nav{position:absolute;left:0;right:0;top:0;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;z-index:90}
+.nav img{height:36px}
+.btn{display:inline-block;background:var(--forest);color:#fff;font:600 18px Fredoka;padding:12px 24px;border-radius:999px;box-shadow:0 4px 0 var(--dark)}
+.head{position:absolute;left:96px;top:76px;width:900px;z-index:4;transition:opacity .5s}
+.h{font:700 72px/1 Fredoka;letter-spacing:-.01em}
+.p{font-size:22px;line-height:1.35}
+#h2 .p{transition:opacity .6s .4s}#h2.off .p{opacity:0;transition:none}
+.off{opacity:0;pointer-events:none}
+.floor{position:absolute;left:0;right:0;bottom:0;background:#F4EFD9;border-top:4px solid var(--line);z-index:0}
+.door{position:absolute;width:170px;height:300px;background:var(--dark);border:6px solid var(--ink);border-bottom:none;border-radius:85px 85px 0 0;z-index:2}
+.door::after{content:"";position:absolute;inset:14px 14px 0 14px;background:#FCE7A8;border-radius:70px 70px 0 0}
+.sign{position:absolute;background:#F7BE3F;border:5px solid var(--ink);border-radius:12px;font:700 22px Fredoka;padding:6px 16px;transform:rotate(-4deg);z-index:3;color:var(--text)}
+.balloon{position:absolute;width:44px;height:54px;border-radius:50%;border:5px solid var(--ink);z-index:2}
+.balloon::after{content:"";position:absolute;left:50%;top:100%;width:3px;height:70px;background:var(--ink);margin-left:-1.5px}
+.wall{position:absolute;left:0;right:0;background:#F3ECD0;border-top:6px solid var(--ink);z-index:1;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='150'%3E%3Cg fill='%23E7DDB7'%3E%3Crect x='20' y='24' width='58' height='14' rx='4'/%3E%3Crect x='150' y='62' width='70' height='14' rx='4'/%3E%3Crect x='70' y='108' width='48' height='14' rx='4'/%3E%3C/g%3E%3C/svg%3E")}
+.wall::before{content:"";position:absolute;left:0;right:0;top:0;height:22px;background:var(--green);border-bottom:5px solid var(--ink)}
+.win{position:absolute;width:150px;height:170px;background:#DCE9DC;border:5px solid var(--ink);border-radius:14px;z-index:2}
+.win::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:5px;margin-left:-2.5px;background:var(--ink)}
+.win::after{content:"";position:absolute;top:46%;left:0;right:0;height:5px;background:var(--ink)}
+.doors{position:absolute;width:236px;height:316px;background:var(--dark);border:6px solid var(--ink);border-bottom:none;border-radius:14px 14px 0 0;z-index:2}
+.doors::before{content:"";position:absolute;left:0;right:0;top:0;height:34px;background:#9DBB8C;border-bottom:5px solid var(--ink);border-radius:8px 8px 0 0}
+.leaf{position:absolute;bottom:0;width:112px;height:270px;background:#CFE2EA;border:8px solid #2F4B7C;outline:4px solid var(--ink);outline-offset:-1px;border-radius:4px;transition:transform .55s cubic-bezier(.3,1.3,.5,1)}
+.leaf i{position:absolute;top:50%;width:8px;height:44px;margin-top:-22px;background:var(--ink);border-radius:4px}
+.leaf.l{left:0;transform-origin:0 100%}.leaf.r{right:0;transform-origin:100% 100%}
+.leaf.l i{right:8px}.leaf.r i{left:8px}
+.open .leaf.l{transform:scaleX(.24) skewY(7deg)}.open .leaf.r{transform:scaleX(.24) skewY(-7deg)}
+.usign{position:absolute;background:var(--forest);color:#FAF7E7;border:5px solid var(--ink);border-radius:12px;font:700 20px Fredoka;letter-spacing:.04em;padding:6px 16px;z-index:3}
+.bunt{position:absolute;z-index:3}
+canvas{position:absolute;inset:0;z-index:10}
+/* background options. a: low solid building, b: one big wall with no roofline, c: a whole little building, d: low building in faint outline */
+.bunt{display:none}
+.bg-a .wall,.bg-c .wall{background-image:none}
+.bg-b .wall{background:#F7F2DE;border:none}.bg-b .wall::before{display:none}.bg-b .bunt{display:block}
+.bg-c .wall{left:40px;right:auto;width:570px;border:6px solid var(--ink);border-bottom:none}
+.bg-c .wall::before{left:-26px;right:-26px;top:-8px;height:30px;border:5px solid var(--ink);border-radius:8px}
+.bg-d .wall{background:none;border-top:5px solid #E3D9B6}.bg-d .wall::before{display:none}
+.bg-b .win,.bg-d .win{background:none;border-color:#E3D9B6}.bg-b .win::before,.bg-b .win::after,.bg-d .win::before,.bg-d .win::after{background:#E3D9B6}
+.bg-x .wall,.bg-x #wins,.bg-x .doors,.bg-x .usign,.bg-x .floor,.bg-x .nav{display:none}
+#plate{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+#dopen{position:absolute;z-index:0;opacity:0;transition:opacity .3s}
+.ch{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
+.ch>*{position:absolute}
+.limb{width:0;height:0;transform-origin:0 0}
+.limb>*{position:absolute}
+.stick{background:var(--ink);border-radius:4px}
+.ball{border-radius:50%;border-style:solid;border-color:var(--ink)}
+.bub{position:absolute;background:#fff;border:3px solid var(--ink);border-radius:16px;padding:10px 16px;font:500 20px Outfit;line-height:1.25;z-index:85;width:max-content;max-width:300px;transform-origin:50% 100%;transform:scale(0);transition:transform .35s cubic-bezier(.3,1.8,.5,1)}
+.bub.on{transform:scale(1)}
+.bub::after{content:"";position:absolute;left:calc(50% - 8px);bottom:-11px;width:16px;height:16px;background:#fff;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:rotate(45deg)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:95;pointer-events:none}
+#cam{position:absolute;left:0;top:0;height:350px;z-index:60;display:none}
+.tkb,.tk .info{--mn:14px;--ms:7px;--mx:-99px;--ml:-99px;--mr:-99px;   /* same admit-one shape as the app's tickets (ui/style.css): a notch top and bottom at the perforation, round bites down both short ends, cut with one mask */
+  -webkit-mask-image:linear-gradient(black 0 0),radial-gradient(circle var(--mn) at var(--mx) 0,black 98%,transparent),radial-gradient(circle var(--mn) at var(--mx) 100%,black 98%,transparent),radial-gradient(circle var(--ms) at var(--ml) 50%,black 98%,transparent),radial-gradient(circle var(--ms) at var(--mr) 50%,black 98%,transparent);
+  mask-image:linear-gradient(black 0 0),radial-gradient(circle var(--mn) at var(--mx) 0,black 98%,transparent),radial-gradient(circle var(--mn) at var(--mx) 100%,black 98%,transparent),radial-gradient(circle var(--ms) at var(--ml) 50%,black 98%,transparent),radial-gradient(circle var(--ms) at var(--mr) 50%,black 98%,transparent);
+  -webkit-mask-size:100% 100%,100% 100%,100% 100%,100% 25px,100% 25px;mask-size:100% 100%,100% 100%,100% 100%,100% 25px,100% 25px;-webkit-mask-repeat:no-repeat,no-repeat,no-repeat,round,round;mask-repeat:no-repeat,no-repeat,no-repeat,round,round;
+  -webkit-mask-composite:source-out,source-over,source-over,source-over;mask-composite:subtract,add,add,add,add}
+.tkb{--mx:116px;--ml:0;--mr:100%;display:flex;background:var(--forest);width:100%;height:100%}
+.tk{position:absolute;filter:drop-shadow(0 6px 0 rgba(31,42,34,.18));width:460px;height:150px;z-index:40;transform:rotate(-3deg) scale(0);transition:transform .5s cubic-bezier(.3,1.7,.5,1)}
+.tk.on{transform:rotate(-3deg) scale(1)}
+.tk.bump{transition:none;transform:rotate(-3deg) scale(1.07)}
+.tk .date{width:116px;color:#fff;font:600 18px Fredoka;display:grid;place-items:center;text-align:center;line-height:1.05}
+.tk .date b{font-size:50px;display:block}
+.tk .info{--mn:19px;--ms:12px;--mx:0;--mr:100%;border:5px solid transparent;border-left:0;background:linear-gradient(var(--forest) 50%,transparent 0) 0 0/3px 12px repeat-y,#fff;background-clip:padding-box;flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px;position:relative}
+.tk .info b{font:600 30px Fredoka}
+.tk .info span{font-size:19px}
+.stamp{position:absolute;right:22px;top:50%;width:84px;height:84px;margin-top:-42px;border:4px double var(--forest);border-radius:50%;display:grid;place-items:center;font:700 20px Fredoka;color:var(--forest);opacity:0;transform:rotate(-14deg) scale(2.6);transition:transform .22s cubic-bezier(.5,0,1,.6),opacity .1s}
+.stamp.on{opacity:.6;transform:rotate(-14deg) scale(1)}
+</style></head><body>
+<div class="stage" id="stage">
+ <div class="nav"><img src="art/logo.png"><span class="btn" style="font-size:16px;padding:8px 20px">Try the demo</span></div>
+ <div class="head" id="h0"><div class="h">Event over!</div></div><div class="head off" id="h0q"><div class="h">Event over...?</div></div>
+ <div class="head off" id="h1"><div class="h">Countless receipts in.</div></div>
+ <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math, and puts it in your club's Google Sheet.</p></div>
+ <img id="plate" src="scene/plate.png"><img id="dopen" src="scene/door-open.png">
+ <div class="floor" id="floor"></div>
+ <div class="wall" id="wall"></div><div id="wins"></div>
+ <div class="doors" id="doors"><div class="leaf l"><i></i></div><div class="leaf r"><i></i></div></div><div class="usign" id="usign">STUDENT UNION</div>
+ <svg class="bunt" id="bunt" width="330" height="70" viewBox="0 0 330 70"><path d="M6,8 Q165,44 324,8" fill="none" stroke="#0C4226" stroke-width="4"/><g stroke="#0C4226" stroke-width="4" stroke-linejoin="round"><path d="M30,13 L62,19 L42,50 Z" fill="#F7BE3F"/><path d="M82,22 L114,26 L96,58 Z" fill="#F08A7B"/><path d="M134,28 L166,29 L150,62 Z" fill="#9DBB8C"/><path d="M186,29 L218,26 L204,60 Z" fill="#F7BE3F"/><path d="M238,24 L270,19 L258,52 Z" fill="#F08A7B"/><path d="M288,16 L318,10 L308,44 Z" fill="#9DBB8C"/></g></svg>
+ <canvas id="c"></canvas><canvas id="c2" style="z-index:45;pointer-events:none"></canvas>
+ <div class="ch" id="tal" style="z-index:60"></div><img src="scene/bush-front.png" style="position:absolute;inset:0;width:100%;height:100%;z-index:61;pointer-events:none">
+ <img id="cam" src="art/tally-camera.png">
+ <div class="bub" id="bs"></div><div class="bub" id="bt"></div>
+ <div class="tk" id="tk"><div class="tkb"><div class="date">NOV<b>14</b>2026</div><div class="info"><b>Boba Social</b><span id="cnt">Receipts in</span><span class="stamp" id="stamp">DONE</span></div></div></div>
+ <div id="flash"></div>
+ <a class="btn" id="handoff" href="/?demo=go" target="_top">Try it with these receipts &rarr;</a>
+</div>
+<script>
+const fit=()=>document.documentElement.style.setProperty('--fit',Math.min(innerWidth/1280,innerHeight/800));fit();addEventListener('resize',fit);
+const QS=new URLSearchParams(location.search),BG=QS.get('bg')||'x',SLOW=+QS.get('slow')||1;document.body.className='bg-'+BG;
+const $=id=>document.getElementById(id),W=1280,H=800,cv=$('c');let g=cv.getContext('2d');cv.width=W;cv.height=H;
+const g1=g,cv2=$('c2'),g2=cv2.getContext('2d');cv2.width=W;cv2.height=H;   // second layer: receipts flying into the ticket pass in front of it
+
+const GROUND=H-80,BACK=GROUND-76,SX=Math.round(W*.6),INK='#0C4226',DX0=72,DY0=-36,N=23;
+let seed=7;const rnd=(a=1,b)=>{seed=(seed*16807)%2147483647;const u=seed/2147483647;return b===undefined?u*a:a+u*(b-a)};
+$('floor').style.top=BACK+'px';const PS=W/1280;$('dopen').style.cssText=`left:${150*PS}px;top:${397*PS}px;width:${235*PS}px`;
+// the student union: a wall across the back, with double doors she comes out of
+const DOORX=96,WH=BG==='b'?BACK:410;$('wall').style.cssText=`top:${BACK-WH}px;height:${WH}px`;
+$('doors').style.cssText=`left:${DOORX}px;top:${BACK-316}px`;$('usign').style.cssText=`left:${DOORX+26}px;top:${BACK-316-54}px`;$('bunt').style.cssText=`left:${DOORX-47}px;top:${BACK-316-124}px`;
+$('wins').innerHTML=(BG==='c'?[420]:[470,720,970,1220]).filter(x=>x<W-170).map(x=>`<div class="win" style="left:${x}px;top:${BACK-330}px"></div>`).join('');
+// ---------- the student: four drawn poses of the same girl
+const PK=.408,SH=290,poses={};for(const k of['walk','look','cheer','dizzy']){poses[k]=new Image();poses[k].src=k==='walk'?'student/set2-1.png':`student/s1-${k}.png`}
+const X0=345,Y0=716,stuO=()=>{const o=Math.min(1,stu.out);return{o,sc:.78+.22*o,by:Y0+(GROUND+4-Y0)*o}};
+const stu={x:X0,pose:'walk',walk:0,wk:0,ph:0,vis:0,squash:0,out:0};
+// Her walk is a rig, not a flipbook: the upper body and the shoes are her own drawing, and the legs are moved every frame
+// (planted foot slides back exactly as fast as she moves forward, the other swings through), so there is no marching and no foot slide.
+const upper=new Image();upper.src='student/w3-upper.png';const footI=new Image();footI.src='student/w3-foot.png';
+const FK=SH/401,HIPX=119,HIPY=278,L1=37.5,L2=37.5,STR=30,ANK=343,FS=1,SKIN='#FDE3CB';
+function legPose(phi,hx,bob){const w=stu.wk,sx=hx>HIPX?6:-6;let fx,fy=ANK,fa=0,kb=.25;
+  if(phi<.5){const u=phi/.5;fx=STR-2*STR*u;if(u>.72){const v=(u-.72)/.28,q=v*v*(3-2*v);fa=28*q;fy-=6*q}else if(u<.14){const v=1-u/.14;fa=-14*v*v}}
+  else{const u=(phi-.5)/.5,e=u*u*(3-2*u);fx=-STR+2*STR*e;fy=ANK-6*(1-u)-13*Math.sin(Math.PI*u);fa=28-42*e;kb=.25+.75*Math.sin(Math.PI*u)}
+  fx=sx+(fx-sx)*w;fy=ANK+(fy-ANK)*w;fa*=w;
+  const H={x:hx,y:HIPY+bob},A={x:hx+fx,y:fy},dx=A.x-H.x,dy=A.y-H.y,d=Math.min(L1+L2-.5,Math.hypot(dx,dy)),base=Math.atan2(dy,dx),k=Math.acos(Math.min(1,(L1*L1+d*d-L2*L2)/(2*L1*d)))*kb;
+  return{H,K:{x:H.x+L1*Math.cos(base-k),y:H.y+L1*Math.sin(base-k)},A,fa}}
+function drawLeg(L){g.lineCap='round';g.lineJoin='round';const path=()=>{g.beginPath();g.moveTo(L.H.x,L.H.y);g.lineTo(L.K.x,L.K.y);g.lineTo(L.A.x,L.A.y+4);g.stroke()};
+  g.strokeStyle=INK;g.lineWidth=27;path();g.strokeStyle=SKIN;g.lineWidth=19;path();
+  g.save();g.translate(L.A.x,L.A.y);g.rotate(L.fa*Math.PI/180);g.scale(FS,FS);g.drawImage(footI,-27,-8.5);g.restore()}
+function drawStudent(){if(!stu.vis)return;const wk=stu.pose==='walk';stu.squash*=.86;
+  // coming out of the doors she starts a little further back (smaller, higher, dimmer) and steps forward onto the floor
+  const {o,sc,by}=stuO();g.fillStyle='rgba(120,80,50,.16)';g.beginPath();g.ellipse(stu.x,by,62*sc,11*sc,0,0,7);g.fill();
+  g.save();g.translate(stu.x,by);g.scale(sc*(1+stu.squash*.5),sc*(1-stu.squash));g.globalAlpha=Math.min(1,.2+o*14);
+  if(!wk){const im=poses[stu.pose];if(im.naturalWidth){const w=im.naturalWidth*SH/im.naturalHeight;g.drawImage(im,-w/2,-SH,w,SH)}g.restore();return}
+  const ph=stu.ph%1,bob=-6*stu.wk*Math.sin(ph*2*Math.PI)**2;
+  g.scale(FK,FK);g.translate(-HIPX,-401);
+  drawLeg(legPose((ph+.5)%1,HIPX-14,bob));drawLeg(legPose(ph,HIPX+14,bob));
+  if(upper.naturalWidth){g.translate(HIPX,HIPY);g.rotate(Math.sin(ph*2*Math.PI)*.012*stu.wk);g.drawImage(upper,-HIPX,-HIPY+bob)}
+  g.restore()}
+// ---------- Tally: his real body, with arms and legs that swing
+const cup=`<svg width="38" height="62" viewBox="0 0 38 62"><path d="M21,2 L18,22" stroke="#0C4226" stroke-width="9" stroke-linecap="round"/><path d="M21,2 L18,22" stroke="#488B53" stroke-width="4" stroke-linecap="round"/>
+ <path d="M6,26 L9,56 Q9,59 12,59 L26,59 Q29,59 29,56 L32,26 Z" fill="#E7C29A" stroke="#0C4226" stroke-width="4" stroke-linejoin="round"/>
+ <path d="M4,26 Q19,8 34,26 Z" fill="#fff" stroke="#0C4226" stroke-width="4" stroke-linejoin="round"/>
+ <g fill="#3a2a1e"><circle cx="13" cy="52" r="3"/><circle cx="20" cy="53" r="3"/><circle cx="26" cy="51" r="3"/><circle cx="16" cy="46" r="3"/><circle cx="23" cy="46" r="3"/></g></svg>`;
+function limb(parent,x,y,len,th,z,end){const l=document.createElement('div');l.className='limb';l.style.cssText=`left:${x}px;top:${y}px;z-index:${z}`;
+  l.innerHTML=`<div class="stick" style="left:${-th/2}px;top:0;width:${th}px;height:${len}px"></div>${end(len)}`;parent.appendChild(l);return l}
+const ball=(d,b,c)=>len=>`<div class="ball" style="width:${d}px;height:${d}px;left:${-d/2}px;top:${len-d/2}px;background:${c};border-width:${b}px"></div>`;
+const foot=(w,h,b,c)=>len=>`<div class="ball" style="width:${w}px;height:${h}px;left:${-w/2+6}px;top:${len-h/2}px;background:${c};border-width:${b}px"></div>`;
+const withCup=(d,b,c,deg)=>len=>`<div style="left:-12px;top:${len-46}px;transform:rotate(${deg}deg);transform-origin:19px 44px">${cup}</div>`+ball(d,b,c)(len);
+const tal={el:$('tal'),x:-120,ph:0,walk:0,hop:0};
+tal.el.insertAdjacentHTML('beforeend','<div style="left:-74px;top:-12px;width:148px;height:22px;border-radius:50%;background:rgba(120,80,50,.16)"></div>');
+tal.legL=limb(tal.el,-36,-34,30,8,1,foot(42,27,5,'var(--green)'));tal.legR=limb(tal.el,36,-34,30,8,1,foot(42,27,5,'var(--green)'));
+tal.armB=limb(tal.el,-70,-128,38,8,1,ball(34,5,'var(--green)'));
+// his body is two layers (blank paper + face and lines) so he can turn: the paper gets narrower and the face slides toward the side he looks at
+const tb=document.createElement('div');tb.style.cssText='left:-75px;top:-278px;width:150px;height:253px;z-index:2;transform-origin:50% 100%';
+tb.innerHTML='<img src="rig/tally-base.png" style="position:absolute;left:0;top:0;width:150px;height:253px"><div style="position:absolute;left:11px;right:11px;top:0;bottom:0;overflow:hidden"><img id="tface" src="rig/tally-face.png" style="position:absolute;left:-11px;top:0;width:150px;height:253px"></div>';tal.el.appendChild(tb);
+const TURN=QS.has('turn')?+QS.get('turn'):1;tal.turn=0;
+const phone=len=>`<div id="phone" style="display:none;left:-28px;top:${len-8}px;width:56px;height:32px;background:#14462A;border:4px solid #0C4226;border-radius:9px"><i style="position:absolute;right:5px;bottom:3px;width:10px;height:10px;border-radius:50%;background:#9FD0A8"></i></div>
+ <svg id="zap" style="display:none;left:-34px;top:${len+30}px" width="68" height="34" viewBox="0 0 68 34"><g stroke="#F7D23F" stroke-width="7" stroke-linecap="round"><path d="M34,3 L34,28"/><path d="M14,4 L5,24"/><path d="M54,4 L63,24"/></g></svg>`;
+tal.armF=limb(tal.el,70,-128,38,8,3,len=>withCup(34,5,'var(--green)',105)(len)+phone(len));tal.cup=tal.armF.children[1];
+// ---------- receipts: soft ribbons (a rope of points drawn with depth). They flutter down, then glide into a slot on a rounded mound.
+const SPC=56,SHELLS=Math.ceil(320/SPC),LAY=[];
+for(let k=0;k<SHELLS;k++){const h=365-k*SPC;LAY.push({h:h*rnd(.94,1.04),hb:h*.82+56,ox:rnd(-18,18),oy:k*5.6})}
+const dome=(L,d)=>Math.abs(d)>=L.hb?0:L.h*Math.pow(Math.cos(Math.PI/2*d/L.hb),.85);
+const plan=[];LAY.forEach((L,l)=>{const cs=L.hb/Math.hypot(L.hb,L.h),n=14,lx=n*22*cs,m=Math.max(1,Math.ceil(2*L.hb*.9/(lx*.5)));
+  for(let i=0;i<m;i++){const d=m>1?((i/(m-1))*2-1)*(L.hb*.9-lx*.45):0;plan.push({lane:l,n,cs,d,far:Math.abs(d)/L.hb})}});
+plan.sort((a,b)=>b.far-a.far||a.lane-b.lane);while(plan.length>N)plan.shift();
+const chains=plan.map((t,i)=>{const L=LAY[t.lane],cx=SX-L.ox,tx=cx+t.d,nn=t.n+Math.round(rnd(-2,2)),side=t.d<-1?-1:1,th=rnd(.1,.45)*(rnd()<.5?-1:1),x0=tx+rnd(-70,70),p=[];
+  for(let j=0;j<nn;j++){const x=x0+(j-nn/2)*22*Math.cos(th),y=-50-j*22*Math.abs(Math.sin(th));p.push({x,y,px:x,py:y})}
+  const jx=rnd(-30,30),jy=rnd(-16,12),tl=rnd(-.22,.22),sg=rnd(-13,13);
+  const goal=p.map((q,j)=>{const u=j-(nn-1)/2,x=tx+jx+u*22*t.cs*side;return{x,y:GROUND-dome(L,x-cx)-34+jy+u*22*tl+sg*Math.sin(j/(nn-1)*Math.PI)}});
+  return{p,goal,slot:goal,side,ox:L.ox,oy:L.oy,i,st:'wait',born:1e9,fold:1,ph:rnd(6.28),w:rnd(.05,.08),amp:rnd(.07,.14),n:0,tot:Math.floor(rnd(2,5)),my:goal.reduce((a,q)=>a+q.y,0)/nn,top:Math.min(...goal.map(q=>q.y))}});
+// the first receipt lands on her head like a hat; it is the one whose place in the mound is nearest her head, so it barely moves later
+const hatD=c=>{const m=c.slot[c.slot.length>>1];return Math.hypot(m.x-(SX-26),m.y-(GROUND-SH+18))};
+const hat=chains.reduce((a,c)=>hatD(c)<hatD(a)?c:a);hat.born=4500;hat.fold=0;
+hat.goal=hat.p.map((q,j)=>{const u=j-(hat.p.length-1)/2;return{x:SX-26+u*13,y:GROUND-SH+3+u*u*.6}});
+hat.p.forEach((q,j)=>{q.x=q.px=SX+60+j*14;q.y=q.py=-60-j*6});
+const kx=W*.80,ky=H*.24;$('tk').style.left=(kx-230)+'px';$('tk').style.top=(ky-75)+'px';
+let count=0,vac=-1,T=0,wigT=-1e9;const done={};const once=(k,t)=>T>=t&&!done[k]&&(done[k]=1);
+function say(id,text,x,headTop){const b=$(id);b.textContent=text;b.style.left=(x-b.offsetWidth/2)+'px';b.style.top=(headTop-b.offsetHeight-22)+'px';b.classList.add('on')}
+const hush=id=>$(id).classList.remove('on');
+function arrive(c){c.st='gone';count++;
+  const k=$('tk');k.classList.add('bump');requestAnimationFrame(()=>requestAnimationFrame(()=>k.classList.remove('bump')))}
+const TSTOP=SX-500;
+if(chains.length!==N)console.error('receipt count',chains.length);
+function step(){
+  // ---- beat 1: she walks out of the boba social
+  if(once('dopen',300))door.to=1;
+  door.v=door.v*(DS==='d'||DS==='e'?.93:.8)+(door.to-door.a)*.035;door.a+=door.v;
+  if(once('go',800)){stu.walk=1;stu.vis=1}
+  if(once('dclose',4200))door.to=0;
+  stu.wk+=((stu.walk?1:0)-stu.wk)*.14;
+  if(stu.walk){const v=2.2*Math.min(1,.2+(SX-stu.x)/70);stu.x+=v;stu.ph+=v/(4*STR*FK);stu.out+=v/(SX-X0);if(stu.x>=SX-.5){stu.walk=0;stu.out=1}}
+  if(once('s1',1500))say('bs','That was a great social!',stu.x-13,stuO().by-SH*stuO().sc);
+  if($('bs').classList.contains('on')&&stu.walk){const b=$('bs'),{sc,by}=stuO();b.style.left=(stu.x-13-b.offsetWidth/2)+'px';b.style.top=(by-SH*sc-b.offsetHeight-22)+'px'}
+  // ---- beat 2: one receipt lands on her head, she looks up, then the rest come down
+  if(hat.st==='rest'&&once('bonk',0)){done.bonkt=T;hush('bs');stu.pose='look';stu.squash=.12}
+  const B=done.bonkt||1e9,A=B+1900;
+  if(once('oh',B+600)){say('bs','...huh?',stu.x+12,GROUND-SH-42);$('h0').classList.add('off');$('h0q').classList.remove('off')}
+  if(once('ava',A)){chains.slice().sort((a,b)=>b.my-a.my).forEach((c,r)=>{if(c===hat)hat.rel=T+r*105;else c.born=T+r*105})}
+  if(hat.rel&&T>=hat.rel){hat.rel=0;hat.goal=hat.slot;hat.st='home';hat.n=0;hat.unfold=1}
+  if(once('ohx',A+500))hush('bs');
+  if(!done.hide&&T>A+1500&&chains.every(c=>c.st==='rest')){done.hide=1;done.hidet=T;stu.vis=0;$('h0q').classList.add('off');$('h1').classList.remove('off')}
+  const P=done.hidet||1e9;
+  if(once('w1',P+700)){wigT=T;say('bs','mmph!!',SX+8,GROUND-392)}
+  if(once('w1x',P+2000))hush('bs');
+  // ---- beat 3: Tally strolls in from the left with his boba
+  if(once('tgo',P+1500))tal.walk=1;
+  if(tal.walk){tal.ph+=.3;tal.x+=3.1;if(tal.x>=TSTOP){tal.x=TSTOP;tal.walk=0;done.tstop=T}}
+  const S=done.tstop||1e9;
+  if(once('t1',S+350))say('bt','Uh... need a hand?',tal.x+10,GROUND-290);
+  if(once('s2',S+1800)){wigT=T;say('bs','YES. Please!',SX+8,GROUND-392)}
+  // ---- beat 4: snap, and the pile gets vacuumed into the ticket
+  if(once('cam',S+3700)){hush('bt');hush('bs');tal.aim=1;tal.cup.style.display='none';$('phone').style.display='block'}
+  if(once('zap',S+4980))$('zap').style.display='block';if(once('zapx',S+5320))$('zap').style.display='none';
+  if(once('flash',S+5100)){const f=$('flash');f.style.transition='none';f.style.opacity=.85;requestAnimationFrame(()=>{f.style.transition='opacity .45s';f.style.opacity=0})}
+  if(once('vac',S+6800)){vac=T;$('tk').classList.add('on');stu.vis=1;stu.pose='dizzy';
+    chains.slice().sort((a,b)=>a.top-b.top).forEach((c,i)=>{c.go=200+i*70})}
+  if(count===N&&once('end',0))done.endt=T;
+  const E=done.endt||1e9;
+  if(once('stamp',E+250)){setTimeout(()=>$('handoff').classList.add('on'),2200);$('cnt').textContent='Receipts in · closed';$('stamp').classList.add('on');$('h1').classList.add('off');$('h2').classList.remove('off');stu.pose='cheer';stu.squash=-.1;
+    tal.aim=0;tal.cup.style.display='';$('phone').style.display='none';tal.hop=1}
+  if(once('s3',E+900))say('bs',"You're a lifesaver!",stu.x+2,GROUND-SH+4);
+  // ---- Tally's pose
+  const tw=Math.sin(tal.ph),tm=tal.walk?1:0;
+  if(tal.hop){tal.hop++;if(tal.hop>130)tal.hop=0}
+  if(!!tal.hop!==tal.happy){tal.happy=!!tal.hop;$('tface').src=tal.happy?'rig/tally-face-happy.png':'rig/tally-face.png'}
+  const tby=(tm?-Math.abs(tw)*7:0)-(tal.hop?(tal.hop<=48?Math.sin(tal.hop/48*Math.PI)*62:tal.hop<=88?Math.sin((tal.hop-48)/40*Math.PI)*36:0):0);
+  tal.lean=(tal.lean||0)+((tal.aim?7:0)-(tal.lean||0))*.15;
+  tal.turn+=((tal.aim?TURN:0)-tal.turn)*.14;{const ts=1-.3*tal.turn;tb.style.transform=`scaleX(${ts})`;$('tface').style.transform=`translateX(${30*tal.turn}px)`;
+    tal.legL.style.left=-36*ts+'px';tal.legR.style.left=36*ts+'px';tal.armB.style.left=-70*ts+'px';tal.armF.style.left=70*ts+'px'}
+  tal.el.style.transform=`translate(${tal.x}px,${GROUND+tby}px) rotate(${tm?3+tw*2:tal.lean}deg)`;
+  tal.legL.style.transform=`rotate(${tm?tw*34:0}deg)`;tal.legR.style.transform=`rotate(${tm?-tw*34:0}deg)`;
+  // cheering: both arms thrown up and waving, boba held high (the cup stays upright)
+  const wv=Math.sin(tal.hop*.42)*17;tal.ab=(tal.ab??14)+((tal.hop?128+wv:14)-(tal.ab??14))*.25;tal.armB.style.transform=`rotate(${tm?-tw*40:tal.ab}deg)`;
+  tal.af=(tal.af??-105)+((tal.aim?-92:tal.hop?-128-wv:-105)-(tal.af??-105))*.22;tal.armF.style.transform=`rotate(${tal.af+(tm?tw*6:0)}deg)`;tal.cup.style.transform=`rotate(${-tal.af}deg)`;
+  // his arms stretch out while he cheers
+  tal.al=(tal.al??38)+((tal.hop?48:38)-(tal.al??38))*.2;{const L=tal.al,B=tal.armB.children,Fc=tal.armF.children;B[0].style.height=L+'px';B[1].style.top=L-17+'px';Fc[0].style.height=L+'px';Fc[1].style.top=L-46+'px';Fc[2].style.top=L-17+'px'}
+  // ---- receipts
+  for(const c of chains){const p=c.p,n=p.length;
+    if(c.st==='gone')continue;
+    if(c.st==='wait'){if(T>=c.born)c.st='fall';else continue}
+    if(vac>0&&c.st!=='fly'&&T-vac>c.go){c.st='fly';c.n=0;c.cx=p.reduce((a,q)=>a+q.x,0)/n;c.cy=p.reduce((a,q)=>a+q.y,0)/n}
+    if(c.unfold&&c.fold<1)c.fold=Math.min(1,c.fold+.03);
+    if(c.st==='fall'){   // drifts straight down over its own place like a sheet of paper: rocks side to side, tips into each slide, and the rocking dies out as it lands
+      const G=c.goal;if(!c.f||c.f.G!==G){let gx=0,gy=0;for(const q of G){gx+=q.x/n;gy+=q.y/n}
+        c.f={G,gx,gy,y:-110,th:Math.atan2(G[n-1].y-G[0].y,G[n-1].x-G[0].x),A:rnd(24,56),w:rnd(.065,.095),v:rnd(7.5,10.5),cu:rnd(8,20)}}
+      const f=c.f;c.ph+=f.w;const b0=Math.min(1,Math.max(0,1-(f.gy-f.y)/210)),b=b0*b0*(3-2*b0);
+      f.y=Math.min(f.gy,f.y+f.v*(1+.3*Math.cos(2*c.ph))*(1-.72*b)+.5);
+      const cx=f.gx+f.A*Math.sin(c.ph)*(1-b),th=f.th+.5*Math.cos(c.ph)*(1-b),cs=Math.cos(th),sn=Math.sin(th);
+      for(let j=0;j<n;j++){const u=j-(n-1)/2,bend=f.cu*Math.sin(c.ph*1.3+j*.35)*Math.sin(j/(n-1)*Math.PI),x=cx+u*22*cs-bend*sn,y=f.y+u*22*sn+bend*cs,q=p[j],t=G[j];
+        q.px=q.x;q.py=q.y;q.x=x+(t.x-x)*b;q.y=y+(t.y-y)*b}
+      if(f.y>=f.gy)c.st='rest';
+    }else if(c.st==='home'){   // glide: each point is pulled to its slot by a soft spring that tightens as it gets close, so there is no snap
+      const k=Math.min(.05,.006+c.n*.0009),dmp=.86;c.n++;let far=0;
+      for(let j=0;j<n;j++){const q=p[j],t=c.goal[j],vx=(q.x-q.px)*dmp+(t.x-q.x)*k,vy=(q.y-q.py)*dmp+(t.y-q.y)*k;q.px=q.x;q.py=q.y;q.x+=vx;q.y+=vy;far=Math.max(far,Math.abs(t.x-q.x)+Math.abs(t.y-q.y)+Math.abs(vx)+Math.abs(vy))}
+      if(far<.5&&c.fold>=1||c===hat&&!c.unfold&&far<1.2)c.st='rest';
+    }else if(c.st==='fly'){if(++c.n>=34)arrive(c)}
+  }
+}
+function ribbon(c){const p=c.p,n=p.length,ox=c.ox,oy=c.oy,DX=DX0+(-DX0*c.side-DX0)*c.fold,DY=DY0+(-2*DY0)*c.fold;
+  g.save();
+  if(c.st==='fly'){const e0=c.n/34,e=e0*e0*(3-2*e0),u=1-e,mx=(c.cx+kx)/2,my=Math.min(c.cy,ky)-160,x=u*u*c.cx+2*u*e*mx+e*e*kx,y=u*u*c.cy+2*u*e*my+e*e*ky,s=1-.88*e*e;
+    g.translate(x,y);g.rotate(e*.5*c.side);g.scale(s,s);g.translate(-c.cx-ox,-c.cy-oy)}
+  const quad=(a,b,dx,dy)=>{g.beginPath();g.moveTo(a.x+ox+dx,a.y+oy+dy);g.lineTo(b.x+ox+dx,b.y+oy+dy);g.lineTo(b.x+ox+DX+dx,b.y+oy+DY+dy);g.lineTo(a.x+ox+DX+dx,a.y+oy+DY+dy);g.closePath()};
+  g.fillStyle='rgba(20,40,25,.2)';for(let j=0;j<n-1;j++){quad(p[j],p[j+1],5,13);g.fill()}
+  for(let j=0;j<n-1;j++){const a=p[j],b=p[j+1],tx=b.x-a.x,ty=b.y-a.y,l=Math.hypot(tx,ty)||1,v=255-Math.round((1-Math.abs(tx)/l)*20);
+    g.fillStyle=`rgb(${v},${v},${v-3})`;g.strokeStyle=g.fillStyle;g.lineWidth=1;quad(a,b,0,0);g.fill();g.stroke();
+    g.strokeStyle='#a3a297';g.lineWidth=2.4;const mx=(a.x+b.x)/2+ox,my=(a.y+b.y)/2+oy,L=(u,w)=>{g.beginPath();g.moveTo(mx+DX*u,my+DY*u);g.lineTo(mx+DX*w,my+DY*w);g.stroke()};
+    if(j%7===3){g.setLineDash([4,3]);L(.12,.88);g.setLineDash([])}
+    else if(j===n-c.tot-1){g.strokeStyle='#1F2A22';g.lineWidth=3.6;L(.12,.42);L(.6,.88)}
+    else if(j>0&&j<n-2){L(.12,.3+((j*37)%5)*.06);L(.68,.88)}}
+  g.strokeStyle=INK;g.lineWidth=2.2;g.lineJoin='round';
+  for(const [dx,dy] of[[0,0],[DX,DY]]){g.beginPath();p.forEach((q,j)=>j?g.lineTo(q.x+ox+dx,q.y+oy+dy):g.moveTo(q.x+ox+dx,q.y+oy+dy));g.stroke()}
+  for(const [q,r] of[[p[0],p[1]],[p[n-1],p[n-2]]]){const tx=q.x-r.x,ty=q.y-r.y,l=Math.hypot(tx,ty)||1,ex=tx/l*5,ey=ty/l*5;g.beginPath();g.fillStyle='#fff';
+    g.moveTo(q.x+ox,q.y+oy);for(let k=1;k<=8;k++){const u=k/8,z=k%2?1:0;g.lineTo(q.x+ox+DX*u+ex*z,q.y+oy+DY*u+ey*z)}g.fill();g.stroke()}
+  g.restore()}
+// The union's double doors: each glass leaf is cut out of the picture and swung on its outer hinge (it gets narrower and tips as it opens), with the dark hall behind.
+const DS=QS.get('door')||'e',door={a:0,v:0,to:0},plate=$('plate'),DQ=[[157,396],[367.5,445.6],[367.5,597],[157,605.5]],SEAM=273.5,sy=(x,t)=>{const u=(x-157)/210.5;return t?396+49.6*u:605.5-8.5*u};
+function drawDoors(){if(Math.abs(door.a)<.004)return;const K=plate.naturalWidth/1280,quad=()=>{g.beginPath();DQ.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.closePath()};
+  // door styles. a: both leaves swing into the hall, b: she pushes only the right leaf out, c: both leaves push out, d: both push out and flap back and forth, e: b with the flap (the pick)
+  const out=DS!=='a',aL=DS==='b'||DS==='e'?0:door.a*(out?1:-1),aR=door.a*(out?1:-1);
+  // one glass leaf on its outer hinge: it gets narrower as it opens; swinging in, its far edge gets shorter, swinging out (toward us) it gets taller and reaches onto the ground
+  const leaf=(hx,x0,x1,la)=>{const ang=Math.min(1.3,Math.abs(la)*1.2),sx=Math.cos(ang),dep=Math.sin(ang),o=la>0,N=14,dx=(x1-x0)/N;
+    const box=x=>{const t=Math.abs(x-hx)/(SEAM-157+10),yt=sy(x,1),yb=sy(x,0),h=yb-yt;return o?[yt-h*.03*dep*t,h*(1+.25*dep*t)]:[yt+h*.1*dep*t,h*(1-.2*dep*t)]};
+    for(let i=0;i<N;i++){const xa=x0+i*dx,xm=xa+dx/2,[y,h]=box(xm);
+      g.drawImage(plate,xa*K,sy(xm,1)*K,dx*K,(sy(xm,0)-sy(xm,1))*K,hx+sx*(xa-hx)-(xa>hx?0:.4),y,sx*dx+.8,h)}
+    const fx=x0===hx?x1:x0,[y,h]=box(fx),X=hx+sx*(fx-hx);g.strokeStyle=INK;g.lineWidth=3;g.beginPath();g.moveTo(X,y);g.lineTo(X,y+h);g.stroke()};
+  const leaves=[[157,157,SEAM,aL],[367.5,SEAM,367.5,aR]];
+  g.save();g.scale(PS,PS);
+  quad();g.save();g.clip();   // the hall and any leaf that swings inward stay inside the door frame
+  const gr=g.createLinearGradient(0,396,0,606);gr.addColorStop(0,'#FFF3CF');gr.addColorStop(1,'#FADB9A');g.fillStyle=gr;g.fillRect(150,390,225,220);
+  drawCrowd();
+  for(const l of leaves)if(l[3]<=0)leaf(...l);
+  g.restore();quad();g.lineWidth=3.5;g.strokeStyle=INK;g.stroke();
+  for(const l of leaves)if(l[3]>0)leaf(...l);
+  g.save();g.beginPath();OCC.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.closePath();g.clip();g.drawImage(plate,0,0,1280,800);g.restore();
+  g.restore()}
+const CR=QS.get('crowd')||'b';
+// one far-away student: head, body, optional ponytail / raised arm / cup; no outline so it stays in the background
+function person(x,y,r,c,o={}){const yy=y+Math.sin(T/260+x)*(o.bob??2.2);g.fillStyle=o.head||c;g.beginPath();g.arc(x,yy,r,0,7);g.fill();
+  if(o.hair){g.fillStyle=o.hair;g.beginPath();g.arc(x,yy-r*.12,r*1.04,Math.PI*1.05,Math.PI*1.95);g.fill();if(o.pony){g.beginPath();g.ellipse(x-r*1.05,yy+r*.1,r*.42,r*.8,.3,0,7);g.fill()}}
+  else if(o.pony){g.beginPath();g.arc(x-r*.85,yy-r*.45,r*.5,0,7);g.fill()}
+  g.fillStyle=c;g.beginPath();g.roundRect(x-r*1.3,yy+r*.85,r*2.6,o.bh||170,r*.9);g.fill();
+  if(o.bh){g.fillRect(x-r*.95,yy+r*.85+o.bh-r,r*.75,o.lh+r);g.fillRect(x+r*.2,yy+r*.85+o.bh-r,r*.75,o.lh+r)}
+  if(o.arm){const an=-1.35+(o.wave?Math.sin(T/170+x)*.38:0)+(o.arm<0?-.45:0),sx=x+o.arm*r*1.05,sy0=yy+r*1.35,L=r*2.5,ex=sx+Math.cos(an)*L*o.arm,ey=sy0+Math.sin(an)*L;
+    g.strokeStyle=c;g.lineWidth=r*.62;g.lineCap='round';g.beginPath();g.moveTo(sx,sy0);g.lineTo(ex,ey);g.stroke();g.fillStyle=o.head||c;g.beginPath();g.arc(ex,ey,r*.42,0,7);g.fill();
+    if(o.cup){g.fillStyle=o.cupc||c;g.beginPath();g.roundRect(ex-r*.4,ey-r*1.25,r*.8,r*1.1,r*.15);g.fill();g.fillRect(ex-r*.06,ey-r*1.8,r*.14,r*.6)}}}
+function drawCrowd(){const far='#BFD6B4',near='#86AE90';
+  if(CR==='a'){for(const [x,y,r,c,k] of CROWD)person(x,y,r,c,{pony:k%3===0,arm:k%4===1?1:0,cup:1})}
+  else if(CR==='b'){   // party still going: whole small figures standing on the hall floor, hands and cups in the air, bunting and confetti
+    g.fillStyle='#F6D592';g.beginPath();g.moveTo(150,552);g.lineTo(375,546);g.lineTo(375,612);g.lineTo(150,612);g.closePath();g.fill();   // the floor
+    g.strokeStyle='#E9C277';g.lineWidth=2;g.beginPath();g.moveTo(150,552);g.lineTo(375,546);g.stroke();
+    g.strokeStyle='#0C4226';g.lineWidth=1.6;g.beginPath();g.moveTo(157,412);g.quadraticCurveTo(262,470,367,458);g.stroke();
+    ['#F7BE3F','#F08A7B','#9DBB8C','#F7BE3F','#F08A7B','#9DBB8C','#F7BE3F'].forEach((c,i)=>{const t=(i+.6)/7.4,x=157+210*t,y=(1-t)*(1-t)*412+2*t*(1-t)*470+t*t*458;g.fillStyle=c;g.beginPath();g.moveTo(x-9,y-2);g.lineTo(x+9,y-1);g.lineTo(x,y+17);g.closePath();g.fill()});
+    // [x, where the feet stand, head size, colour, options]: the back row stands further up the floor and is smaller
+    const stand=(x,fy,r,c,o)=>person(x,fy-r*6.3,r,c,{...o,bh:r*3.1,lh:r*1.5,bob:1});
+    [[186,572,7.5,far,{arm:1,wave:1}],[214,571,7.5,far,{pony:1}],[244,570,7.5,far,{arm:-1,wave:1,cup:1}],[276,569,7.5,far,{arm:1,wave:1}],[306,568,7.5,far,{pony:1}],[336,567,7.5,far,{arm:1,wave:1,cup:1}],[358,566,7.5,far,{}],
+     [176,594,10,near,{arm:1,wave:1,cup:1}],[212,593,10,near,{pony:1,arm:-1,wave:1}],[262,591,10,near,{arm:1,wave:1}],[300,590,10,near,{pony:1}],[340,589,10,near,{arm:-1,wave:1,cup:1}]].forEach(q=>stand(...q));
+    for(let i=0;i<16;i++){const x=165+((i*53+T*.02*(1+i%3))%195),y=440+((i*37+T*.05*(1+i%4))%110);g.fillStyle=['#F7BE3F','#F08A7B','#9DBB8C'][i%3];g.fillRect(x,y,4,4)}}
+  else if(CR==='c'){   // real colours: small flat students in the palette
+    const sk='#FCDCCB';[[198,466,18,'#A9C6DE',{head:sk,hair:'#6B4A2E'}],[250,472,19,'#F4C96B',{head:sk,hair:'#0C4226',pony:1}],[304,478,18,'#EFA398',{head:sk,hair:'#C98A3B'}],[350,486,17,'#B7CFA9',{head:sk,hair:'#3A2A1E'}],
+     [176,494,24,'#F08A7B',{head:sk,hair:'#0C4226',pony:1}],[236,502,25,'#9DBB8C',{head:sk,hair:'#6B4A2E',arm:1,cup:1,cupc:'#E7C29A'}],[298,508,25,'#F7BE3F',{head:sk,hair:'#3A2A1E'}],[346,512,23,'#8FB8D8',{head:sk,hair:'#C98A3B',pony:1}]].forEach(q=>person(...q))}
+  else{   // a few friends at the door waving goodbye
+    [[206,468,19,far,{pony:1}],[330,484,19,far,{}],[186,494,26,near,{arm:1,wave:1}],[262,490,27,near,{pony:1,arm:1,wave:1}],[334,506,25,near,{arm:-1,wave:1,cup:1}]].forEach(q=>person(...q))}}
+const CROWD=[[196,462,20,'#BFD6B4',0],[246,470,21,'#BFD6B4',1],[298,476,20,'#BFD6B4',2],[346,484,19,'#BFD6B4',3],
+  [176,486,25,'#86AE90',4],[272,496,26,'#86AE90',7],[330,504,24,'#86AE90',5]];
+const OCC=[[128,518],[146,531],[153,547],[164,553],[168,568],[187,568],[188,628],[128,632]];   // the planter and bush stand in front of the door, so they are drawn again on top of it
+// shadows of the falling receipts: a blob on the ground that grows as each one comes down, and shade that lands on her (drawn only where she is)
+function fallShadows(onHer){const B=done.bonkt||1e9,e0=Math.min(1,Math.max(0,(T-B-900)/3200)),loom=e0*e0*(3-2*e0)*(vac>0?Math.max(0,1-(T-vac)/1400):1);   // the big shadow lifts again as the pile is pulled into the ticket
+  if(!onHer&&loom&&stu.vis){g.fillStyle=`rgba(90,55,35,${.22*loom})`;g.beginPath();g.ellipse(SX,GROUND+10,70+150*loom,10+16*loom,0,0,7);g.fill()}
+  for(const c of chains){if(c.st!=='fall'||!c.f)continue;
+    const k=Math.min(1,Math.max(0,(c.f.y+110)/(c.f.gy+110))),x=c.p[c.p.length>>1].x;
+    if(!onHer){g.fillStyle=`rgba(90,55,35,${.06+.2*k})`;g.beginPath();g.ellipse(x,GROUND+14,40+70*k,7+10*k,0,0,7);g.fill();continue}
+    const y=GROUND-SH+50,r=50+110*k,gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`rgba(15,45,30,${.2*k})`);gr.addColorStop(1,'rgba(15,45,30,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,2*r,2*r)}
+  if(onHer&&loom){g.fillStyle=`rgba(15,45,30,${.5*loom})`;g.fillRect(0,0,W,H)}}   // the shade creeps over her slowly while the receipts are still on their way down
+function render(){g.clearRect(0,0,W,H);drawDoors();fallShadows(0);drawStudent();if(stu.vis&&stu.pose==='look'){g.globalCompositeOperation='source-atop';fallShadows(1);g.globalCompositeOperation='source-over'}
+  const t0=T-wigT,on=t0>0&&t0<1300,rot=on?Math.sin(t0*.04)*.04*Math.sin(t0/1300*Math.PI):0;   // she struggles under the heap
+  g.save();g.translate(SX,GROUND+40);g.rotate(rot);g.translate(-SX,-GROUND-40);
+  for(const c of chains)if(c.st!=='wait'&&c.st!=='gone'&&c.st!=='fly')ribbon(c);g.restore();
+  g2.clearRect(0,0,W,H);g=g2;for(const c of chains)if(c.st==='fly')ribbon(c);camFx();g=g1}
+// The phone doing the work: a focus box shrinks onto the pile and locks (yellow to green), the flash fires, then a scan line sweeps down and ticks each receipt it has read.
+const CHK=[[-70,-345],[60,-320],[-120,-250],[130,-240],[10,-215],[-150,-130],[90,-120],[190,-60],[-40,-50]];
+function camFx(){const t=T-(done.tstop||1e9);if(t<4000)return;const out=vac>0?Math.min(1,(T-vac)/300):0;if(out>=1)return;
+  const e0=Math.min(1,(t-4000)/650),e=1-(1-e0)**3,locked=t>4650,pop=locked?Math.max(0,1-(t-4650)/220)*8:0,pad=70*(1-e)-pop;
+  const x0=SX-232-pad,x1=SX+318+pad,y0=GROUND-412-pad,y1=GROUND+52+pad,col=locked?'#8FD49A':'#F7D23F',L=46;
+  g.save();g.globalAlpha=(1-out)*Math.min(1,(t-4000)/200);g.lineCap='round';g.lineJoin='round';
+  for(const [c,w] of [[INK,11],[col,6]]){g.strokeStyle=c;g.lineWidth=w;for(const [x,y,sx,sy] of [[x0,y0,1,1],[x1,y0,-1,1],[x0,y1,1,-1],[x1,y1,-1,-1]]){g.beginPath();g.moveTo(x+sx*L,y);g.lineTo(x,y);g.lineTo(x,y+sy*L);g.stroke()}}
+  const u=(t-5450)/1150;
+  if(u>0){const y=y0+(y1-y0)*Math.min(1,u);
+    if(u<1){const gr=g.createLinearGradient(0,y-90,0,y);gr.addColorStop(0,'rgba(143,212,154,0)');gr.addColorStop(1,'rgba(143,212,154,.5)');g.fillStyle=gr;g.fillRect(x0+8,Math.max(y0,y-90),x1-x0-16,Math.min(90,y-y0));
+      g.strokeStyle=INK;g.lineWidth=9;g.beginPath();g.moveTo(x0+6,y);g.lineTo(x1-6,y);g.stroke();g.strokeStyle='#8FD49A';g.lineWidth=5;g.stroke()}
+    for(const [dx,dy] of CHK){const cx=SX+dx,cy=GROUND+dy;if(cy>y)continue;const k0=Math.min(1,(y-cy)/40),k=k0+.35*Math.sin(k0*Math.PI);   // each tick pops in as the line passes it
+      g.save();g.translate(cx,cy);g.scale(k,k);g.fillStyle='#fff';g.strokeStyle=INK;g.lineWidth=3;g.beginPath();g.arc(0,0,15,0,7);g.fill();g.stroke();
+      g.strokeStyle='#2E8B4E';g.lineWidth=4.5;g.beginPath();g.moveTo(-7,0);g.lineTo(-2,6);g.lineTo(8,-6);g.stroke();g.restore()}}
+  g.restore()}
+let acc=0,last=performance.now();
+function frame(now){acc+=Math.min(120,now-last)/SLOW;last=now;if(SLOW>1)document.getAnimations().forEach(a=>a.playbackRate=1/SLOW);while(acc>=16.667){acc-=16.667;T+=16.667;step()}render();requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+new Image().src='rig/tally-face-happy.png';
+</script></body></html>

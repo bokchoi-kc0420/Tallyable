@@ -444,6 +444,7 @@ def test_a_new_event_starts_with_who_is_in_before_upload():
     base.mkdir(parents=True, exist_ok=True)
     (base / "mode.txt").write_text("real")  # your own club, not the demo's sample one
     at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button(key="welcome-setup").click().run()
     assert any("Welcome to Tallyable" in h.value for h in at.html)  # the club comes first
     at.text_input(key="club-first-name").set_value("Sunrise Hiking Club").run()
     at.button(key="club-first-add").click().run()

@@ -13,7 +13,7 @@ import time
 import streamlit as st
 
 from treasurer import session_store
-from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, upload
+from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
 from ui.common import ART, ROOT, is_demo, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
@@ -32,6 +32,7 @@ if os.getenv("APP_PASSWORD") and not ss.get("authed"):
         st.error("Wrong password.")
     st.stop()
 
+welcome.start_demo_from_link()  # the intro's Skip / "Try it with these receipts" link
 if "event" not in ss and (saved := session_store.load(out() / "session.json")):  # a new tab: back where you left off
     ss.update(saved)
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
@@ -46,6 +47,9 @@ ss.setdefault("drafted_at", None)    # first Draft click, for the run log
 ss.setdefault("review_started", None)
 ss.setdefault("income", {})
 
+if ss.get("view") == "intro":
+    welcome.intro()
+    st.stop()
 st.logo(str(ART / "logo.png"), size="large", link=sidebar.HOME_URL)
 if "event" in ss:
     club.seed(ss.event)  # events from before clubs existed start "My club"
@@ -76,4 +80,5 @@ if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: 
     st.html("<script>document.querySelector('[data-testid=\"stMain\"]')?.scrollTo(0, 0)</script>",
             unsafe_allow_javascript=True)
 ss.last_screen = screen
+tour.show()
 sidebar.save_session()

@@ -9,9 +9,9 @@ APP = str(Path(__file__).parent.parent / "app.py")
 
 def test_demo_and_real_never_share_data():
     base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
-    at = AppTest.from_file(APP, default_timeout=30).run()  # a new install opens the demo
-    assert any("Demo mode" in h.value for h in at.sidebar.html)
-    at.button(key="to-real").click().run()  # "Set up my club"
+    at = AppTest.from_file(APP, default_timeout=30).run()  # a new install opens the real app
+    assert not any("Demo mode" in h.value for h in at.sidebar.html)
+    at.button(key="welcome-setup").click().run()
     at.text_input(key="club-first-name").set_value("Chess Club").run()
     at.button(key="club-first-add").click().run()
     at.button(key="home-go").click().run()
@@ -23,19 +23,27 @@ def test_demo_and_real_never_share_data():
     assert any("free version" in w.value for w in at.warning)  # start.bat's stand-in, not a missing key
 
     at.button(key="club-home").click().run()
-    at.button(key="to-demo").click().run()
+    at.button(key="to-demo").click().run()  # the first time, the intro plays
+    assert at.session_state["view"] == "intro" and not any("Demo mode" in h.value for h in at.sidebar.html)
+    at.query_params["demo"] = "go"  # its "Try it with these receipts" link
+    at.run()
     assert not at.exception
     assert any("Demo mode" in h.value for h in at.sidebar.html)
+    assert at.header[0].value == "Upload receipts" and at.session_state["event"]["name"] == "Boba Social"
     assert len(at.session_state["demo"]) == 14  # the sample receipts are already loaded
     assert "Sunrise Hiking Club" in (base / "demo" / "clubs.json").read_text()
     assert "Sunrise" not in (base / "real" / "clubs.json").read_text()
 
+    at.button(key="club-home").click().run()
     at.button(key="to-real").click().run()
     assert not at.exception
     assert not any("Demo mode" in h.value for h in at.sidebar.html)
     assert (base / "mode.txt").read_text() == "real"
     fresh = AppTest.from_file(APP, default_timeout=30).run()  # a new tab opens the mode you left in
     assert not any("Demo mode" in h.value for h in fresh.sidebar.html)
+    fresh.button(key="club-home").click().run()
+    fresh.button(key="to-demo").click().run()  # intro seen once: the demo opens right away
+    assert any("Demo mode" in h.value for h in fresh.sidebar.html)
 
 
 def test_real_books_never_go_to_the_env_test_sheet(monkeypatch):
