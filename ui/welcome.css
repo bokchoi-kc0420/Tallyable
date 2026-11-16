@@ -33,11 +33,12 @@
 .st-key-welcome-demo button { background: transparent; border: 2px solid var(--tly-outline); }
 .st-key-welcome-rc .bc { height: 40px; margin-top: 24px; background: repeating-linear-gradient(90deg, var(--tly-ink) 0 3px, transparent 3px 6px, var(--tly-ink) 6px 7px,
   transparent 7px 11px, var(--tly-ink) 11px 15px, transparent 15px 17px); }
-.st-key-welcome .tly-welcome-tally { position: absolute; left: -264px; bottom: 8px; height: 320px; z-index: 3; }
-.st-key-welcome .tly-welcome-bub { position: absolute; left: -344px; bottom: 344px; width: 272px; z-index: 6; margin: 0; padding: 16px 24px; background: var(--tly-white);
+.st-key-welcome { --tly-side: max(-408px, calc(280px - 50vw)); }  /* Tally + bubble sit left of the receipt, kept on screen */
+.st-key-welcome .tly-welcome-tally { position: absolute; left: calc(var(--tly-side) + 80px); bottom: 8px; height: 320px; z-index: 3; }
+.st-key-welcome .tly-welcome-bub { position: absolute; left: var(--tly-side); bottom: 344px; width: 272px; z-index: 6; margin: 0; padding: 16px 24px; background: var(--tly-white);
   border: 3px solid var(--tly-outline); border-radius: var(--tly-r); font-size: var(--tly-t-md); line-height: 1.35; color: var(--tly-ink);
-  transform-origin: 80px 100%; animation: tly-pop .35s cubic-bezier(.3, 1.8, .5, 1) 3.4s both; }
-.st-key-welcome .tly-welcome-bub::after { content: ""; position: absolute; left: 72px; bottom: -11px; width: 16px; height: 16px; background: var(--tly-white);
+  transform-origin: 184px 100%; animation: tly-pop .35s cubic-bezier(.3, 1.8, .5, 1) 3.4s both; }
+.st-key-welcome .tly-welcome-bub::after { content: ""; position: absolute; left: 176px; bottom: -11px; width: 16px; height: 16px; background: var(--tly-white);
   border-right: 3px solid var(--tly-outline); border-bottom: 3px solid var(--tly-outline); transform: rotate(45deg); }
 @keyframes tly-pop { from { transform: scale(0); } to { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .tly-printer, .st-key-welcome-rc, .tly-welcome-bub { animation: none; } }

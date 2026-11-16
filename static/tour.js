@@ -3,7 +3,7 @@
    rig: real body + face images, arms and legs drawn here). A stop shows when its spot is on the page and goes
    away on "Got it" or a click on the spot. Progress lives in localStorage, so reruns and new pages keep it. */
 (() => {
-  const KEY = "tly-tour", S = 0.7, GAP = 32;
+  const KEY = "tly-tour", S = 0.7;
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
   const save = (st) => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* private window: tour just restarts */ } };
 
@@ -68,20 +68,24 @@
       ui.querySelector(".veil").style.clipPath = `path(evenodd, "M0,0 H${W} V${H} H0 Z ${hole}")`;
       Object.assign(ui.querySelector(".ring").style, { left: x0 + "px", top: y0 + "px", width: x1 - x0 + "px", height: y1 - y0 + "px" });
 
-      // Tally: to the right of the spot if it fits, else to its left, else above it, reaching for its nearest edge
-      const bw = 150 * S, tall = 278 * S, room = bw + 2 * GAP;
-      let fx, fy, side;
-      if (W - x1 > room + 120) { side = "right"; fx = x1 + GAP + bw / 2; }
-      else if (y0 > tall + 160) { side = "up"; fx = Math.min(x1 - bw, x0 + 160); }   // wide spots: he stands on top
-      else { side = "left"; fx = Math.max(bw / 2 + 16, x0 - GAP - bw / 2); }
-      fy = side === "up" ? y0 - 16 : Math.min(H - 16, Math.max(tall + 200, (y0 + y1) / 2 + tall / 2));
-      const tal = ui.querySelector(".tal");
+      // Tally stays close to the spot so his arm never grows past MAX (a long stick arm looks scary)
+      const MAX = 48, tall = 278 * S, SH = 90, mid = Math.min(y1 - 16, Math.max(y0 + 16, (y0 + y1) / 2));
+      const tal = ui.querySelector(".tal"), reach = tal.querySelector(".reach"), back = tal.querySelector(".back");
+      const bodies = tal.querySelectorAll(".body"), legs = tal.querySelectorAll(".leg");
+      let fx, fy, side, sx = -40, aimX, aimY, clip = "none", hideLegs = [false, false], hideBack = false;
+      const fitsR = x1 + 141 < W - 8, fitsL = x0 - 141 > 8;
+      if (y0 > 160) {                          // peeks over the top edge, the spot hides his lower half; hand on the ring
+        side = "up"; fx = Math.min(x1 - 80, x0 + 120); fy = y0 + 70;
+        aimX = fx + sx - 30; aimY = y0 + 4; clip = `inset(0 0 ${177 - (y0 - fy + 195)}px 0)`; hideLegs = [true, true]; hideBack = true;
+      } else {                                 // no room above: stands right beside it, arm out level
+        side = fitsR || !fitsL ? "right" : "left"; fx = side === "right" ? x1 + 89 : x0 - 89; sx = side === "right" ? -40 : 40;
+        fy = Math.min(H - 8, mid + SH - 12); aimX = side === "right" ? x1 + 4 : x0 - 4; aimY = Math.min(y1 - 8, fy - SH + 20);
+      }
       tal.style.transform = `translate(${fx}px,${fy}px)`;
-      const sx = side === "left" ? 70 * S : -70 * S, sy = -128 * S;   // shoulder of the reaching arm, from his feet
-      const aimX = side === "right" ? x1 + 4 : side === "left" ? x0 - 4 : fx + sx - 48;   // up: down and out, onto the spot's edge
-      const aimY = side === "up" ? y0 + 4 : Math.min(y1 - 16, Math.max(y0 + 16, fy + sy - 24));
-      const dx = aimX - (fx + sx), dy = aimY - (fy + sy), len = Math.max(28, Math.hypot(dx, dy) - 12 * S);
-      const reach = tal.querySelector(".reach"), back = tal.querySelector(".back");
+      bodies.forEach((b) => { b.style.clipPath = clip; });
+      legs.forEach((l, i) => { l.style.display = hideLegs[i] ? "none" : ""; });
+      back.style.display = hideBack ? "none" : "";
+      const dx = aimX - (fx + sx), dy = aimY - (fy - SH), len = Math.min(MAX, Math.max(20, Math.hypot(dx, dy) - 8));
       reach.style.left = sx + "px"; back.style.left = -sx + "px";
       reach.style.transform = `rotate(${Math.atan2(-dx, dy)}rad)`;
       reach.querySelector("i").style.height = len + "px"; reach.querySelector("b").style.top = len - 12 + "px";
