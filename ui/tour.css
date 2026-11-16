@@ -7,7 +7,7 @@
 #tly-tour .tal > * { position: absolute; }
 #tly-tour .body { left: -52px; top: -195px; width: 105px; height: 177px; z-index: 2; }
 #tly-tour .limb { width: 0; height: 0; top: -90px; transform-origin: 0 0; z-index: 1; }
-#tly-tour .limb.reach { z-index: 3; }
+#tly-tour .limb.reach { z-index: 1; }  /* its root tucks behind his body, so the arm grows out of his outline */
 #tly-tour .limb i { position: absolute; left: -3px; top: 0; width: 6px; height: 26px; border-radius: 4px; background: var(--tly-outline); }
 #tly-tour .limb b { position: absolute; left: -12px; top: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--tly-limb); border: 4px solid var(--tly-outline); }
 #tly-tour .leg { top: -24px; } #tly-tour .leg.l { left: -25px; } #tly-tour .leg.r { left: 25px; }
