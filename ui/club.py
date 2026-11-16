@@ -9,7 +9,9 @@ import re
 
 import streamlit as st
 
-from ui.common import out, ss
+from treasurer import session_store
+from treasurer.models import Receipt
+from ui.common import out, past, ss
 
 DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "sheets": {}}
 AVATARS = ["#1C5C36", "#B0413E", "#6B4E8A", "#2F4B7C", "#C8673C", "#1F7A73"]
@@ -95,6 +97,14 @@ def owns(event: dict) -> bool:
     """Is this saved event the open club's? Events from before clubs had names belong to the first club."""
     ids = list(_read()["clubs"])
     return (event.get("club") or (ids[0] if ids else None)) == current()
+
+
+def earlier_receipts() -> list[tuple[str, Receipt]]:
+    """(event name, receipt) for every receipt this club counted in its other saved events,
+    so a receipt sent in again for a new event gets flagged before it's paid back twice."""
+    here = ss.event["event_id"]
+    return [(e["name"], r) for e in session_store.past_nets(past()) if owns(e) and e["event_id"] != here
+            for r in e["counted"]]
 
 
 def seed(event: dict) -> None:

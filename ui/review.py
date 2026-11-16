@@ -10,6 +10,7 @@ import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
+from ui import club
 from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, md, next_step, payers, plural, reviewed, ss, step_bar, usd
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
@@ -170,7 +171,7 @@ def show() -> None:
               key="review-empty", to="1. Upload")
         return
     ss.review_started = ss.review_started or time.time()
-    flags = run_checks(list(ss.receipts.values()))
+    flags = run_checks(list(ss.receipts.values()), club.earlier_receipts())
     checked = reviewed()
     st.progress(checked / len(ss.receipts), text=f"{checked} of {len(ss.receipts)} reviewed")
     approve_clean(flags)

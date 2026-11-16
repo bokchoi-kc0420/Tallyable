@@ -159,3 +159,15 @@ def test_overridden_math_books_the_whole_total_under_one_category():
     view = render_expense_report({"event_id": "E", "name": "Mixer", "date": "2026-11-01"},
                                  OrderedDict(T1=transaction_rows(over_read)))
     assert ["Other", 5.0] in [r[:2] for r in view.grid]  # not the $10.00 the lines add up to
+
+
+def test_a_receipt_already_counted_in_another_event_is_flagged():
+    """The same receipt sent in for two events would be paid back twice."""
+    old = make(receipt_id="R03", image_hash="abc")
+    again = make(receipt_id="R01", image_hash="abc", payer="Someone else")
+    retyped = make(receipt_id="R02", image_hash=None)  # same place, date and total, no photo match
+    new = make(receipt_id="R04", total="99.00", tax="0", items=[LineItem(category="Food", item="x", unit=1, price=Decimal("99"))])
+    flags = run_checks([again, retyped, new], [("Fall Potluck", old)])
+    assert "R03 in Fall Potluck" in flags["R01"][0].message and flags["R01"][0].severity is Severity.BLOCK
+    assert flags["R02"][0].code == "possible_duplicate"
+    assert flags["R04"] == []
