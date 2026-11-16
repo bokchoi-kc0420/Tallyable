@@ -8,7 +8,7 @@ import streamlit as st
 from ui.common import BASE, mascot_uri, ss
 
 INTRO_SEEN = BASE / "intro_seen"  # the intro auto-plays in full once; after that the demo opens right away
-LINES = [("Receipts in", "14"), ("Read by Tally", "done"), ("Math checked", "done"), ("Who's owed", "done"),
+LINES = [("Receipts in", "done"), ("Read by Tally", "done"), ("Math checked", "done"), ("Who's owed", "done"),
          ("Pushed to your Sheet", "done")]
 
 
