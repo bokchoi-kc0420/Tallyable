@@ -36,8 +36,9 @@ def counts_line(receipts: list[Receipt], income: dict[str, Decimal]) -> str:
     return f"{line} and {usd(sum(income.values(), Decimal('0')))} income"
 
 
-def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], push) -> None:
-    """Draw the card once the books are out: pushed, or downloaded as Excel. `push` re-runs the push for the stale variant."""
+def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], push, save_again=None) -> None:
+    """Draw the card once the books are out: pushed, or downloaded as Excel. `push` re-runs the push for the stale variant.
+    `save_again` (no Google Sheet) draws the Save again button as an Excel download, so the file on the laptop gets the change."""
     at = ss.event.get("pushed_at")
     on_sheets = sink.label == "Google Sheets"
     if at and ss.event.get("pushed_sig") != fingerprint():
@@ -46,7 +47,10 @@ def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
             c = st.columns([3.2, 1.4], vertical_alignment="center")
             c[0].markdown(f'<p class="tly-done-title">You changed something since {at}.</p>'
                           f'<p class="tly-done-sub">{again} so your books match!</p>', unsafe_allow_html=True)
-            if c[1].button(again, type="primary", icon=":material/upload:", key="push-again", width="stretch"):
+            with c[1]:
+                clicked = save_again() if save_again else st.button(again, type="primary", icon=":material/upload:",
+                                                                     key="push-again", width="stretch")
+            if clicked:
                 push()
         return
     if at and on_sheets:

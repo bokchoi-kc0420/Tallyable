@@ -135,6 +135,8 @@ def book_xlsx(views: dict[str, View], transactions: list[dict], tx_fields: list[
     ws = wb.create_sheet("Transactions")
     ws.sheet_properties.tabColor = _hex(fmt.DATA_TAB)
     _tidy(ws, tx_fields, transactions, fmt.TIDY_MONEY)
+    for cell in (c for sheet in wb for row in sheet.iter_rows() for c in row if c.data_type == "f"):
+        cell.data_type = "s"  # the book has no formulas: text starting with "=" (a doctored Place) stays plain text
     out = BytesIO()
     wb.save(out)
     return out.getvalue()
