@@ -74,6 +74,15 @@ def check_returned(r: Receipt) -> list[Flag]:
                  f"Returned, listed but excluded: {', '.join(names)} (-${r.returned_amount})")]
 
 
+def same_purchase(r: Receipt, s: Receipt) -> str | None:
+    """Why two receipts look like one purchase (same image, or same place, date and total), else None."""
+    if r.image_hash is not None and r.image_hash == s.image_hash:
+        return "same image"
+    if r.place.strip().lower() == s.place.strip().lower() and r.date == s.date and abs(r.total - s.total) <= TOLERANCE:
+        return "same place, date and total"
+    return None
+
+
 def check_duplicates(receipts: list[Receipt]) -> dict[str, list[Flag]]:
     """Flag the LATER receipt of each pair, naming the earlier one.
 
@@ -87,11 +96,8 @@ def check_duplicates(receipts: list[Receipt]) -> dict[str, list[Flag]]:
         for s in seen:
             if s.event_id != r.event_id:
                 continue
-            same_image = r.image_hash is not None and r.image_hash == s.image_hash
-            same_fields = (r.place.strip().lower() == s.place.strip().lower()
-                           and r.date == s.date and abs(r.total - s.total) <= TOLERANCE)
-            if same_image or same_fields:
-                why = "same image" if same_image else "same place, date and total"
+            why = same_purchase(r, s)
+            if why:
                 out.setdefault(r.receipt_id, []).append(
                     Flag("possible_duplicate", Severity.BLOCK, f"Possible duplicate of {s.receipt_id} ({why})"))
                 break
@@ -109,10 +115,25 @@ def check_duplicates(receipts: list[Receipt]) -> dict[str, list[Flag]]:
 PER_RECEIPT = [check_math, check_missing_payer, check_missing_receipt, check_tax_rate, check_proof, check_returned]
 
 
-def run_checks(receipts: list[Receipt]) -> dict[str, list[Flag]]:
+def check_earlier_events(receipts: list[Receipt], earlier: list[tuple[str, Receipt]]) -> dict[str, list[Flag]]:
+    """A receipt the club already counted in another event (event name, receipt): paying it back twice
+    is the costly mistake, and nothing inside one event can catch it."""
+    out: dict[str, list[Flag]] = {}
+    for r in receipts:
+        hit = next(((name, s, why) for name, s in earlier if (why := same_purchase(r, s))), None)
+        if hit:
+            name, s, why = hit
+            out[r.receipt_id] = [Flag("possible_duplicate", Severity.BLOCK,
+                                      f"Possible duplicate of {s.receipt_id} in {name}, already in the books ({why})")]
+    return out
+
+
+def run_checks(receipts: list[Receipt], earlier: list[tuple[str, Receipt]] = ()) -> dict[str, list[Flag]]:
+    """Every flag per receipt id. `earlier`: what the club counted in its other events, as (event name, receipt)."""
     flags = {r.receipt_id: [f for check in PER_RECEIPT for f in check(r)] for r in receipts}
-    for rid, dup in check_duplicates(receipts).items():
-        flags[rid].extend(dup)
+    for found in (check_duplicates(receipts), check_earlier_events(receipts, list(earlier))):
+        for rid, dup in found.items():
+            flags[rid].extend(dup)
     return flags
 
 

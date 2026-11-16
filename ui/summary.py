@@ -16,7 +16,7 @@ from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
-from ui import connect, done_card
+from ui import club, connect, done_card
 from ui.common import dec, get_sink, go, guide, html_table, loading, md, money_panel, out, saved_reimbursements, ss, step_bar, usd
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
@@ -132,7 +132,7 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
         if rec.status is Status.APPROVED:
             ss.receipts[rid] = rec.model_copy(update={"status": Status.POSTED})
     if written:
-        now, flags = time.time(), run_checks(receipts)
+        now, flags = time.time(), run_checks(receipts, club.earlier_receipts())
         ex, reader = make_extractor()
         log_run(out() / "run_log.csv", {
             "event_id": event.event_id, "reader": reader, "model": getattr(ex, "model", "stub"),
@@ -225,7 +225,8 @@ def show(event: EventInfo) -> None:
     s = st.columns(3)
     s[0].metric("Minutes in tool", f"{(time.time() - ss.started) / 60:.1f}")
     s[1].metric("Edits to drafts", ss.edits)
-    s[2].metric("Flags open", sum(1 for fl in run_checks(receipts).values() for f in fl if f.severity is Severity.BLOCK))
+    flags = run_checks(receipts, club.earlier_receipts())
+    s[2].metric("Flags open", sum(1 for fl in flags.values() for f in fl if f.severity is Severity.BLOCK))
     runs = read_runs(out() / "run_log.csv")
     if runs:
         st.caption(f"Past runs, from {out() / 'run_log.csv'}")
