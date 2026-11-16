@@ -65,3 +65,10 @@ def test_pdf_passes_through_and_fake_pdf_is_refused():
 def test_unreadable_files_get_a_plain_message(data, name, msg):
     with pytest.raises(UnsupportedFile, match=msg):
         prepare(data, name)
+
+
+def test_giant_photo_is_turned_away_not_a_crash():
+    big = io.BytesIO()
+    Image.new("1", (20000, 10000)).save(big, "PNG")  # 200 MP, like a phone's top camera setting
+    with pytest.raises(UnsupportedFile, match="too big"):
+        prepare(big.getvalue(), "huge.png")

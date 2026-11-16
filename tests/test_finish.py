@@ -32,7 +32,9 @@ def test_done_card_counts_left_out_and_goes_stale_after_an_edit():
     assert at.button(key="to-closeout").proto.type == "primary"  # Close out is the next step now
     at.text_input(key="income-Cash").set_value("120.00").run()
     assert any("You changed something since" in m.value for m in at.markdown)
-    next(b for b in at.button if b.label == "Save again").click().run()
+    again = at.download_button(key="push-again")  # no sheet: Save again hands over a fresh Excel file too
+    assert again.proto.label == "Save again"
+    again.click().run()
     assert any("Your book is ready!" in m.value for m in at.markdown)
 
 

@@ -429,3 +429,26 @@ def test_events_sharing_a_name_get_their_own_expense_tab():
     titles = [expense_tab_title(e, events) for e in events]
     assert len({t.lower() for t in titles}) == 4  # Sheets refuses a repeat, caps aside
     assert titles[0] == "Expense Report: Picnic (Oct 3)" and titles[3] == "Expense Report: Mixer"
+
+
+def test_formula_text_stays_plain_in_excel_and_csv():
+    """A doctored receipt whose Place reads "=HYPERLINK(...)" must not become a live formula in a download."""
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from treasurer.models import LineItem, Receipt, Status
+    from treasurer.post import TX_FIELDS
+    from treasurer.sheets import local_transactions, local_views
+    from treasurer.views import grid_to_csv
+    from treasurer.xlsx_export import book_xlsx
+    evil = '=HYPERLINK("http://evil.example","Open receipt")'
+    r = Receipt(receipt_id="R1", event_id=EVENT.event_id, place=evil, date=EVENT.date, payer="@Ana", status=Status.APPROVED,
+                items=[LineItem(category="Food", item="+Chips", unit=1, price=Decimal("5"))], total=Decimal("5"))
+    views = local_views([r], EVENT, {})
+    wb = load_workbook(BytesIO(book_xlsx(views, local_transactions([r]), TX_FIELDS)))
+    cells = [c for ws in wb for row in ws.iter_rows() for c in row]
+    assert not [c.coordinate for c in cells if c.data_type == "f"]
+    assert any(c.value == evil for c in cells)  # still readable, just not run
+    csv_text = grid_to_csv(views["Receipts"].grid)
+    assert "'" + evil.replace('"', '""') in csv_text and "\n=" not in csv_text and ",=" not in csv_text

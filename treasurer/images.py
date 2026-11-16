@@ -67,6 +67,8 @@ def prepare(data: bytes, filename: str) -> Prepared:
         im.load()
     except UnsupportedFile:
         raise
+    except Image.DecompressionBombError as e:  # 180+ megapixels: opening it could eat all the memory
+        raise UnsupportedFile(f"{name} is way too big to open. Screenshot the receipt, or enter it by hand below.") from e
     except (UnidentifiedImageError, OSError) as e:
         raise UnsupportedFile(f"{name} won't open as an image (it may be damaged). Enter it by hand below.") from e
 
