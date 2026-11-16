@@ -14,6 +14,7 @@
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
   --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
+  --tly-outline: #0C4226; --tly-limb: #488B53; --tly-printer: #0E3D22; --tly-printer-slot: #06200F; --tly-led: #7CE38B; /* Tally's own lines, the welcome printer */
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
    on buttons and cards, a numbered step bar, and the mascot. Motion is off for reduced-motion users. */

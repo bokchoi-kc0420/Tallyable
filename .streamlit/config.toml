@@ -6,6 +6,7 @@ toolbarMode = "minimal"
 showErrorDetails = false  # a crash shows a short message, not code paths from the server
 
 [server]
+enableStaticServing = true  # static/ is served at /app/static: the intro animation and the tour's Tally
 maxUploadSize = 30  # MB per file, the same as the PDF limit in treasurer/images.py
 
 # Tallyable look (prototype 1): cream paper, forest green, sunny yellow, chunky rounded headings.
