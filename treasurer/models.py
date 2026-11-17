@@ -99,11 +99,11 @@ class Receipt(BaseModel):
             if not (i.for_item_above and i.price < 0 and owner):
                 owner = i
             owners.append(owner)
-        out = sum((i.amount for i, o in zip(self.items, owners) if o.returned), Decimal("0"))
+        out = sum((i.amount for i, o in zip(self.items, owners, strict=True) if o.returned), Decimal("0"))
         if out == 0:
             return Decimal("0.00")
         marked = any(i.taxed is not None for i in self.items)
-        base = [(i, o) for i, o in zip(self.items, owners) if o.taxed or not marked]
+        base = [(i, o) for i, o in zip(self.items, owners, strict=True) if o.taxed or not marked]
         base_amt = sum((i.amount for i, _ in base), Decimal("0"))
         out_base = sum((i.amount for i, o in base if o.returned), Decimal("0"))
         return money(out + (self.tax * out_base / base_amt if base_amt else Decimal("0")))
