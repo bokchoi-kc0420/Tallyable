@@ -70,8 +70,9 @@ def check_returned(r: Receipt) -> list[Flag]:
     names = [i.item for i in r.items if i.returned]
     if not names:
         return []
+    why = "Returned" if r.left_out_why == "returned" else "Personal"
     return [Flag("returned_item", Severity.INFO,
-                 f"Returned, listed but excluded: {', '.join(names)} (-${r.returned_amount})")]
+                 f"{why}, listed but left out: {', '.join(names)} (-${r.returned_amount})")]
 
 
 def same_purchase(r: Receipt, s: Receipt) -> str | None:

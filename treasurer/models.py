@@ -65,6 +65,8 @@ class Receipt(BaseModel):
     review_note: str | None = None
     # What the photo shows. Anything but a receipt is not proof that money was spent (see checks.check_proof).
     proof: Literal["receipt", "cart", "estimate", "pending_charge"] = "receipt"
+    # Why the left-out lines (LineItem.returned) are out: the payer's own stuff, or taken back to the store.
+    left_out_why: Literal["personal", "returned"] = "personal"
 
     @model_validator(mode="after")
     def _not_a_refund(self):

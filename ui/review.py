@@ -17,7 +17,7 @@ FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
              "missing_receipt": (":material/hide_image:", "No photo attached"),
              "unusual_tax": (":material/percent:", "Tax looks high"),
-             "returned_item": (":material/undo:", "Returned item"),
+             "returned_item": (":material/undo:", "Left out of the books"),
              "not_final": (":material/receipt_long:", "Not a final receipt"),
              "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
 FLAG_TONE = {Severity.BLOCK: ("block", "Must fix"), Severity.WARN: ("warn", "Check"), Severity.INFO: ("info", "FYI")}
@@ -117,10 +117,22 @@ def edit_form(rid: str, flags: list) -> None:
                "item": st.column_config.TextColumn("Item", width=200),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
-               "returned": st.column_config.CheckboxColumn("Returned", width=80)}
+               "returned": st.column_config.CheckboxColumn("Leave out", width=80,
+                                                           help="Not the club's: a personal buy, or taken back")}
+    if r.status is Status.DRAFTED and not all(i.returned for i in r.items) and len(r.items) > 2:
+        # A grocery run where only a line or two was for the club: leave everything out, then untick the club's.
+        if st.button("Mostly personal? Leave out all", key=f"all-out-{rid}", type="tertiary"):
+            ss.receipts[rid] = r.model_copy(update={"items": [i.model_copy(update={"returned": True}) for i in r.items]})
+            ss.pop(f"items-{rid}", None)
+            st.rerun()
     # Tax marks and discount links ride along hidden, so an edit never drops them.
     edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns,
                             column_order=list(columns))
+    why = r.left_out_why
+    if any(i.returned for i in r.items):
+        why = st.segmented_control("Left out because", ["personal", "returned"], default=r.left_out_why,
+                                   format_func={"personal": "Personal", "returned": "Returned"}.get,
+                                   key=f"why-{rid}") or r.left_out_why
     c1, c2, c3 = st.columns(3)
     tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
     tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
@@ -132,7 +144,7 @@ def edit_form(rid: str, flags: list) -> None:
                           taxed=None if pd.isna(row.taxed) else bool(row.taxed),
                           for_item_above=bool(row.for_item_above) if pd.notna(row.for_item_above) else False)
                  for row in edited.itertuples() if pd.notna(row.item) and str(row.item).strip()]
-        new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items,
+        new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items, left_out_why=why,
                                        tax=dec(tax), tip=dec(tip), total=dec(total)))
     except (ValueError, TypeError):
         st.error("Something's off in the line items! Each line needs an item, a qty and a price.")

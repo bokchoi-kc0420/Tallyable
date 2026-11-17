@@ -155,3 +155,10 @@ def test_tax_on_mostly_returned_receipt_uses_full_subtotal():
     # The tax rate is judged on what was printed, before returns.
     r = receipt(items=[item("A", "90.00", returned=True), item("B", "10.00")], tax="8.00")
     assert "unusual_tax" not in codes(r)
+
+
+def test_personal_lines_say_personal_not_returned():
+    from treasurer.post import transaction_rows
+    r = receipt(items=[item("Ramen", "6.99", returned=True), item("Green plum", "4.29")])
+    assert [row["returned"] for row in transaction_rows(r)] == ["PERSONAL", "FALSE"]
+    assert r.model_copy(update={"left_out_why": "returned"}).posted_amount == r.posted_amount == Decimal("4.29")

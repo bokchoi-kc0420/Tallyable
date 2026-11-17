@@ -175,6 +175,7 @@ class ClaudeExtractor:
                 items=items, tax=_money(x.tax, "tax", filename), tip=_money(x.tip, "tip", filename),
                 total=_money(x.total, "total", filename), image_file=filename,
                 image_hash=hashlib.sha256(image).hexdigest(), review_note=note, proof=x.proof,
+                left_out_why="returned" if any(i.returned for i in items) else "personal",
             )
         except ValueError as e:  # bad date, no items, negative money
             raise ExtractionError(f"Claude's reading of {filename} did not fit the receipt format: {e}") from e
