@@ -303,6 +303,10 @@
 /* Both lines in one font (Outfit), close together. */
 .tly-confirm-note { font-family: var(--tly-body); line-height: 1.45; margin: 16px 0 16px; }
 .tly-confirm-note b { font-family: var(--tly-body); color: var(--tly-forest); font-weight: 700; }
+.tly-check-all { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.tly-check-all li { display: flex; justify-content: space-between; gap: 16px; font-family: var(--tly-body);
+  padding: 8px 0; border-bottom: 1px solid var(--tly-paper); }
+.tly-check-all b { font-family: var(--tly-head); }
 .tly-confirm-note small { font-size: var(--tly-t-sm); color: var(--tly-soft); }
 .tly-confirm { display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 16px; } .tly-confirm .tly-event { width: 300px; }
 div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-family: var(--tly-head) !important; font-weight: 600; }

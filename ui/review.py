@@ -11,7 +11,7 @@ import streamlit as st
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
 from ui import club
-from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, md, next_step, payers, plural, reviewed, ss, step_bar, usd
+from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, is_demo, md, next_step, payers, plural, reviewed, ss, step_bar, usd
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
@@ -46,6 +46,25 @@ def approve_all(rids: list[str]) -> None:
     ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
 
 
+@st.dialog("Approve these?", on_dismiss=lambda: ss.pop("check_all", None))
+def check_all(rids: list[str]) -> None:
+    """One line per receipt before money is committed, so a $33 grocery run for one drink stands out."""
+    lines = "".join(f"<li><span>{html.escape(ss.receipts[x].payer or 'No payer')} · {html.escape(ss.receipts[x].place)}"
+                    f" · {plural(len(ss.receipts[x].items), 'item')}</span><b>{usd(ss.receipts[x].posted_amount)}</b></li>"
+                    for x in rids)
+    st.markdown(f'<ul class="tly-check-all">{lines}</ul>'
+                '<p class="tly-confirm-note">Anything the club didn\'t pay for? Go back and tick it under '
+                "<b>Leave out</b>.</p>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if c[0].button("Go back", key="check-all-no", width="stretch"):
+        ss.pop("check_all", None)
+        st.rerun()
+    if c[1].button(f"Approve all {len(rids)}", type="primary", key="check-all-yes", width="stretch"):
+        ss.pop("check_all", None)
+        approve_all(rids)
+        st.rerun()
+
+
 def approve_clean(flags: dict) -> None:
     """One click for every receipt with nothing to fix, so a big event goes fast. Flagged ones stay one by one."""
     clean = [x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED and not needs_look(x, flags)]
@@ -54,11 +73,16 @@ def approve_clean(flags: dict) -> None:
     n = len(clean)
     with st.container(border=True, key="clean-card"):
         c = st.columns([3.2, 1.4], vertical_alignment="center")
-        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} look{"s" if n == 1 else ""} good!</p>'
-                      '<p class="tly-done-sub">The math adds up - peek at the photos to make sure I read them right!</p>',
+        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} add{"s" if n == 1 else ""} up!</p>'
+                      '<p class="tly-done-sub">Peek at the photos to make sure I read them right - '
+                      "and leave out anything that wasn't the club's!</p>",
                       unsafe_allow_html=True)
+        # The demo's fake receipts go straight through, so the tour isn't covered by the check.
+        go = approve_all if is_demo() else lambda c: ss.update(check_all=c)
         c[1].button(f"Approve all {n}" if n > 1 else "Approve it", type="primary", icon=":material/done_all:",
-                    key="approve-clean", width="stretch", on_click=approve_all, args=(clean,))
+                    key="approve-clean", width="stretch", on_click=go, args=(clean,))
+    if ss.get("check_all"):
+        check_all(ss.check_all)
 
 
 def photo(rid: str) -> None:

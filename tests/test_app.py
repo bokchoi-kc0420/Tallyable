@@ -427,6 +427,18 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     assert not at.exception
 
 
+def test_real_approve_all_shows_each_receipt_first():
+    at = new_app().run()
+    upload_and_draft(at)
+    at.session_state["demo_mode"] = False  # real money: a one-line-per-receipt check before anything is approved
+    at.sidebar.radio[0].set_value("2. Review").run()
+    at.button(key="approve-clean").click().run()
+    assert not any(r.status is Status.APPROVED for r in at.session_state["receipts"].values())
+    at.button(key="check-all-yes").click().run()
+    assert any(r.status is Status.APPROVED for r in at.session_state["receipts"].values())
+    assert not at.exception
+
+
 def test_my_funder_rules():
     at = new_app().run()
     upload_and_draft(at)
