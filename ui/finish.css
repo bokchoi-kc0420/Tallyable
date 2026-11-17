@@ -77,8 +77,8 @@
 .tly-rip .body { --mx: 0; --mr: 100%; left: 70px; width: 194px; display: grid; background: var(--tly-c); transform-origin: -4px 100%;
   animation: tly-rip-body 1.9s linear forwards; }
 .tly-rip .info { padding: 0 64px 0 16px; display: grid; align-content: center; gap: 4px; }
-.tly-rip .body b { font-size: var(--tly-t-lg); font-weight: 600; line-height: 1.2; color: var(--tly-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tly-rip .body small { font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-soft); }
+.tly-rip .info > b { font-size: var(--tly-t-lg); font-weight: 600; line-height: 1.2; color: var(--tly-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tly-rip .info > small { font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-soft); }
 @keyframes tly-rip-body { 0%, 43.7% { transform: none; animation-timing-function: cubic-bezier(.2,.8,.3,1); }
   47.1% { transform: translate(3px,1px) rotate(2deg); animation-timing-function: cubic-bezier(.3,0,.3,1); }
   49.7% { transform: translate(1px,1px) rotate(.5deg); opacity: 1; animation-timing-function: cubic-bezier(.55,0,.9,.45); }
@@ -99,7 +99,7 @@
   54.2% { transform: translate(-22px,-12px) rotate(6deg) scale(1.04); opacity: 1; animation-timing-function: cubic-bezier(.4,0,.7,.6); }
   68.7% { transform: translate(calc(var(--fx) * .45), calc(var(--fy) - 6px)) rotate(17deg) scale(.6); opacity: 1; animation-timing-function: cubic-bezier(.3,.4,.5,1); }
   82% { opacity: 1; } 83.2%, 100% { transform: translate(var(--fx), var(--fy)) rotate(32deg) scale(.13); opacity: 0; } }
-.tly-rip i { position: absolute; left: 64px; top: var(--y); width: 4px; height: 3px; background: var(--tly-white); opacity: 0;
+.tly-rip .tk > i { position: absolute; left: 64px; top: var(--y); width: 4px; height: 3px; background: var(--tly-white); opacity: 0;
   animation: tly-rip-bit .42s var(--d) cubic-bezier(.2,.6,.4,1) forwards; }
 @keyframes tly-rip-bit { 0% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--bx), var(--by)) rotate(220deg); } }
 /* While the rip is on the page, the Past events row stays hidden under the ticket, then lands with the stub. */

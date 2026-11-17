@@ -1,17 +1,9 @@
-/* Tally's demo tour (static/tour.js): a blurred veil with a sharp hole, a sun ring round the hole, the intro's
-   Tally (images + stick limbs) and his bubble. Fixed over everything; only the bubble and the hole take clicks. */
+/* Tally's demo tour (static/tour.js): a blurred veil with a sharp hole, a sun ring round the hole, Tally (a pose
+   of his own per stop) and his bubble. Fixed over everything; only the bubble and the hole take clicks. */
 #tly-tour { position: fixed; inset: 0; z-index: 2147483000;  /* over Streamlit's sidebar and header */ pointer-events: none; }
 #tly-tour .veil { position: absolute; inset: 0; background: rgba(31,42,34,.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: auto; }
 #tly-tour .ring { position: absolute; border-radius: var(--tly-r); box-shadow: var(--tly-ring); outline: 4px solid var(--tly-sun); transition: all .25s; }
-#tly-tour .tal { position: absolute; left: 0; top: 0; width: 0; height: 0; }
-#tly-tour .tal > * { position: absolute; }
-#tly-tour .body { left: -52px; top: -195px; width: 105px; height: 177px; z-index: 2; }
-#tly-tour .limb { width: 0; height: 0; top: -90px; transform-origin: 0 0; z-index: 1; }
-#tly-tour .limb.reach { z-index: 1; }  /* its root tucks behind his body, so the arm grows out of his outline */
-#tly-tour .limb i { position: absolute; left: -3px; top: 0; width: 6px; height: 26px; border-radius: 4px; background: var(--tly-outline); }
-#tly-tour .limb b { position: absolute; left: -12px; top: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--tly-limb); border: 4px solid var(--tly-outline); }
-#tly-tour .leg { top: -24px; } #tly-tour .leg.l { left: -25px; } #tly-tour .leg.r { left: 25px; }
-#tly-tour .leg i { height: 21px; } #tly-tour .leg b { left: -12px; top: 12px; width: 30px; height: 20px; }
+#tly-tour .pose { position: absolute; left: 0; top: 0; }
 #tly-tour .bub { position: absolute; left: 0; top: 0; width: 320px; padding: 16px 24px; background: var(--tly-white); border: 3px solid var(--tly-outline);
   border-radius: var(--tly-r); pointer-events: auto; font: 500 var(--tly-t-md) / 1.4 var(--tly-body); color: var(--tly-ink); }
 #tly-tour .bub::after { content: ""; position: absolute; left: var(--tx, 48px); bottom: -11px; width: 16px; height: 16px; margin-left: -8px; background: var(--tly-white);
@@ -24,13 +16,16 @@
 #tly-tour .skip:hover { color: var(--tly-ink); }
 #tly-tour .go { background: var(--tly-forest); color: var(--tly-white); padding: 8px 16px; }
 #tly-tour .go:hover { background: var(--tly-forest-2); }
-#tly-tour.pop .tal { animation: tly-tour-in .45s cubic-bezier(.3, 1.6, .5, 1); }
+#tly-tour.pop .pose { animation: tly-tour-in .45s cubic-bezier(.3, 1.6, .5, 1); }
+#tly-tour.rise.pop .pose { animation: tly-tour-rise .6s cubic-bezier(.3, 1.4, .5, 1) 2.2s both; }  /* after the ticket rip */
+#tly-tour.rise.pop .bub { animation-delay: 2.7s; }
 #tly-tour.pop .bub { animation: tly-tour-fade .3s ease-out .15s both; }
 @keyframes tly-tour-in { from { opacity: 0; } }
+@keyframes tly-tour-rise { from { translate: 0 100vh; } }
 @keyframes tly-tour-fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { #tly-tour.pop .tal, #tly-tour.pop .bub, #tly-tour .ring, #tly-tour.nudge .ring { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { #tly-tour.pop .pose, #tly-tour.pop .bub, #tly-tour .ring, #tly-tour.nudge .ring { animation: none; transition: none; } }
 /* Nudge: the page is theirs (no blur); the green button pulses with Tally's hand on it. Quiet: just the ring. */
-#tly-tour.nudge .veil, #tly-tour.quiet .tal, #tly-tour.quiet .bub, #tly-tour.away .tal, #tly-tour.away .bub { display: none; }
+#tly-tour.nudge .veil, #tly-tour.quiet .pose, #tly-tour.quiet .bub, #tly-tour.away .pose, #tly-tour.away .bub { display: none; }
 #tly-tour.nudge .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }
 @keyframes tly-tour-pulse { 50% { outline-offset: 8px; } }
 /* bubble beside his face when there's no room over his head: the tail turns to point at him */
