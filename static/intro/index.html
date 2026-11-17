@@ -6,12 +6,13 @@
 *{box-sizing:border-box;margin:0}
 body{background:#BFE3F7;font-family:Outfit,sans-serif;color:var(--text);overflow:hidden}
 .stage{position:fixed;left:50%;top:50%;width:1280px;height:800px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--fit,1))}  /* drawn for 1280x800, scaled to fit the window */
-#handoff{position:absolute;left:96px;top:216px;z-index:96;text-decoration:none;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .4s,transform .4s cubic-bezier(.3,1.6,.5,1)}
+#handoff{position:relative;margin-top:24px;z-index:96;text-decoration:none;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .4s,transform .4s cubic-bezier(.3,1.6,.5,1)}
 #handoff.on{opacity:1;transform:none;pointer-events:auto}#handoff:hover{filter:brightness(1.08)}
 .nav{position:absolute;left:0;right:0;top:0;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;z-index:90}
 .nav img{height:36px}
 .btn{display:inline-block;background:var(--forest);color:#fff;font:600 18px Fredoka;padding:12px 24px;border-radius:999px;box-shadow:0 4px 0 var(--dark)}
 .head{position:absolute;left:96px;top:76px;width:900px;z-index:4;transition:opacity .5s}
+#h2{width:660px;z-index:96}  /* ends before the ticket (left edge ~794px), so the line wraps instead of hiding behind it */
 .h{font:700 72px/1 Fredoka;letter-spacing:-.01em}
 .p{font-size:22px;line-height:1.35}
 #h2 .p{transition:opacity .6s .4s}#h2.off .p{opacity:0;transition:none}
@@ -80,7 +81,7 @@ canvas{position:absolute;inset:0;z-index:10}
  <div class="nav"><img src="art/logo.png"><span class="btn" style="font-size:16px;padding:8px 20px">Try the demo</span></div>
  <div class="head" id="h0"><div class="h">Event over!</div></div><div class="head off" id="h0q"><div class="h">Event over...?</div></div>
  <div class="head off" id="h1"><div class="h">Countless receipts in.</div></div>
- <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math, and puts it in your club's Google Sheet.</p></div>
+ <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math, and puts it in your club's Google Sheet.</p><a class="btn" id="handoff" href="/?demo=go" target="_top">Try it with these receipts &rarr;</a></div>
  <img id="plate" src="scene/plate.png"><img id="dopen" src="scene/door-open.png">
  <div class="floor" id="floor"></div>
  <div class="wall" id="wall"></div><div id="wins"></div>
@@ -92,7 +93,6 @@ canvas{position:absolute;inset:0;z-index:10}
  <div class="bub" id="bs"></div><div class="bub" id="bt"></div>
  <div class="tk" id="tk"><div class="tkb"><div class="date">NOV<b>14</b>2026</div><div class="info"><b>Boba Social</b><span id="cnt">Receipts in</span><span class="stamp" id="stamp">DONE</span></div></div></div>
  <div id="flash"></div>
- <a class="btn" id="handoff" href="/?demo=go" target="_top">Try it with these receipts &rarr;</a>
 </div>
 <script>
 const fit=()=>document.documentElement.style.setProperty('--fit',Math.min(innerWidth/1280,innerHeight/800));fit();addEventListener('resize',fit);
