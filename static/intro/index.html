@@ -12,7 +12,7 @@ body{background:#BFE3F7;font-family:Outfit,sans-serif;color:var(--text);overflow
 .nav img{height:36px}
 .btn{display:inline-block;background:var(--forest);color:#fff;font:600 18px Fredoka;padding:12px 24px;border-radius:999px;box-shadow:0 4px 0 var(--dark)}
 .head{position:absolute;left:96px;top:76px;width:900px;z-index:4;transition:opacity .5s}
-#h2{width:660px;z-index:96}  /* ends before the ticket (left edge ~794px), so the line wraps instead of hiding behind it */
+#h2{top:44px;width:660px;z-index:96}  /* ends before the ticket (left edge ~794px), so the line wraps instead of hiding behind it */
 .h{font:700 72px/1 Fredoka;letter-spacing:-.01em}
 .p{font-size:22px;line-height:1.35}
 #h2 .p{transition:opacity .6s .4s}#h2.off .p{opacity:0;transition:none}
@@ -81,7 +81,7 @@ canvas{position:absolute;inset:0;z-index:10}
  <div class="nav"><img src="art/logo.png"><span class="btn" style="font-size:16px;padding:8px 20px">Try the demo</span></div>
  <div class="head" id="h0"><div class="h">Event over!</div></div><div class="head off" id="h0q"><div class="h">Event over...?</div></div>
  <div class="head off" id="h1"><div class="h">Countless receipts in.</div></div>
- <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math, and puts it in your club's Google Sheet.</p><a class="btn" id="handoff" href="/?demo=go" target="_top">Try it with these receipts &rarr;</a></div>
+ <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math,<br>and puts it in your club's Google Sheet.</p><a class="btn" id="handoff" href="/?demo=go" target="_top">Try it with these receipts &rarr;</a></div>
  <img id="plate" src="scene/plate.png"><img id="dopen" src="scene/door-open.png">
  <div class="floor" id="floor"></div>
  <div class="wall" id="wall"></div><div id="wins"></div>
