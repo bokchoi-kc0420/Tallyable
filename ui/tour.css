@@ -2,7 +2,7 @@
    of his own per stop) and his bubble. Fixed over everything; only the bubble and the hole take clicks. */
 #tly-tour { position: fixed; inset: 0; z-index: 2147483000;  /* over Streamlit's sidebar and header */ pointer-events: none; }
 #tly-tour .veil { position: absolute; inset: 0; background: rgba(31,42,34,.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: auto; }
-#tly-tour .ring { position: absolute; border-radius: var(--tly-r); box-shadow: var(--tly-ring); outline: 4px solid var(--tly-sun); transition: all .25s; }
+#tly-tour .ring { position: absolute; border-radius: var(--tly-r); box-shadow: var(--tly-ring); outline: 4px solid var(--tly-sun); }  /* no transition: it must stick to the spot while the page scrolls */
 #tly-tour .pose { position: absolute; left: 0; top: 0; }
 #tly-tour .bub { position: absolute; left: 0; top: 0; width: 320px; padding: 16px 24px; background: var(--tly-white); border: 3px solid var(--tly-outline);
   border-radius: var(--tly-r); pointer-events: auto; font: 500 var(--tly-t-md) / 1.4 var(--tly-body); color: var(--tly-ink); }
@@ -23,7 +23,7 @@
 @keyframes tly-tour-in { from { opacity: 0; } }
 @keyframes tly-tour-rise { from { translate: 0 100vh; } }
 @keyframes tly-tour-fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { #tly-tour.pop .pose, #tly-tour.pop .bub, #tly-tour .ring, #tly-tour.nudge .ring { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { #tly-tour.pop .pose, #tly-tour.pop .bub, #tly-tour.nudge .ring { animation: none; } }
 /* Nudge: the page is theirs (no blur); the green button pulses with Tally's hand on it. Quiet: just the ring. */
 #tly-tour.nudge .veil, #tly-tour.quiet .pose, #tly-tour.quiet .bub, #tly-tour.away .pose, #tly-tour.away .bub { display: none; }
 #tly-tour.nudge .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }

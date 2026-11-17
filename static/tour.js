@@ -26,6 +26,12 @@
       d.querySelector(".skip").onclick = () => mark({ off: true });
       d.querySelector(".go").onclick = () => (cfg.stops[cur].info ? doneOne(cur) : add("seen", cur));  // page is theirs now
       document.body.appendChild(d);
+      // the blur sits over the page, so a wheel on it scrolls the page underneath (to see the rest of the spot)
+      d.querySelector(".veil").addEventListener("wheel", (e) => {
+        let n = el && el.parentElement;
+        while (n && !(n.scrollHeight > n.clientHeight && /auto|scroll/.test(getComputedStyle(n).overflowY))) n = n.parentElement;
+        (n || document.scrollingElement).scrollBy(0, e.deltaY);
+      }, { passive: true });
       // only a click on the green button counts as doing the step (picking a name in the spot doesn't)
       document.addEventListener("click", (e) => {
         const s = cur >= 0 && cfg.stops[cur], h = s && !s.info && document.querySelector(s.hand || s.spot);
@@ -41,12 +47,15 @@
         const s = cfg.stops[i];
         if ((st.done || []).includes(i)) continue;
         if (s.until && document.querySelector(s.until)) { doneOne(i); return [-1, null]; }  // done another way
-        const p = s.explain && !(st.seen || []).includes(i) ? "explain" : "nudge";
+        let p = s.explain && !(st.seen || []).includes(i) ? "explain" : "nudge";
+        if (p === "explain" && s.typed && typed(s)) { add("seen", i); return [-1, null, ""]; }  // they put it in: on to the button
         const t = document.querySelector(p === "explain" ? s.spot : s.hand || s.spot);
         if (t && t.getBoundingClientRect().width > 0) return [i, t, p];
       }
       return [-1, null, ""];
     }
+
+    const typed = (s) => (document.querySelector(s.spot)?.textContent || "").includes(s.typed);  // e.g. the total shows it
 
     function check() {
       const [i, t, p] = pick();
