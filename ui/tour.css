@@ -32,7 +32,7 @@
 /* A stop where the page has to be edited (fix a flagged receipt): only the ring, pulsing, so nothing sits on the boxes */
 #tly-tour.clear .veil, #tly-tour.clear .tal, #tly-tour.clear .bub { display: none; }
 #tly-tour.clear .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }
-@keyframes tly-tour-pulse { 50% { box-shadow: 0 0 0 8px rgba(247,190,63,.45); } }
+@keyframes tly-tour-pulse { 50% { outline-offset: 8px; } }
 /* bubble beside his face when there's no room over his head: the tail turns to point at him */
 #tly-tour .bub.side::after { left: -11px; top: 24px; bottom: auto; margin-left: 0; transform: rotate(135deg); }
 #tly-tour .bub.side.flip::after { left: auto; right: -11px; transform: rotate(-45deg); }
