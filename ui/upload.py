@@ -198,10 +198,15 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
     # Green while anyone still needs a payer: Read stays gray until then, so this is the one button to hit.
     untagged = any(not ss.get(f"payer-{name}") for name, _ in unread(sources))
-    if c[1].button("Apply to all", key="apply-all", type="primary" if untagged else "secondary"):
-        for name, _ in sources:
+    # Photos come in one person at a time (Soojin's text, then Minjun's), so a name only fills the photos
+    # nobody's tagged yet: drop Kevin's, hit Kevin, drop Minjun's, hit Minjun. Once all have one, it sets them all.
+    blank = [name for name, _ in sources if not ss.get(f"payer-{name}")]
+    some = bool(blank) and len(blank) < len(sources)
+    if c[1].button("Apply to the rest" if some else "Apply to all", key="apply-all",
+                   type="primary" if untagged else "secondary"):
+        for name in blank or [name for name, _ in sources]:
             ss[f"payer-{name}"] = everyone
-        retag([name for name, _ in sources])
+        retag(blank or [name for name, _ in sources])
         st.rerun()
     todo = unread(sources)
     joinable = [name for name, _ in todo if not name.lower().endswith(".pdf")]  # a PDF already holds every page
