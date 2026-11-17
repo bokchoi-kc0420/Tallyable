@@ -13,7 +13,8 @@ from ui.common import get_sink, is_demo, ss
 # the page back so it can be tried out. Nudge: no blur, a pulsing ring on the green button (`hand`, the spot if not
 # given) with Tally peeking over it and a one-line `hint`; the stop ends when that button is clicked, or when
 # `until` shows up (done another way). info = done at "Got it"; quiet = ring only (Tally would sit on the boxes);
-# pose = which Tally (static/poses); rise = he pops up from the bottom of the screen.
+# pose = which Tally (static/poses); rise = he pops up from the bottom of the screen; typed = the explain moves on
+# once the spot shows that text (the total, after they put the amount in).
 # Copy is Kevin's call: casual, no filler.
 STOPS = [
     {"spot": ".st-key-event-group", "info": True, "pose": "hello",
@@ -34,7 +35,8 @@ STOPS = [
                 "Same deal for the other flagged ones!"},
     {"spot": ".st-key-to-summary", "pose": "tickets", "hint": "All checked! Hit Go to Summary."},
     {"spot": ".st-key-income-box", "hand": ".st-key-push-sheets, .st-key-push-excel", "until": ".st-key-books-in",
-     "pose": "coin-jar", "explain": "Add what came in - try $200 in dues and watch the money bar move!", "push": True},
+     "pose": "coin-jar", "typed": "$700.00", "push": True,
+     "explain": "Add what came in - try $700 in dues and watch the money bar move!"},
     {"spot": ".st-key-to-closeout", "pose": "cheer", "hint": "Books are in! Hit Next: Close out."},
     {"spot": ".st-key-whos-owed", "hand": "[class*='st-key-paid-']", "pose": "high-five",
      "explain": "Here's who's owed what. Change how you paid them back if you want.",
