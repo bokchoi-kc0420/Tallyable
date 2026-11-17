@@ -64,13 +64,13 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
 
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.text_input(key="income-Cash").set_value("100.00").run()
-    push = at.download_button(key="push-excel")
-    assert push.disabled  # other receipts still drafted
+    assert at.button(key="push-sheets").disabled  # other receipts still drafted
     for rid, r in list(at.session_state["receipts"].items()):
         if rid != "R01":
             at.session_state["receipts"][rid] = r.model_copy(update={"status": Status.REJECTED})
     at.run()
-    at.download_button(key="push-excel").click().run()  # no Google Sheet: saving is the push
+    at.button(key="push-sheets").click().run()  # the demo has no club sheet: it opens a peek at the book
+    at.download_button(key="push-excel").click().run()  # saving the Excel file is the push
     assert not at.exception
     assert at.session_state["receipts"]["R01"].status is Status.POSTED
     assert {"Balance Sheet", "General Ledger", "Expense Report", "Receipts"} <= {b.label for b in at.get("download_button")}
@@ -240,7 +240,8 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
     at.session_state["receipts"]["R01"] = at.session_state["receipts"]["R01"].model_copy(
         update={"status": Status.APPROVED})
     at.sidebar.radio[0].set_value("3. Summary").run()
-    at.download_button(key="push-excel").click().run()  # no Google Sheet: saving is the push
+    at.button(key="push-sheets").click().run()  # the demo has no club sheet: it opens a peek at the book
+    at.download_button(key="push-excel").click().run()  # saving the Excel file is the push
     assert not at.exception
     assert any("stopped partway" in e.value for e in at.error)
     assert at.session_state["receipts"]["R01"].status is Status.APPROVED   # not marked posted
@@ -391,14 +392,15 @@ def test_income_sources_can_be_added_renamed_and_removed():
 
 
 def test_with_google_sheets_push_offers_the_sheet_not_an_excel_file(monkeypatch, tmp_path):
-    from treasurer import sheets
     from treasurer.post import LocalCsvSink
 
     class FakeSheet(LocalCsvSink):
         label = "Google Sheets"
         url = "https://docs.google.com/spreadsheets/d/fake"
 
-    monkeypatch.setattr(sheets.GoogleSheetsSink, "from_env", classmethod(lambda cls, *a: FakeSheet(tmp_path / "t.csv")))
+    import ui.summary
+    monkeypatch.setattr(ui.summary, "get_sink", lambda: (FakeSheet(tmp_path / "t.csv"), None))
+    monkeypatch.setattr(ui.summary, "is_demo", lambda: False)  # a real club with its sheet linked
     at = new_app().run()
     upload_and_draft(at)
     for rid in list(at.session_state["receipts"]):

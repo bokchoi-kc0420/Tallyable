@@ -19,7 +19,8 @@ def pushed_app():
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.text_input(key="income-Cash").set_value("100.00").run()
-    at.download_button(key="push-excel").click().run()  # no Google Sheet: saving is the push
+    at.button(key="push-sheets").click().run()  # the demo has no club sheet: it opens a peek at the book
+    at.download_button(key="push-excel").click().run()  # saving the Excel file is the push
     assert not at.exception
     return at
 

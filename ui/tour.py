@@ -13,7 +13,8 @@ from ui.common import get_sink, is_demo, ss
 # the page back so it can be tried out. Nudge: no blur, a pulsing ring on the green button (`hand`, the spot if not
 # given) with Tally peeking over it and a one-line `hint`; the stop ends when that button is clicked, or when
 # `until` shows up (done another way). info = done at "Got it"; quiet = ring only (Tally would sit on the boxes);
-# pose = which Tally (static/poses); rise = he pops up from the bottom of the screen; typed = the explain moves on
+# pose = which Tally (static/poses); end = the last one: a card in the middle
+# asking what's next (their own club, or another demo event at `spot`'s button); typed = the explain moves on
 # once the spot shows that text (the total, after they put the amount in).
 # Copy is Kevin's call: casual, no filler.
 STOPS = [
@@ -37,12 +38,15 @@ STOPS = [
     {"spot": ".st-key-income-box", "hand": ".st-key-push-sheets, .st-key-push-excel", "until": ".st-key-books-in",
      "pose": "coin-jar", "typed": "$700.00", "push": True,
      "explain": "Add what came in - try $700 in dues and watch the money bar move!"},
+    {"spot": ".st-key-sheet-peek", "hand": ".st-key-push-excel", "until": ".st-key-books-in", "pose": "thumbs-up",
+     "hint": "That's your book! Hit Download as Excel to keep it."},
     {"spot": ".st-key-to-closeout", "pose": "cheer", "hint": "Books are in! Hit Next: Close out."},
     {"spot": ".st-key-whos-owed", "hand": "[class*='st-key-paid-']", "pose": "high-five",
      "explain": "Here's who's owed what. Change how you paid them back if you want.",
      "hint": "Paid them back? Hit Mark paid!"},
     {"spot": ".st-key-finish-event", "pose": "ledger", "hint": "Last one! Hit Finish event to close it out."},
-    {"spot": ".st-key-next-event", "rise": True, "pose": "party", "hint": "That's it! Ready to start your next event?"},
+    {"spot": ".st-key-next-event", "end": True, "pose": "party", "title": "Boba Social's done!",
+     "explain": "Want to close out a real event for your club?"},
 ]
 PUSH = {"sheets": "Done adding? Hit Push to Google Sheets - every row goes in your club's sheet.",
         "excel": "Done adding? Hit Save and get Excel - your whole book in one file!"}
@@ -50,6 +54,8 @@ PUSH = {"sheets": "Done adding? Hit Push to Google Sheets - every row goes in yo
 
 def push_line() -> str:
     """The push stop names the button that's really there (the sink is only looked up on Summary)."""
+    if is_demo():  # the demo always shows Sheets (it opens a peek at the book)
+        return PUSH["sheets"]
     if ss.get("step") != "3. Summary":
         return PUSH["excel"]
     return PUSH["sheets" if get_sink()[0].label == "Google Sheets" else "excel"]
