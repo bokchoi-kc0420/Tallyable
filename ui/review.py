@@ -48,12 +48,24 @@ def approve_all(rids: list[str]) -> None:
 
 @st.dialog("Approve these?", on_dismiss=lambda: ss.pop("check_all", None))
 def check_all(rids: list[str]) -> None:
-    """One line per receipt before money is committed, so a $33 grocery run for one drink stands out."""
-    lines = "".join(f"<li><span>{html.escape(ss.receipts[x].payer or 'No payer')} · {html.escape(ss.receipts[x].place)}"
-                    f" · {plural(len(ss.receipts[x].items), 'item')}</span><b>{usd(ss.receipts[x].posted_amount)}</b></li>"
-                    for x in rids)
-    st.markdown(f'<ul class="tly-check-all">{lines}</ul>'
-                '<p class="tly-confirm-note">Anything the club didn\'t pay for? Go back and tick it under '
+    """Grouped by who gets paid back, like Who's owed, so "$51.19 for Kevin?" is what you check. The biggest receipt
+    is marked, and each person opens to their photos."""
+    people: dict[str, list[str]] = {}
+    for x in rids:
+        people.setdefault(ss.receipts[x].payer or "No payer", []).append(x)
+    big = max(rids, key=lambda x: ss.receipts[x].posted_amount)
+    for who, mine in people.items():
+        total = sum((ss.receipts[x].posted_amount for x in mine), Decimal("0"))
+        with st.expander(f"**{who}**  {usd(total)}", key=f"check-{who}"):
+            lines = "".join(f'<li{" class=big" if x == big and len(rids) > 1 else ""}><span>{html.escape(ss.receipts[x].place)}'
+                            f'<small>{plural(len(ss.receipts[x].items), "item")}</small></span>'
+                            f"<b>{usd(ss.receipts[x].posted_amount)}</b></li>" for x in mine)
+            st.markdown(f'<ul class="tly-check-all">{lines}</ul>', unsafe_allow_html=True)
+            shots = [ss.images[x][0] for x in mine if ss.images.get(x) and ss.images[x][1] != "application/pdf"]
+            for row in range(0, len(shots), 4):
+                for col, img in zip(st.columns(4), shots[row:row + 4], strict=False):
+                    col.image(img, width="stretch")
+    st.markdown('<p class="tly-confirm-note">Anything the club didn\'t pay for? Go back and tick it under '
                 "<b>Leave out</b>.</p>", unsafe_allow_html=True)
     c = st.columns(2)
     if c[0].button("Go back", key="check-all-no", width="stretch"):
