@@ -28,4 +28,11 @@
 #tly-tour.pop .bub { animation: tly-tour-fade .3s ease-out .15s both; }
 @keyframes tly-tour-in { from { opacity: 0; } }
 @keyframes tly-tour-fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { #tly-tour.pop .tal, #tly-tour.pop .bub, #tly-tour .ring { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { #tly-tour.pop .tal, #tly-tour.pop .bub, #tly-tour .ring, #tly-tour.clear .ring { animation: none; transition: none; } }
+/* A stop where the page has to be edited (fix a flagged receipt): only the ring, pulsing, so nothing sits on the boxes */
+#tly-tour.clear .veil, #tly-tour.clear .tal, #tly-tour.clear .bub { display: none; }
+#tly-tour.clear .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }
+@keyframes tly-tour-pulse { 50% { outline-offset: 8px; } }
+/* bubble beside his face when there's no room over his head: the tail turns to point at him */
+#tly-tour .bub.side::after { left: -11px; top: 24px; bottom: auto; margin-left: 0; transform: rotate(135deg); }
+#tly-tour .bub.side.flip::after { left: auto; right: -11px; transform: rotate(-45deg); }

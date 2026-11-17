@@ -169,12 +169,13 @@ def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
     kind = "secondary" if done else "primary"
     with st.container(horizontal=True, key="push-row"):
         if sink.label == "Google Sheets":
-            if st.button("Push to Google Sheets", type=kind, disabled=bool(waiting), icon=":material/upload:"):
+            if st.button("Push to Google Sheets", type=kind, disabled=bool(waiting), icon=":material/upload:",
+                         key="push-sheets"):
                 push(sink, receipts, event, income)
             if xlsx and excel_button(xlsx, event, "Download as Excel", "dl-xlsx-row"):
                 ss.event = {**ss.event, "excel_at": time.strftime("%I:%M %p").lstrip("0")}
                 st.rerun()
-        elif xlsx and excel_button(xlsx, event, "Save and get Excel", "dl-xlsx-row", type=kind, disabled=bool(waiting)):
+        elif xlsx and excel_button(xlsx, event, "Save and get Excel", "push-excel", type=kind, disabled=bool(waiting)):
             push(sink, receipts, event, income)  # without Sheets, saving the books is the push
     if not done and not waiting:  # pushing is optional: a club can go straight on
         with st.container(border=True, key="next-card"):

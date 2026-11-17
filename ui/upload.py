@@ -196,7 +196,9 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     st.subheader("Who paid")
     c = st.container(key="tag-all").columns([3, 1, 2], vertical_alignment="bottom")
     everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
-    if c[1].button("Apply to all"):
+    # Green while anyone still needs a payer: Read stays gray until then, so this is the one button to hit.
+    untagged = any(not ss.get(f"payer-{name}") for name, _ in unread(sources))
+    if c[1].button("Apply to all", key="apply-all", type="primary" if untagged else "secondary"):
         for name, _ in sources:
             ss[f"payer-{name}"] = everyone
         retag([name for name, _ in sources])
