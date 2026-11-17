@@ -414,3 +414,9 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .st-key-review-nav [data-testid="stMarkdown"] { align-self: center; }
 /* A photo's Fullscreen button sits on the photo, not above it where it covered the next-receipt arrow */
 [data-testid="stFullScreenFrame"]:has(img) [data-testid="stElementToolbar"] { top: 8px !important; right: 8px; }
+/* The demo's peek at the book (ui/sheet_peek.py): a tab drawn like a spreadsheet. */
+.tly-sheet { overflow: auto; max-height: 360px; border: 1px solid var(--tly-line); border-radius: var(--tly-r-in); background: var(--tly-white); }
+.tly-sheet table { border-collapse: collapse; table-layout: fixed; width: max-content; font: var(--tly-t-sm) var(--tly-body); color: var(--tly-ink); }
+.tly-sheet td, .tly-sheet th { border: 1px solid var(--tly-line); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.tly-sheet th { background: var(--tly-paper-soft); color: var(--tly-soft); font-weight: 500; text-align: center; position: sticky; top: 0; }
+.tly-sheet tr th:first-child { position: sticky; left: 0; }

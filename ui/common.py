@@ -119,7 +119,7 @@ def get_sink():
     try:
         from ui.connect import linked
         link = linked() or {}
-        if not link and not is_demo():  # real books only go to a sheet linked in the app, never the .env test sheet
+        if is_demo() or not link:  # real books only go to a sheet linked in the app; the demo's stay on this computer
             return LocalCsvSink(out() / "transactions.csv"), None
         return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(out() / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network

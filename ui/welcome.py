@@ -22,14 +22,18 @@ def watch_demo() -> None:
 
 
 def start_demo_from_link() -> bool:
-    """The intro's Skip and "Try it with these receipts" links come back as ?demo=go (a new page load)."""
-    if st.query_params.get("demo") != "go":
+    """The intro's Skip and "Try it with these receipts" links come back as ?demo=go (a new page load), and
+    the tour's last "Set up my club" as ?demo=off."""
+    go = st.query_params.get("demo")
+    if go not in ("go", "off"):
         return False
     st.query_params.clear()
     BASE.mkdir(parents=True, exist_ok=True)
     INTRO_SEEN.touch()
     from ui.home import switch_mode
-    switch_mode(True)
+    switch_mode(go == "go")
+    if go == "off":
+        ss.club_form = True  # straight to setting up their club, not the welcome page again
     return True
 
 

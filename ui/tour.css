@@ -17,11 +17,12 @@
 #tly-tour .go { background: var(--tly-forest); color: var(--tly-white); padding: 8px 16px; }
 #tly-tour .go:hover { background: var(--tly-forest-2); }
 #tly-tour.pop .pose { animation: tly-tour-in .45s cubic-bezier(.3, 1.6, .5, 1); }
-#tly-tour.rise.pop .pose { animation: tly-tour-rise .6s cubic-bezier(.3, 1.4, .5, 1) 2.2s both; }  /* after the ticket rip */
-#tly-tour.rise.pop .bub { animation-delay: 2.7s; }
+#tly-tour.end.pop .veil { animation: tly-tour-fade .4s ease-out 2.2s both; }  /* after the ticket rip */
+#tly-tour.end.pop .pose { animation: tly-tour-rise .6s cubic-bezier(.3, 1.4, .5, 1) 2.6s both; }
+#tly-tour.end.pop .bub { animation-delay: 2.3s; }
 #tly-tour.pop .bub { animation: tly-tour-fade .3s ease-out .15s both; }
 @keyframes tly-tour-in { from { opacity: 0; } }
-@keyframes tly-tour-rise { from { translate: 0 100vh; } }
+@keyframes tly-tour-rise { from { translate: 0 120px; opacity: 0; } }
 @keyframes tly-tour-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { #tly-tour.pop .pose, #tly-tour.pop .bub, #tly-tour.nudge .ring { animation: none; } }
 /* Nudge: the page is theirs (no blur); the green button pulses with Tally's hand on it. Quiet: just the ring. */
@@ -31,3 +32,11 @@
 /* bubble beside his face when there's no room over his head: the tail turns to point at him */
 #tly-tour .bub.side::after { left: -11px; top: 24px; bottom: auto; margin-left: 0; transform: rotate(135deg); }
 #tly-tour .bub.side.flip::after { left: auto; right: -11px; transform: rotate(-45deg); }
+/* The last stop: a card in the middle with his question and the two ways on (Tally peeks over its top edge). */
+#tly-tour .ttl { display: none; margin: 0 0 8px; font: 600 var(--tly-t-xl) var(--tly-head); color: var(--tly-ink); }
+#tly-tour.end .ring, #tly-tour.end .cnt, #tly-tour.end .bub::after { display: none; }
+#tly-tour.end .ttl { display: block; }
+#tly-tour.end .bub { width: 400px; padding: 48px 24px 24px; text-align: center; }
+#tly-tour.end .row { flex-direction: column; gap: 8px; }
+#tly-tour.end .go { order: -1; padding: 16px 24px; font-size: var(--tly-t-md); }
+#tly-tour.end .skip { padding: 16px 24px; outline: 2px solid var(--tly-forest); outline-offset: -2px; color: var(--tly-forest); background: var(--tly-white); font-size: var(--tly-t-md); }

@@ -16,8 +16,23 @@ from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
-from ui import club, connect, done_card
-from ui.common import dec, get_sink, go, guide, html_table, loading, md, money_panel, out, saved_reimbursements, ss, step_bar, usd
+from ui import club, connect, done_card, sheet_peek
+from ui.common import (
+    dec,
+    get_sink,
+    go,
+    guide,
+    html_table,
+    is_demo,
+    loading,
+    md,
+    money_panel,
+    out,
+    saved_reimbursements,
+    ss,
+    step_bar,
+    usd,
+)
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
                   "Grants and funding", "Donations", "Fundraiser", "Other"]
@@ -162,11 +177,8 @@ def csv_downloads(views: dict, event: EventInfo) -> None:
                                 mime="text/csv", key=f"dl-{title}")
 
 
-def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], xlsx: bytes | None,
-              waiting: list) -> None:
-    """Push to Google Sheets and/or get the Excel file. Whichever is done first, Close out becomes the green button."""
-    done = bool(ss.event.get("pushed_at") or ss.event.get("excel_at"))
-    kind = "secondary" if done else "primary"
+def push_buttons(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], xlsx: bytes | None,
+                 waiting: list, kind: str) -> None:
     with st.container(horizontal=True, key="push-row"):
         if sink.label == "Google Sheets":
             if st.button("Push to Google Sheets", type=kind, disabled=bool(waiting), icon=":material/upload:",
@@ -177,6 +189,18 @@ def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
                 st.rerun()
         elif xlsx and excel_button(xlsx, event, "Save and get Excel", "push-excel", type=kind, disabled=bool(waiting)):
             push(sink, receipts, event, income)  # without Sheets, saving the books is the push
+
+
+def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], views: dict,
+              xlsx: bytes | None, waiting: list) -> None:
+    """Push to Google Sheets and/or get the Excel file. Whichever is done first, Close out becomes the green button."""
+    done = bool(ss.event.get("pushed_at") or ss.event.get("excel_at"))
+    kind = "secondary" if done else "primary"
+    if is_demo():  # no club sheet in the demo: Sheets opens a peek at the book, with the Excel file in it
+        sheet_peek.show(views, done, waiting, lambda: excel_button(xlsx, event, "Download as Excel", "push-excel", type=kind)
+                        and push(sink, receipts, event, income))
+    else:
+        push_buttons(sink, receipts, event, income, xlsx, waiting, kind)
     if not done and not waiting:  # pushing is optional: a club can go straight on
         with st.container(border=True, key="next-card"):
             c = st.columns([4, 1.3], vertical_alignment="center")
@@ -212,13 +236,13 @@ def show(event: EventInfo) -> None:
     sink, err = get_sink()
     if err:
         st.error(err)
-    if sink.label != "Google Sheets":
+    if sink.label != "Google Sheets" and not is_demo():
         with st.expander("Connect Google Sheets (optional - otherwise your books come out as an Excel file)",
                          icon=":material/link:", expanded=not err):
             connect.box("summary")
     views = local_views(receipts, event, income, saved_reimbursements(sink)) if any(r.counts for r in receipts) else {}
     xlsx = book_xlsx(views, local_transactions(receipts), TX_FIELDS) if views else None
-    books_row(sink, receipts, event, income, xlsx, waiting)
+    books_row(sink, receipts, event, income, views, xlsx, waiting)
     again = None if sink.label == "Google Sheets" or not xlsx else (
         lambda: excel_button(xlsx, event, "Save again", "push-again", type="primary", width="stretch"))
     done_card.show(sink, receipts, event, income, lambda: push(sink, receipts, event, income), again)

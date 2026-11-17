@@ -46,6 +46,16 @@ def test_demo_and_real_never_share_data():
     assert any("Demo mode" in h.value for h in fresh.sidebar.html)
 
 
+def test_tour_end_set_up_my_club_goes_straight_to_the_club_form():
+    base = Path(os.environ["TALLYABLE_OUTPUT_DIR"])
+    at = AppTest.from_file(APP, default_timeout=30)
+    at.query_params["demo"] = "off"  # the tour's last "Set up my club"
+    at.run()
+    assert not at.exception
+    assert (base / "mode.txt").read_text() == "real" and not any("Demo mode" in h.value for h in at.sidebar.html)
+    assert at.text_input(key="club-first-name")  # the club form, not the welcome page again
+
+
 def test_real_books_never_go_to_the_env_test_sheet(monkeypatch):
     monkeypatch.setenv("TALLYABLE_SHEET_ID", "the-test-sheet")
     from ui import common
