@@ -424,10 +424,11 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-sheet td, .tly-sheet th { border: 1px solid var(--tly-line); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .tly-sheet th { background: var(--tly-paper-soft); color: var(--tly-soft); font-weight: 500; text-align: center; position: sticky; top: 0; }
 .tly-sheet tr th:first-child { position: sticky; left: 0; }
-/* Loading (Kevin's pick: the thin bar): while the app works, a green bar runs across the very top and the page
-   blurs. After a click it waits .3s, so a quick one doesn't flash; pages with their own loading card (Tally reading,
-   writing to the sheet) stay sharp. On a first load the page is still settling after the run, so the bar finishes
-   and the blur clears over .8s once it's drawn (app.py turns that on for the first run only). */
+/* Loading (Kevin's pick: the thin bar): while the app works, a green bar runs across the very top. After a click it
+   waits .3s, so a quick one doesn't flash. No blur (it "flashbanged" on every short wait, Kevin 2026-11-17): only a
+   wait past 1.5s fades the page a little, so it reads as busy. Pages with their own loading card (Tally reading,
+   writing to the sheet) stay as they are. On a first load the bar finishes and the page fades in over .8s once it's
+   drawn (app.py turns that on for the first run only). */
 [data-testid="stApp"]::before { content: ""; position: fixed; z-index: 1000002; left: 0; top: 0; height: 4px; width: 0;
   background: var(--tly-forest); animation: var(--tly-bar-in, none) .8s ease-in both; }
 [data-testid="stApp"]:is([data-test-script-state="running"], [data-test-script-state="initial"]):not(:has(.tly-loading))::before {
@@ -436,7 +437,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 @keyframes tly-bar-in { from { width: 60%; } 80% { width: 100%; opacity: 1; } to { width: 100%; opacity: 0; } }
 [data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: var(--tly-load-in, none) .8s ease-in both; }
 [data-testid="stApp"]:is([data-test-script-state="running"], [data-test-script-state="initial"]):not(:has(.tly-loading))
-  :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: tly-load-blur .2s ease-out .3s both; }
-@keyframes tly-load-blur { to { filter: blur(4px); } }
-@keyframes tly-load-in { from, 50% { filter: blur(4px); } to { filter: none; } }
+  :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: tly-load-fade .4s ease-out 1.5s both; }
+@keyframes tly-load-fade { to { opacity: .6; } }
+@keyframes tly-load-in { from, 50% { opacity: .6; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { [data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: none !important; } }
