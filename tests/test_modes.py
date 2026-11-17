@@ -52,3 +52,19 @@ def test_real_books_never_go_to_the_env_test_sheet(monkeypatch):
     monkeypatch.setitem(common.ss, "demo_mode", False)
     sink, error = common.get_sink()
     assert sink.label != "Google Sheets" and error is None
+
+
+def test_demo_never_spends_api_credits(monkeypatch):
+    monkeypatch.setenv("TALLYABLE_EXTRACTOR", "")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+    from treasurer.reader import make_extractor
+    assert make_extractor(demo=True)[1] == "stub"
+
+
+def test_intro_has_every_picture_it_draws():
+    import re
+    intro = Path(__file__).parent.parent / "static" / "intro"
+    page = (intro / "index.html").read_text()
+    names = set(re.findall(r"[\w/.-]+\.png", page))
+    names |= {f"student/s1-{k}.png" for k in re.findall(r"'(look|cheer|dizzy)'", page)}  # built from a template
+    assert names and not [n for n in names if not (intro / n).exists()]

@@ -315,7 +315,7 @@ def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo)
 def show(event: EventInfo) -> None:
     st.header("Upload receipts")
     step_bar("1. Upload")
-    ex, reader = make_extractor()
+    ex, reader = make_extractor(demo=is_demo())
     if reader == "claude":
         st.success(f"Reading receipts with Claude ({ex.model}).")
     elif not is_demo() and os.getenv("TALLYABLE_EXTRACTOR", "").lower() == "stub":  # start.bat, not the key
