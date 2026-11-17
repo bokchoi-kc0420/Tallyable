@@ -202,7 +202,7 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     # nobody's tagged yet: drop Kevin's, hit Kevin, drop Minjun's, hit Minjun. Once all have one, it sets them all.
     blank = [name for name, _ in sources if not ss.get(f"payer-{name}")]
     some = bool(blank) and len(blank) < len(sources)
-    if c[1].button("Apply to the rest" if some else "Apply to all", key="apply-all",
+    if c[1].button("Apply to rest" if some else "Apply to all", key="apply-all",
                    type="primary" if untagged else "secondary"):
         for name in blank or [name for name, _ in sources]:
             ss[f"payer-{name}"] = everyone

@@ -138,10 +138,10 @@ def edit_form(rid: str, flags: list) -> None:
                       columns=["unit", "item", "price", "category", "returned", "taxed", "for_item_above"])
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
-               "item": st.column_config.TextColumn("Item", width=200),
+               "item": st.column_config.TextColumn("Item", width=188),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
-               "returned": st.column_config.CheckboxColumn("Leave out", width=80,
+               "returned": st.column_config.CheckboxColumn("Leave out", width=92,
                                                            help="Not the club's: a personal buy, or taken back")}
     if r.status is Status.DRAFTED and not all(i.returned for i in r.items) and len(r.items) > 2:
         # A grocery run where only a line or two was for the club: leave everything out, then untick the club's.
