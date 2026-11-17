@@ -137,7 +137,8 @@ def edit_form(rid: str, flags: list) -> None:
                 else "<br><small>Changed your mind? Hit Reopen.</small>")
         st.markdown(f'<div class="tly-decided {tone}"><b>{label.capitalize()}</b>{why}{undo}</div>',
                     unsafe_allow_html=True)
-    look_card(rid, flags if r.status is Status.DRAFTED else [])
+    # Left-out lines get a small chip by the table instead of a card: the ticks already say which ones.
+    look_card(rid, [f for f in flags if f.code != "returned_item"] if r.status is Status.DRAFTED else [])
     st.markdown('<p class="tly-edit-hint"><i class="ms">edit</i>Got something wrong? Click any box or cell to fix it.</p>',
                 unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
@@ -161,6 +162,10 @@ def edit_form(rid: str, flags: list) -> None:
             ss.receipts[rid] = r.model_copy(update={"items": [i.model_copy(update={"returned": True}) for i in r.items]})
             ss.pop(f"items-{rid}", None)
             st.rerun()
+    out = [i for i in r.items if i.returned]
+    if out:
+        st.markdown(f'<span class="tly-left-out">↺ {len(out)} left out '
+                    f'<em>({r.left_out_why})</em><b>&minus;{usd(r.returned_amount)}</b></span>', unsafe_allow_html=True)
     # Tax marks and discount links ride along hidden, so an edit never drops them.
     edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns,
                             column_order=list(columns))
@@ -190,7 +195,8 @@ def edit_form(rid: str, flags: list) -> None:
             ss.receipts[rid] = new
             st.rerun()  # re-run checks on the edited values
 
-    st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
+    st.caption(md(f"Goes in the books as {usd(r.posted_amount)}" if out else
+                  f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
     decided = r.status is not Status.DRAFTED
     blocked = not decided and not can_approve(flags)
     note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
