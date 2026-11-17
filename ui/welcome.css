@@ -42,9 +42,13 @@
   border-right: 3px solid var(--tly-outline); border-bottom: 3px solid var(--tly-outline); transform: rotate(45deg); }
 @keyframes tly-pop { from { transform: scale(0); } to { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .tly-printer, .st-key-welcome-rc, .tly-welcome-bub { animation: none; } }
-/* The intro animation over the whole window, Skip in the corner */
-#tly-intro { position: fixed; inset: 0; z-index: 999998; background: var(--tly-page); }
-#tly-intro iframe { width: 100%; height: 100%; border: 0; }
-#tly-intro .tly-intro-skip { position: absolute; right: 24px; top: 24px; padding: 8px 24px; border-radius: 999px; background: var(--tly-white);
-  border: 2px solid var(--tly-outline); font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-ink); text-decoration: none; box-shadow: var(--tly-shadow); }
-#tly-intro .tly-intro-skip:hover { background: var(--tly-sun-tint); }
+/* The intro as a popup over the blurred home page, kept at the 16:10 it's drawn in, with an X on its corner */
+#tly-intro { position: fixed; inset: 0; z-index: 999998; display: grid; place-items: center; background: rgba(31,42,34,.45);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#tly-intro .frame { position: relative; width: min(90vw, 88vh * 1.6); aspect-ratio: 16 / 10; border: 4px solid var(--tly-outline);
+  border-radius: var(--tly-r); box-shadow: var(--tly-shadow); background: var(--tly-page); }
+#tly-intro iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: var(--tly-r-in); }
+#tly-intro .tly-intro-x { position: absolute; right: -24px; top: -24px; display: grid; place-items: center; width: 48px; height: 48px;
+  border-radius: 50%; background: var(--tly-white); border: 3px solid var(--tly-outline); box-shadow: var(--tly-shadow);
+  font: 700 var(--tly-t-lg) var(--tly-head); color: var(--tly-ink); text-decoration: none; }
+#tly-intro .tly-intro-x:hover { background: var(--tly-sun-tint); }
