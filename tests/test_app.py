@@ -427,6 +427,18 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     assert not at.exception
 
 
+def test_real_approve_all_shows_each_receipt_first():
+    at = new_app().run()
+    upload_and_draft(at)
+    at.session_state["demo_mode"] = False  # real money: a one-line-per-receipt check before anything is approved
+    at.sidebar.radio[0].set_value("2. Review").run()
+    at.button(key="approve-clean").click().run()
+    assert not any(r.status is Status.APPROVED for r in at.session_state["receipts"].values())
+    at.button(key="check-all-yes").click().run()
+    assert any(r.status is Status.APPROVED for r in at.session_state["receipts"].values())
+    assert not at.exception
+
+
 def test_my_funder_rules():
     at = new_app().run()
     upload_and_draft(at)
@@ -503,14 +515,20 @@ def test_connect_catches_a_viewer_only_share(monkeypatch):
                 raise PermissionError("403")
 
     class Client:
-        def __init__(self, editor):
-            self.editor = editor
+        def __init__(self, editor, anyone=False):
+            self.editor, self.anyone = editor, anyone
 
         def open_by_key(self, key):
             return Book(self.editor)
 
+        def list_permissions(self, key):
+            return [{"type": "anyone", "role": "writer"}] if self.anyone else [{"type": "user", "role": "writer"}]
+
     monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=False))
-    assert "Editor, not Viewer" in connect.check({"book": "x"})
+    assert "add the email above as Editor" in connect.check({"book": "x"})
+    # Kevin's 2026-11-17 run: link set to "anyone can edit" instead of adding the bot. The books would be public.
+    monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True, anyone=True))
+    assert "Anyone with the link can edit" in connect.check({"book": "x"})
     monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True))
     assert connect.check({"book": "x"}) is None
 

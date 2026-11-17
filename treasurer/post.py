@@ -17,11 +17,18 @@ TX_FIELDS = ["event_id", "receipt_id", "date", "place", "payer", "category", "it
              "amount", "returned", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted", "image_file"]
 
 
+def left_out_cell(r: Receipt, i) -> str:
+    """The Transactions `returned` cell: FALSE, TRUE (taken back to the store) or PERSONAL (the payer's own buy)."""
+    if not i.returned:
+        return "FALSE"
+    return "TRUE" if r.left_out_why == "returned" else "PERSONAL"
+
+
 def transaction_rows(r: Receipt) -> list[dict]:
     """Long format: one row per line item. Every sheet layout is built from these."""
     return [dict(event_id=r.event_id, receipt_id=r.receipt_id, date=r.date.isoformat(), place=r.place,
                  payer=r.payer or "", category=i.category, item=i.item, unit=i.unit, price=str(i.price),
-                 amount=str(i.amount), returned="TRUE" if i.returned else "FALSE", receipt_tax=str(r.tax),
+                 amount=str(i.amount), returned=left_out_cell(r, i), receipt_tax=str(r.tax),
                  receipt_tip=str(r.tip), receipt_total=str(r.total), receipt_posted=str(r.posted_amount),
                  image_file=r.image_file or "") for i in r.items]
 

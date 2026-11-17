@@ -50,7 +50,8 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
         payer = f["payer"] or "No payer"
         own = defaultdict(Decimal)
         for i in items:
-            rows.append(["", i["category"], i["item"] + (" (returned)" if is_returned(i) else ""),
+            why = {"TRUE": " (returned)", "PERSONAL": " (personal)"}.get(str(i["returned"]).upper(), "")
+            rows.append(["", i["category"], i["item"] + why,
                          int(D(i["unit"])), num(D(i["price"])), "", "", "", ""])
             if not is_returned(i):
                 own[i["category"]] += D(i["amount"])

@@ -47,6 +47,16 @@ def test_returned_share_rounds_to_cents():
     assert r.posted_amount + r.returned_amount == r.total
 
 
+def test_left_out_item_takes_its_own_discount_and_only_its_own_tax():
+    # Real Safeway receipt (Maid Cafe, 2026-11-17): foil 5.99 T, butter 4.49 S with Member Savings -0.50
+    # printed under it, tax .55 (all on the foil). Leaving out the butter must leave the foil + all its tax.
+    lines = [LineItem(category="Other", item="Foil", unit=1, price=Decimal("5.99"), taxed=True),
+             LineItem(category="Food", item="Butter", unit=1, price=Decimal("4.49"), taxed=False, returned=True),
+             LineItem(category="Other", item="Member Savings", unit=1, price=Decimal("-0.50"), for_item_above=True)]
+    r = receipt(items=lines, tax="0.55")
+    assert r.posted_amount == Decimal("6.54")
+
+
 def test_refund_on_a_separate_slip_cannot_be_negative():
     # A store refund slip adds up to less than $0. The model refuses it, so a refund
     # must be recorded as `returned` on the original receipt instead.
@@ -145,3 +155,10 @@ def test_tax_on_mostly_returned_receipt_uses_full_subtotal():
     # The tax rate is judged on what was printed, before returns.
     r = receipt(items=[item("A", "90.00", returned=True), item("B", "10.00")], tax="8.00")
     assert "unusual_tax" not in codes(r)
+
+
+def test_personal_lines_say_personal_not_returned():
+    from treasurer.post import transaction_rows
+    r = receipt(items=[item("Ramen", "6.99", returned=True), item("Green plum", "4.29")])
+    assert [row["returned"] for row in transaction_rows(r)] == ["PERSONAL", "FALSE"]
+    assert r.model_copy(update={"left_out_why": "returned"}).posted_amount == r.posted_amount == Decimal("4.29")

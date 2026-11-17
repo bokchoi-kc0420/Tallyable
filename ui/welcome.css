@@ -52,3 +52,7 @@
   border-radius: 50%; background: var(--tly-white); border: 3px solid var(--tly-outline); box-shadow: var(--tly-shadow);
   font: 700 var(--tly-t-lg) var(--tly-head); color: var(--tly-ink); text-decoration: none; }
 #tly-intro .tly-intro-x:hover { background: var(--tly-sun-tint); }
+#tly-intro .tly-intro-skip { position: absolute; right: 0; bottom: -48px; padding: 8px 16px; border-radius: 999px;
+  background: var(--tly-white); border: 2px solid var(--tly-outline); font: 600 var(--tly-t-md) var(--tly-head);
+  color: var(--tly-ink); text-decoration: none; }
+#tly-intro .tly-intro-skip:hover { background: var(--tly-sun-tint); }

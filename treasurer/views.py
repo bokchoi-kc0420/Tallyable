@@ -63,8 +63,9 @@ def income_sources(event: dict) -> list[str]:
 
 
 def is_returned(row: dict) -> bool:
-    """A Transactions row's `returned` cell, which comes back as TRUE/FALSE text or a bool."""
-    return str(row["returned"]).upper() == "TRUE"
+    """A Transactions row is left out of the books: its `returned` cell is TRUE (returned) or PERSONAL.
+    The cell comes back as text or a bool."""
+    return str(row["returned"]).upper() in ("TRUE", "PERSONAL")
 
 
 def group(tx: list[dict]) -> OrderedDict[str, OrderedDict[str, list[dict]]]:

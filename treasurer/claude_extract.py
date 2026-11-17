@@ -54,7 +54,11 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
   screenshot it is the order total actually charged.
 - Fees (delivery, service, bag, small-order) are their own lines, category Other.
 - A discount, coupon, promo or member saving is its own line with a NEGATIVE price,
-  category Other. Copy its wording as the item name.
+  category Other. Copy its wording as the item name. Set `for_item_above` when it is printed
+  under one item and saves on that item (e.g. "Member Savings" under it); leave it false for a
+  discount on the whole order.
+- Set `taxed` on each line only if the receipt marks which lines are taxed (e.g. T or TX vs S, N
+  or F after the price). Leave it empty when the receipt has no such marks.
 - Dates as YYYY-MM-DD. Money as plain decimals with two places, no currency symbol.
 - Receipts may be partly in Korean. Copy item names as printed; add an English gloss
   in parentheses only if you are sure of it.
@@ -75,6 +79,8 @@ class ExtractedItem(BaseModel):
     unit: int
     price: str = Field(description="Unit price before tax, e.g. '4.99'; negative for a discount, e.g. '-4.00'")
     returned: bool = False
+    taxed: bool | None = None
+    for_item_above: bool = False
 
 
 class ExtractedReceipt(BaseModel):
@@ -161,13 +167,15 @@ class ClaudeExtractor:
             d = date.fromisoformat(x.date)
             # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
             items = [LineItem(category=i.category, item=i.item, unit=i.unit,
-                              price=_money(i.price, "price", filename), returned=i.returned) for i in x.items if i.unit > 0]
+                              price=_money(i.price, "price", filename), returned=i.returned,
+                              taxed=i.taxed, for_item_above=i.for_item_above) for i in x.items if i.unit > 0]
             return Receipt(
                 receipt_id=receipt_id, event_id=event_id, place=x.place, date=d,
                 payer=None,  # payer comes from the upload tag, never from the AI
                 items=items, tax=_money(x.tax, "tax", filename), tip=_money(x.tip, "tip", filename),
                 total=_money(x.total, "total", filename), image_file=filename,
                 image_hash=hashlib.sha256(image).hexdigest(), review_note=note, proof=x.proof,
+                left_out_why="returned" if any(i.returned for i in items) else "personal",
             )
         except ValueError as e:  # bad date, no items, negative money
             raise ExtractionError(f"Claude's reading of {filename} did not fit the receipt format: {e}") from e

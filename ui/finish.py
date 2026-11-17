@@ -66,10 +66,22 @@ def set_finished(done: bool, step: str = "4. Close out", late: bool = False) -> 
             ss.finish_note = f"Finished, but the sheet's Receipts tab didn't update ({e}). Push again on Summary to redraw it."
     ss.event = {**ss.event, "finished": done, "late": late}
     ss.pop("last_draft", None)  # "Done! I read all 14" is old news on a reopened Upload
-    ss.revisit = False  # just finished: the next step is Club home, not Reopen
     ss.rip = done  # the ticket rip plays once, right after Finish event: not on every visit to the page
     ss.step = step
     save_session()
+
+
+@st.dialog("Reopen this event?", on_dismiss=lambda: ss.pop("confirm_reopen", None))
+def confirm_reopen(name: str, net: Decimal) -> None:
+    gone = f"its {usd(net)}" if net >= 0 else f"its {usd(-net)} loss"
+    st.markdown(f'<p class="tly-confirm-note"><b>{html.escape(name)}</b> goes back to Close out. The club balance '
+                f"leaves out {gone} until you finish it again.</p>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if c[0].button("Keep it closed", key="reopen-no", width="stretch"):
+        ss.pop("confirm_reopen", None)
+        st.rerun()
+    c[1].button("Reopen it", type="primary", key="reopen-yes", width="stretch",
+                on_click=lambda: (ss.pop("confirm_reopen", None), set_finished(False)))
 
 
 def next_event() -> None:
@@ -158,13 +170,7 @@ def show(event: EventInfo) -> None:
                     row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
                                   icon_position="right", on_click=set_finished, args=(False, step), disabled=locked)
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
-            # Back from Past events it's usually to change something, so Reopen leads. Right after finishing, home does.
-            lead = bool(ss.get("revisit")) and not locked
-            if lead:
-                st.button("Reopen this event", key="reopen-event", type="primary", icon=":material/undo:",
-                          on_click=set_finished, args=(False,), help=REOPEN_HELP)
-            st.button("Back to club home", type="secondary" if lead else "primary", key="to-home", icon=":material/home:",
-                      on_click=go_home)
+            st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
             st.button("Start the next event", key="next-event", on_click=next_event)
             if not locked:
                 st.button("Add a missed receipt", key="add-missed", icon=":material/add:", on_click=set_finished,
@@ -193,8 +199,11 @@ def show(event: EventInfo) -> None:
     if locked:
         st.caption(f"Locked: this event is from the {school_year(event.date).replace('-', '–')} school year, "
                    "so it can't be reopened or take new receipts.")
-    elif not lead:
-        st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:", on_click=set_finished,
-                  args=(False,), help=REOPEN_HELP)
+    else:
+        # Reopening takes a closed event out of the club balance, so one stray click can't do it.
+        st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
+                  on_click=lambda: ss.update(confirm_reopen=True), help=REOPEN_HELP)
+        if ss.get("confirm_reopen"):
+            confirm_reopen(event.name, t["net"])
     if ss.pop("rip", False):  # last, once the whole page is built: its script looks for the Past events row
         st.html(rip(event.date, event.name, len(ss.receipts), ss.event.get("color")) + confetti(), unsafe_allow_javascript=True)

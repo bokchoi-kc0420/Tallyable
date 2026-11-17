@@ -44,10 +44,11 @@ def intro() -> None:
     # intro's last button has to reload this page (?demo=go). No tags in the script text: Streamlit drops those scripts.
     st.html("""<script>if (!document.getElementById("tly-intro")) {
       const d = document.createElement("div"), box = document.createElement("div"), f = document.createElement("iframe"),
-        a = document.createElement("a");
+        a = document.createElement("a"), s = document.createElement("a");
       d.id = "tly-intro"; box.className = "frame"; f.src = "app/static/intro/index.html"; f.title = "Tallyable intro";
       a.className = "tly-intro-x"; a.href = "?demo=go"; a.textContent = "\u2715"; a.setAttribute("aria-label", "Close the intro");
-      box.append(f, a); d.append(box); document.body.append(d); }</script>""", unsafe_allow_javascript=True)
+      s.className = "tly-intro-skip"; s.href = "?demo=go"; s.textContent = "Skip intro \u2192";
+      box.append(f, a, s); d.append(box); document.body.append(d); }</script>""", unsafe_allow_javascript=True)
 
 
 def receipt() -> None:
