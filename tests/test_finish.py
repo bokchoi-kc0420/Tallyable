@@ -54,6 +54,8 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     hidden = ".st-key-event-group { display: none; }"
     assert any(hidden in h.value for h in at.get("html"))  # its ticket left the sidebar
     at.button(key="reopen-event").click().run()
+    assert at.session_state["event"]["finished"]  # a closed book asks first
+    at.button(key="reopen-yes").click().run()
     assert not at.session_state["event"]["finished"]
     assert at.sidebar.radio(key="step").value == "4. Close out"
     assert any(b.key == "finish-event" for b in at.button)
