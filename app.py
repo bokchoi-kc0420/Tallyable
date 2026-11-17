@@ -17,8 +17,11 @@ from ui import close_out, club, club_home, finish, home, review, sidebar, start,
 from ui.common import ART, ROOT, is_demo, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
+first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
+ss.loaded = True
+settle = "[data-testid=stApp]{--tly-load-in:tly-load-in;--tly-bar-in:tly-bar-in}" if first_load else ""
 st.markdown("<style>" + "".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "ui").glob("*.css")))
-            + "</style>", unsafe_allow_html=True)
+            + settle + "</style>", unsafe_allow_html=True)
 
 # Password gate. Only on when APP_PASSWORD is set (always set it before deploying:
 # the app can spend API credit). compare_digest avoids leaking the password by timing.
