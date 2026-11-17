@@ -21,13 +21,25 @@ def check(ids: dict) -> str | None:
         try:
             book = client.open_by_key(sid)
         except Exception:
-            return f"Tally can't open your {what} sheet yet. Did you share it?"
+            return f"Tally can't open your {what} sheet yet. In Share, paste the email above into Add people as Editor!"
         try:  # rewrite the title as it is: harmless, but only an Editor may do it
             book.batch_update({"requests": [{"updateSpreadsheetProperties": {
                 "properties": {"title": book.title}, "fields": "title"}}]})
         except Exception:
-            return f"Tally can see your {what} sheet but can't write to it. Share it as Editor, not Viewer!"
+            return f"Tally can see your {what} sheet but can't edit it. In Share, add the email above as Editor!"
+        if open_to_anyone(client, sid):
+            return (f"Anyone with the link can edit your {what} sheet right now. In Share, add the email above "
+                    "under Add people, then set General access back to Restricted.")
     return None
+
+
+def open_to_anyone(client, sid: str) -> bool:
+    """The sheet's link lets anyone edit it: the club's books would be open to whoever the link reaches.
+    False when Google won't say, so a sheet never gets stuck on this check."""
+    try:
+        return any(p.get("type") == "anyone" and p.get("role") in ("writer", "owner") for p in client.list_permissions(sid))
+    except Exception:
+        return False
 
 
 @st.dialog("Connect your Google Sheets", width="large")
@@ -42,8 +54,10 @@ def box(key: str) -> None:
         st.caption("Google Sheets isn't set up on this copy of Tallyable, so your books come out as an Excel file.")
         return
     saved = linked()
-    st.markdown("**1. Share your sheets with Tally** as Editor (Share button, top right in Google Sheets):")
+    st.markdown("**1. Share your sheets with Tally:** hit Share in Google Sheets, paste this into **Add people**, "
+                "and pick Editor.")
     st.code(email, language=None)
+    st.caption("Leave General access on Restricted, so only Tally and the people you add can open your books.")
     st.markdown("**2. Paste the links here.**")
     book = st.text_input("Event books (balance sheet, expenses, receipts)", key=f"{key}-book",
                          value=f"https://docs.google.com/spreadsheets/d/{saved['book']}" if saved.get("book") else "",
@@ -61,7 +75,7 @@ def box(key: str) -> None:
     with st.spinner("Checking Tally can open it..."):
         problem = check(ids)
     if problem:
-        st.error(problem + f" Share it with {email} as Editor, then hit Connect again.")
+        st.error(problem + " Then hit Connect again.")
         return
     club.save(sheets=ids)
     st.toast("Connected! Push sends your books there now.", icon=":material/celebration:")

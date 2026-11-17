@@ -515,14 +515,20 @@ def test_connect_catches_a_viewer_only_share(monkeypatch):
                 raise PermissionError("403")
 
     class Client:
-        def __init__(self, editor):
-            self.editor = editor
+        def __init__(self, editor, anyone=False):
+            self.editor, self.anyone = editor, anyone
 
         def open_by_key(self, key):
             return Book(self.editor)
 
+        def list_permissions(self, key):
+            return [{"type": "anyone", "role": "writer"}] if self.anyone else [{"type": "user", "role": "writer"}]
+
     monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=False))
-    assert "Editor, not Viewer" in connect.check({"book": "x"})
+    assert "add the email above as Editor" in connect.check({"book": "x"})
+    # Kevin's 2026-11-17 run: link set to "anyone can edit" instead of adding the bot. The books would be public.
+    monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True, anyone=True))
+    assert "Anyone with the link can edit" in connect.check({"book": "x"})
     monkeypatch.setattr(connect, "bot_client", lambda root, key: Client(editor=True))
     assert connect.check({"book": "x"}) is None
 
