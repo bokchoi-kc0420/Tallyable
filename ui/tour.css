@@ -28,10 +28,10 @@
 #tly-tour.pop .bub { animation: tly-tour-fade .3s ease-out .15s both; }
 @keyframes tly-tour-in { from { opacity: 0; } }
 @keyframes tly-tour-fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { #tly-tour.pop .tal, #tly-tour.pop .bub, #tly-tour .ring, #tly-tour.clear .ring { animation: none; transition: none; } }
-/* A stop where the page has to be edited (fix a flagged receipt): only the ring, pulsing, so nothing sits on the boxes */
-#tly-tour.clear .veil, #tly-tour.clear .tal, #tly-tour.clear .bub { display: none; }
-#tly-tour.clear .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { #tly-tour.pop .tal, #tly-tour.pop .bub, #tly-tour .ring, #tly-tour.nudge .ring { animation: none; transition: none; } }
+/* Nudge: the page is theirs (no blur); the green button pulses with Tally's hand on it. Quiet: just the ring. */
+#tly-tour.nudge .veil, #tly-tour.quiet .tal, #tly-tour.quiet .bub, #tly-tour.away .tal, #tly-tour.away .bub { display: none; }
+#tly-tour.nudge .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }
 @keyframes tly-tour-pulse { 50% { outline-offset: 8px; } }
 /* bubble beside his face when there's no room over his head: the tail turns to point at him */
 #tly-tour .bub.side::after { left: -11px; top: 24px; bottom: auto; margin-left: 0; transform: rotate(135deg); }
