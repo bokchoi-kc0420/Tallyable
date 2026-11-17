@@ -5,9 +5,9 @@ import html
 
 import streamlit as st
 
-from treasurer.reaction import react
+from treasurer.reaction import canned, react
 from ui import club
-from ui.common import mascot_uri, payers, ss
+from ui.common import is_demo, mascot_uri, payers, ss
 from ui.sidebar import event_id_for
 from ui.tickets import ticket
 
@@ -58,9 +58,9 @@ def members_box() -> None:
 
 
 @st.cache_data(show_spinner=False, max_entries=200)
-def reaction(name: str) -> str:
-    """Once per name: Claude's line (or the canned one) doesn't change on reruns."""
-    return react(name)
+def reaction(name: str, demo: bool) -> str:
+    """Once per name: Claude's line (or the canned one) doesn't change on reruns. The demo never calls Claude."""
+    return canned(name) if demo else react(name)
 
 
 def preview(name: str, d, people: int, names: list[str], say: str) -> str:
@@ -103,4 +103,4 @@ def show() -> None:
     slot = right.empty()
     slot.html(preview(name, d, people, names, "…" if named else "Name your event!"))
     if named:
-        slot.html(preview(name, d, people, names, reaction(name)))
+        slot.html(preview(name, d, people, names, reaction(name, is_demo())))

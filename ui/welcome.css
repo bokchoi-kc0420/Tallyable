@@ -1,5 +1,5 @@
-/* Welcome (welcome.py): sage page, a printer at the top, and the close-out receipt feeding out of it in short jerky
-   steps like a thermal printer. Tally stands to its left; his bubble pops once the receipt is torn off. */
+/* Welcome (welcome.py): sage page, a printer at the top, and the close-out receipt sliding out of its slot in one
+   smooth feed (the printer hides the paper still inside it). Tally stands to its left; his bubble pops once the receipt is torn off. */
 .stApp:has(.st-key-welcome) { background: var(--tly-sage); }
 .stApp:has(.st-key-welcome) [data-testid="stMainBlockContainer"] { padding-top: 0; }
 .stApp:has(.st-key-welcome) [data-testid="stHeader"] { background: transparent; }
@@ -16,8 +16,8 @@
 .st-key-welcome-rc { position: relative; z-index: 4; gap: 0; padding: 48px 48px 56px; background: var(--tly-paper-soft);
   -webkit-mask: linear-gradient(black, black) top / 100% calc(100% - 12px) no-repeat, conic-gradient(from -45deg at 50% 100%, black 90deg, transparent 0) bottom / 16px 12px repeat-x;
   mask: linear-gradient(black, black) top / 100% calc(100% - 12px) no-repeat, conic-gradient(from -45deg at 50% 100%, black 90deg, transparent 0) bottom / 16px 12px repeat-x;
-  animation: tly-print 2.6s steps(28, end) .6s both, tly-tug .35s ease-out 3.2s; }
-@keyframes tly-print { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  animation: tly-print 2.4s cubic-bezier(.33, 0, .2, 1) .6s both, tly-tug .35s ease-out 3.2s; }
+@keyframes tly-print { from { transform: translateY(-100%); } }
 @keyframes tly-tug { 50% { transform: translateY(8px); } }
 .st-key-welcome-rc .logo { display: block; height: 40px; margin: 0 auto 8px; }
 .st-key-welcome-rc .ce { margin: 0; text-align: center; font: 600 var(--tly-t-sm) var(--tly-head); letter-spacing: .12em; color: var(--tly-soft); }
