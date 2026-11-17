@@ -5,7 +5,7 @@
 :root{--ink:#0C4226;--text:#1F2A22;--cream:#FAF7E7;--forest:#1C5C36;--dark:#14462A;--line:#E8DFC0;--green:#488B53}
 *{box-sizing:border-box;margin:0}
 body{background:#BFE3F7;font-family:Outfit,sans-serif;color:var(--text);overflow:hidden}
-.stage{position:fixed;left:50%;top:50%;width:1280px;height:800px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--fit,1))}  /* drawn for 1280x800, scaled to cover the window (never a blue sliver at an edge) */
+.stage{position:fixed;left:50%;top:50%;width:1280px;height:800px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--fit,1))}  /* drawn for 1280x800, scaled to cover the window plus 3%, so no sliver of the backdrop shows at an edge */
 #handoff{position:relative;margin-top:24px;z-index:96;text-decoration:none;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .4s,transform .4s cubic-bezier(.3,1.6,.5,1)}
 #handoff.on{opacity:1;transform:none;pointer-events:auto;animation:nudge 1.6s ease-in-out 1s infinite}#handoff:hover{filter:brightness(1.08)}
 #handoff{font-size:24px;padding:16px 32px}  /* the one thing to do once it plays out: big, and it nudges */
@@ -97,7 +97,7 @@ canvas{position:absolute;inset:0;z-index:10}
  <div id="flash"></div>
 </div>
 <script>
-const fit=()=>document.documentElement.style.setProperty('--fit',Math.max(innerWidth/1280,innerHeight/800));fit();addEventListener('resize',fit);
+const fit=()=>document.documentElement.style.setProperty('--fit',Math.max(innerWidth/1280,innerHeight/800)*1.03);fit();addEventListener('resize',fit);
 const QS=new URLSearchParams(location.search),BG=QS.get('bg')||'x',SLOW=+QS.get('slow')||1;document.body.className='bg-'+BG;
 const $=id=>document.getElementById(id),W=1280,H=800,cv=$('c');let g=cv.getContext('2d');cv.width=W;cv.height=H;
 const g1=g,cv2=$('c2'),g2=cv2.getContext('2d');cv2.width=W;cv2.height=H;   // second layer: receipts flying into the ticket pass in front of it
