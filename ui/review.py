@@ -110,14 +110,17 @@ def edit_form(rid: str, flags: list) -> None:
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
     payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
     df = pd.DataFrame([{"unit": i.unit, "item": i.item, "price": float(i.price), "category": i.category,
-                        "returned": i.returned} for i in r.items], columns=["unit", "item", "price", "category", "returned"])
+                        "returned": i.returned, "taxed": i.taxed, "for_item_above": i.for_item_above} for i in r.items],
+                      columns=["unit", "item", "price", "category", "returned", "taxed", "for_item_above"])
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
                "item": st.column_config.TextColumn("Item", width=200),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
                "returned": st.column_config.CheckboxColumn("Returned", width=80)}
-    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns)
+    # Tax marks and discount links ride along hidden, so an edit never drops them.
+    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns,
+                            column_order=list(columns))
     c1, c2, c3 = st.columns(3)
     tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
     tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
@@ -125,7 +128,9 @@ def edit_form(rid: str, flags: list) -> None:
 
     try:
         items = [LineItem(category=row.category, item=str(row.item), unit=int(row.unit),
-                          price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned))
+                          price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned),
+                          taxed=None if pd.isna(row.taxed) else bool(row.taxed),
+                          for_item_above=bool(row.for_item_above) if pd.notna(row.for_item_above) else False)
                  for row in edited.itertuples() if pd.notna(row.item) and str(row.item).strip()]
         new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items,
                                        tax=dec(tax), tip=dec(tip), total=dec(total)))
