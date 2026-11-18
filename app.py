@@ -14,7 +14,7 @@ import streamlit as st
 
 from treasurer import session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
-from ui.common import ART, ROOT, is_demo, out, ss
+from ui.common import ART, ROOT, hosted, is_demo, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
@@ -33,6 +33,12 @@ if os.getenv("APP_PASSWORD") and not ss.get("authed"):
         st.rerun()
     if pw:
         st.error("Wrong password.")
+    st.stop()
+
+# The hosted link: each treasurer signs in with Google, so their clubs, events and sheets stay theirs.
+if hosted() and not st.user.is_logged_in:
+    st.header("Tallyable")
+    st.button("Sign in with Google", type="primary", icon=":material/login:", on_click=st.login)
     st.stop()
 
 welcome.start_demo_from_link()  # the intro's Skip / "Try it with these receipts" link

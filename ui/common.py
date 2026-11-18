@@ -3,7 +3,9 @@ walker bar, tables, the money bars)."""
 from __future__ import annotations
 
 import base64
+import hashlib
 import html
+import json
 import os
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -15,8 +17,7 @@ from treasurer.post import LocalCsvSink, event_totals
 from treasurer.sheets import GoogleSheetsSink
 
 ROOT = Path(__file__).parent.parent
-BASE = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
-MODE_FILE = BASE / "mode.txt"  # "demo" or "real": which folder a new tab opens (none yet: real)
+DATA = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
@@ -32,17 +33,43 @@ TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small
 ss = st.session_state
 
 
+def hosted() -> bool:
+    """The hosted link: Google sign-in is set up in secrets.toml. Locally there is none."""
+    try:
+        return "auth" in st.secrets
+    except Exception:  # no secrets.toml
+        return False
+
+
+def signed_in_email() -> str | None:
+    try:
+        return st.user.email.lower() if st.user.is_logged_in else None
+    except Exception:  # sign-in isn't set up (running locally)
+        return None
+
+
+def base() -> Path:
+    """Locally, output/. On the hosted link each Google account gets its own folder,
+    so one club never opens another club's events or saved progress."""
+    email = signed_in_email()
+    return DATA / "users" / hashlib.sha256(email.encode()).hexdigest()[:16] if email else DATA
+
+
+def mode_file() -> Path:
+    return base() / "mode.txt"  # "demo" or "real": which folder a new tab opens (none yet: real)
+
+
 def is_demo() -> bool:
     """Demo (sample club, fake receipts) or real (your club). Each tab keeps the mode it opened in,
     so a switch in one tab can't send another tab's event into the wrong folder."""
     if "demo_mode" not in ss:
-        ss.demo_mode = MODE_FILE.exists() and MODE_FILE.read_text().strip() == "demo"  # a new install opens the real app
+        ss.demo_mode = mode_file().exists() and mode_file().read_text().strip() == "demo"  # a new install opens the real app
     return ss.demo_mode
 
 
 def out() -> Path:
     """This mode's own data folder. Demo and real never share a file."""
-    return BASE / ("demo" if is_demo() else "real")
+    return base() / ("demo" if is_demo() else "real")
 
 
 def past() -> Path:
@@ -64,7 +91,10 @@ def load_cloud_secrets() -> dict | None:
         return None
 
 
-GCP_KEY = load_cloud_secrets()
+# The Google bot's key: from secrets.toml, or (on the hosted link) the whole service_account.json
+# pasted into Doppler as GOOGLE_SERVICE_ACCOUNT_JSON. Locally neither is set and the file in .env is used.
+GCP_KEY = load_cloud_secrets() or (json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+                                   if os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") else None)
 
 
 def dec(text: str, default: str = "0") -> Decimal:
