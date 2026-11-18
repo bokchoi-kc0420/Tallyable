@@ -13,7 +13,7 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.ledger_view import school_year
 from ui import club, welcome
-from ui.common import BASE, FAKE, MODE_FILE, STEPS, is_demo, mascot_uri, out, past, ss, usd
+from ui.common import FAKE, STEPS, base, is_demo, mascot_uri, mode_file, out, past, ss, usd
 from ui.sidebar import DEFAULT_EVENT, event_id_for, open_past, save_session, start_new_event
 
 
@@ -155,8 +155,8 @@ def switch_mode(demo: bool) -> None:
     authed = ss.get("authed")
     ss.clear()
     ss.authed, ss.demo_mode = authed, demo
-    BASE.mkdir(parents=True, exist_ok=True)
-    MODE_FILE.write_text("demo" if demo else "real")
+    base().mkdir(parents=True, exist_ok=True)
+    mode_file().write_text("demo" if demo else "real")
     if not demo:
         ss.view = "club"  # app.py reopens the real club's last event behind it
         return
@@ -179,7 +179,7 @@ def demo_band() -> None:
         return
     with st.container(key="demo-band", horizontal=True, vertical_alignment="center"):
         st.markdown("**You're in the demo** - a sample club with fake receipts. Play around, nothing here is real!")
-        label = "Back to my club" if (BASE / "real" / "clubs.json").exists() else "Set up my club"
+        label = "Back to my club" if (base() / "real" / "clubs.json").exists() else "Set up my club"
         st.button("Watch the intro again", icon=":material/play_circle:", key="intro-again", type="tertiary",
                   on_click=lambda: ss.update(view="intro"))
         st.button(label, icon=":material/arrow_forward:", icon_position="right", key="to-real",

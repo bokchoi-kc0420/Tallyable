@@ -5,16 +5,15 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.common import BASE, mascot_uri, ss
+from ui.common import base, mascot_uri, ss
 
-INTRO_SEEN = BASE / "intro_seen"  # the intro auto-plays in full once; after that the demo opens right away
 LINES = [("Receipts in", "done"), ("Read by Tally", "done"), ("Math checked", "done"), ("Who's owed", "done"),
          ("Pushed to your Sheet", "done")]
 
 
 def watch_demo() -> None:
     """Watch the demo callback: the intro the first time, straight into the demo after that."""
-    if INTRO_SEEN.exists():
+    if (base() / "intro_seen").exists():  # the intro auto-plays in full once; after that the demo opens right away
         from ui.home import switch_mode
         switch_mode(True)
         return
@@ -28,8 +27,8 @@ def start_demo_from_link() -> bool:
     if go not in ("go", "off"):
         return False
     st.query_params.clear()
-    BASE.mkdir(parents=True, exist_ok=True)
-    INTRO_SEEN.touch()
+    base().mkdir(parents=True, exist_ok=True)
+    (base() / "intro_seen").touch()
     from ui.home import switch_mode
     switch_mode(go == "go")
     if go == "off":
