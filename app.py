@@ -12,9 +12,9 @@ import time
 
 import streamlit as st
 
-from treasurer import session_store
+from treasurer import backup, session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
-from ui.common import ART, ROOT, hosted, is_demo, out, ss
+from ui.common import ART, DATA, ROOT, base, hosted, is_demo, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
@@ -41,6 +41,8 @@ if hosted() and not st.user.is_logged_in:
     st.button("Sign in with Google", type="primary", icon=":material/login:", on_click=st.login)
     st.stop()
 
+if backup.on():  # Heroku wipes its disk on restart: put this account's folder back, then save the last run's changes
+    ss.backed_up = backup.push(base(), DATA, ss.get("backed_up") or backup.restore(base(), DATA))
 welcome.start_demo_from_link()  # the intro's Skip / "Try it with these receipts" link
 if "event" not in ss and (saved := session_store.load(out() / "session.json")):  # a new tab: back where you left off
     ss.update(saved)
@@ -91,3 +93,5 @@ if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: 
 ss.last_screen = screen
 tour.show()
 sidebar.save_session()
+if backup.on():
+    ss.backed_up = backup.push(base(), DATA, ss.backed_up)
