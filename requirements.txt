@@ -8,3 +8,4 @@ anthropic>=2.4
 python-dotenv>=1.0
 gspread>=6.0
 openpyxl>=3.1
+psycopg[binary]>=3.2  # hosted link only: keeps saved data in Heroku Postgres
