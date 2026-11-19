@@ -3,7 +3,7 @@
    take clicks. The card moves to another corner when the spot is under it, so it never covers the button. */
 #tly-tour { position: fixed; inset: 0; z-index: 2147483000;  /* over Streamlit's sidebar and header */ pointer-events: none; }
 #tly-tour .veil { position: absolute; inset: 0; background: rgba(31,42,34,.28); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: auto; }
-#tly-tour .ring { position: absolute; border-radius: var(--tly-r); outline: 3px solid var(--tly-forest); outline-offset: 0; }  /* no transition: it must stick to the spot while the page scrolls */
+#tly-tour .ring { position: absolute; border-radius: var(--tly-r); outline: 4px solid var(--tly-sun); outline-offset: 0; box-shadow: var(--tly-ring); }  /* no transition: it must stick to the spot while the page scrolls */
 #tly-tour .bub { position: absolute; left: 0; top: 0; width: 400px; min-height: 112px; padding: 16px 24px 16px 112px; background: var(--tly-white);
   border: 3px solid var(--tly-outline); border-radius: var(--tly-r); box-shadow: var(--tly-shadow); pointer-events: auto;
   font: 500 var(--tly-t-md) / 1.4 var(--tly-body); color: var(--tly-ink); }
