@@ -72,3 +72,9 @@ def test_giant_photo_is_turned_away_not_a_crash():
     Image.new("1", (20000, 10000)).save(big, "PNG")  # 200 MP, like a phone's top camera setting
     with pytest.raises(UnsupportedFile, match="too big"):
         prepare(big.getvalue(), "huge.png")
+
+
+def test_same_file_name_twice_keeps_both():  # IMG_0001.jpg from two phones used to collide
+    from ui.upload import renamed
+    assert [n for n, _ in renamed([("IMG_0001.jpg", b"a"), ("IMG_0001.jpg", b"b"), ("IMG_0001.jpg", b"c")])] == \
+        ["IMG_0001.jpg", "IMG_0001 (2).jpg", "IMG_0001 (3).jpg"]

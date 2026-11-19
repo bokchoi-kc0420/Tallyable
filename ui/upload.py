@@ -7,6 +7,7 @@ import io
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date
 from pathlib import Path
 
 import streamlit as st
@@ -97,7 +98,22 @@ def thumbnail(data: bytes, name: str) -> bytes | None:
         return None
 
 
-def read_one(ex, parts: list[tuple[str, bytes]], event_id: str, rid: str, seen: dict) -> tuple:
+def renamed(files: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
+    """Two different files with one name (IMG_0001.jpg from two phones): the second is IMG_0001 (2).jpg,
+    so each keeps its own photo, payer and receipt."""
+    out, taken = [], set()
+    for name, data in files:
+        stem, ext = Path(name).stem, Path(name).suffix
+        new, n = name, 1
+        while new in taken:
+            n += 1
+            new = f"{stem} ({n}){ext}"
+        taken.add(new)
+        out.append((new, data))
+    return out
+
+
+def read_one(ex, parts: list[tuple[str, bytes]], event_id: str, rid: str, seen: dict, undated: date | None = None) -> tuple:
     """One receipt, on a worker thread (so no Streamlit calls here): (photo, receipt, problem, repeat).
     `repeat` is the id of the receipt a photo already read became: it isn't read (or paid for) twice.
     Several screenshots are read together as one receipt, and kept as one tall photo."""
@@ -113,7 +129,7 @@ def read_one(ex, parts: list[tuple[str, bytes]], event_id: str, rid: str, seen: 
         return f, None, None, repeat
     try:
         more = [(x.data, x.filename) for x in fs[1:]]
-        return f, ex.extract(fs[0].data, fs[0].filename, event_id, rid, more), None, None
+        return f, ex.extract(fs[0].data, fs[0].filename, event_id, rid, more, undated), None, None
     except ExtractionError as e:
         return f, None, f"{e} You can type it in by hand below.", None
 
@@ -135,9 +151,10 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
     rids: list[str] = []
     for parts in sources:
         rids.append(next_id(parts[0][0], rids))
+    day = date.fromisoformat(str(ss.event["date"])[:10])  # for receipts that show no date
     done: list[str] = []  # the last few read show as lines, the ones still waiting as skeleton lines
     with ThreadPoolExecutor(READERS) as pool:
-        jobs = [pool.submit(read_one, ex, parts, event_id, rid, seen) for parts, rid in zip(sources, rids, strict=True)]
+        jobs = [pool.submit(read_one, ex, parts, event_id, rid, seen, day) for parts, rid in zip(sources, rids, strict=True)]
         for n, job in enumerate(as_completed(jobs), start=1):
             r = job.result()[1]
             if r:
@@ -346,8 +363,9 @@ def show(event: EventInfo) -> None:
     if is_demo() and st.button("Use the fake event's 14 receipts instead"):  # fake receipts never reach real books
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
-    ss.removed = ss.get("removed", set()) & {f.name for f in files or []}  # picked again later: it's back
-    sources = ([(f.name, f.getvalue()) for f in files if f.name not in ss.removed] if files else
+    picked = renamed([(f.name, f.getvalue()) for f in files or []])
+    ss.removed = ss.get("removed", set()) & {name for name, _ in picked}  # picked again later: it's back
+    sources = ([x for x in picked if x[0] not in ss.removed] if picked else
                [(p.name, p.read_bytes()) for p in ss.get("demo", [])])
 
     tagged_with()

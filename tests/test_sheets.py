@@ -263,7 +263,11 @@ def test_expense_report_tab_in_club_format(approved):
     assert any(str(r[2]).endswith("(returned)") for r in grid if len(r) > 2)
     assert any(str(r[8]).startswith("No payer") for r in grid if len(r) > 8)  # R07 has no payer
     flat = [c for r in grid for c in r]
-    assert "By category (before tax)" in flat and "Paid out of pocket" in flat
+    assert "By category" in flat and "Paid out of pocket" in flat
+    start = next(i for i, r in enumerate(grid) if r and r[0] == "By category")
+    cats = [r[:2] for r in grid[start + 1:] if r and r[0]]
+    assert cats[-1][0] == "Tax & tip"  # its own line, last, so the categories add up to the total
+    assert sum(Decimal(str(v)) for _, v in cats) == Decimal("571.75")
 
 
 def test_local_views_match_what_sheets_would_draw(approved):

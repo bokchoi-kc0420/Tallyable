@@ -62,6 +62,8 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
             own = {max(own, key=own.get): D(f["receipt_posted"]) - extras}
         for k, v in own.items():
             by_cat[k] += v
+        if rest := D(f["receipt_posted"]) - sum(own.values(), Decimal(0)):
+            by_cat[TAX_TIP] += rest  # its own line, the tax and tip that went in the books, so the lines add up to the total
         rows[top][0] = f"{f['place']}\n{date.fromisoformat(str(f['date'])[:10]):%m/%d}"
         rows[top][5:9] = [num(D(f["receipt_tax"])), num(D(f["receipt_tip"])), num(D(f["receipt_posted"])),
                           f"{payer}\n{rid}"]
@@ -111,15 +113,18 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
     return view
 
 
+TAX_TIP = "Tax & tip"
+
+
 def _breakdowns(rows: list[list], by_cat: dict, by_payer: dict) -> list[dict]:
     """Spent by category (left) and paid out of pocket (right), side by side under the total."""
     start = len(rows) + 1
     lines = max(len(by_cat), len(by_payer)) + 1
     rows.extend([[]] + [[""] * 9 for _ in range(lines)])
     looks = []
-    for c, title, data in ((0, "By category (before tax)", by_cat), (7, "Paid out of pocket", by_payer)):
+    for c, title, data in ((0, "By category", by_cat), (7, "Paid out of pocket", by_payer)):
         rows[start][c] = title
-        for k, (name, amount) in enumerate(sorted(data.items()), start=1):
+        for k, (name, amount) in enumerate(sorted(data.items(), key=lambda x: (x[0] == TAX_TIP, x[0])), start=1):
             rows[start + k][c:c + 2] = [name, num(amount)]
         end = start + len(data) + 1
         looks += [{"rows": (start, start + 1), "cols": (c, c + 2), "merge": True, "fill": INK, "color": "FFFFFF",
