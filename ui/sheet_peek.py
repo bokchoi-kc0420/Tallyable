@@ -43,6 +43,6 @@ def show(views: dict, done: bool, waiting: list, download) -> None:
         return
     with st.container(border=True, key="sheet-peek"):
         st.markdown("**Sheets is for real clubs** - here's what would go in yours:")
+        download()  # above the book, not under it: the next step shouldn't be a long scroll away
         for tab, view in zip(st.tabs(list(views)), views.values(), strict=True):
             tab.html(grid(view.grid, view.widths))
-        download()

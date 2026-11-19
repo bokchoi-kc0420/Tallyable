@@ -207,7 +207,8 @@ def edit_form(rid: str, flags: list) -> None:
     # With a red flag open, the button says what it will do: the receipt's own total goes in the books.
     # No payer is the one flag that can't be booked past: nobody would get paid back.
     no_payer = any(f.code == "missing_payer" for f in flags)
-    approve = b1.button(f"Book {usd(r.posted_amount)} anyway" if blocked else "Approve", type="primary",
+    # Booking past a red flag is the way out, not the way forward: fixing the box is, so it isn't the green button.
+    approve = b1.button(f"Book {usd(r.posted_amount)} anyway" if blocked else "Approve", type="secondary" if blocked else "primary",
                         key=f"approve-{rid}", disabled=decided or no_payer,
                         help="Pick who paid first." if no_payer and not decided else None)
     leave_out = b2.container(key="leave-out").button("Leave out", disabled=decided or not note.strip(),
