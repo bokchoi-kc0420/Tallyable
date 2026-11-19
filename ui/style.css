@@ -14,6 +14,7 @@
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
   --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
+  --tly-outline: #0C4226; --tly-limb: #488B53; --tly-printer: #0E3D22; --tly-printer-slot: #06200F; --tly-led: #7CE38B; /* Tally's own lines, the welcome printer */
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
    on buttons and cards, a numbered step bar, and the mascot. Motion is off for reduced-motion users. */
@@ -68,16 +69,37 @@
 .st-key-whos-owed [data-testid="stCaption"], .st-key-whos-owed .stButton { margin-top: 8px; }
 .st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) + [data-testid="stLayoutWrapper"] { border-top: none; }
 .st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.total) { border-top: 2px solid var(--tly-ink); }
-/* Sidebar: the event's ticket. Its date stub has the same torn zigzag edge as the Past events stubs. */
-.tly-event { display: grid; grid-template-columns: 70px 1fr; margin: 4px 0 0; border: 2px solid var(--tly-c, var(--tly-forest));
-  border-radius: var(--tly-r); overflow: hidden; background: var(--tly-card); }
-.tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 8px 8px 8px 0;
-  background: var(--tly-c, var(--tly-forest)); color: var(--tly-ct, var(--tly-white)); font-family: var(--tly-head);
-  clip-path: polygon(0 0,100% 0%,calc(100% - 8px) 6%,100% 12%,calc(100% - 8px) 18%,100% 24%,calc(100% - 8px) 30%,100% 36%,calc(100% - 8px) 42%,100% 48%,calc(100% - 8px) 54%,100% 60%,calc(100% - 8px) 66%,100% 72%,calc(100% - 8px) 78%,100% 84%,calc(100% - 8px) 90%,100% 96%,calc(100% - 8px) 100%,0 100%); }
+/* Tickets (shape B, Kevin's pick): a classic admit-one outline. A notch top and bottom at the perforation and small round
+   bites down the short ends, cut with one mask. Each piece sets where its cuts go: --mx the notches, --ml / --mr the bites
+   on the left / right end (off the piece when it has none). The ticket is its color all over; the white .info sits on it,
+   cut a little wider (--tb) so the color shows round it as the outline. */
+.tly-event, .tly-event .info, .tly-stub, .tly-rip .stub, .tly-rip .body, .tly-rip .info {
+  --mn: var(--tn, 8px); --ms: var(--ts, 4px); --mx: -99px; --ml: -99px; --mr: -99px;
+  mask-image: linear-gradient(black 0 0), radial-gradient(circle var(--mn) at var(--mx) 0, black 98%, transparent),
+    radial-gradient(circle var(--mn) at var(--mx) 100%, black 98%, transparent),
+    radial-gradient(circle var(--ms) at var(--ml) 50%, black 98%, transparent),
+    radial-gradient(circle var(--ms) at var(--mr) 50%, black 98%, transparent);
+  mask-size: 100% 100%, 100% 100%, 100% 100%, 100% 16px, 100% 16px; mask-repeat: no-repeat, no-repeat, no-repeat, round, round;
+  mask-composite: subtract, add, add, add, add; }
+.tly-event .info, .tly-rip .info { --mn: calc(var(--tn, 8px) + var(--tb, 2px)); --ms: calc(var(--ts, 4px) + var(--tb, 2px)); --mx: 0; --mr: 100%;
+  border: var(--tb, 2px) solid transparent; border-left: 0; background: linear-gradient(var(--tly-c) 50%, transparent 0) 0 0 / 2px 8px repeat-y,
+  var(--tly-card); background-clip: padding-box; position: relative; }
+.tly-event { --mx: var(--tp, 70px); --ml: 0; --mr: 100%; display: grid; grid-template-columns: var(--tp, 70px) 1fr; margin: 4px 0 0;
+  background: var(--tly-c, var(--tly-forest)); }
+.tly-event .stub { display: grid; place-content: center; text-align: center; line-height: 1; padding: 8px 0;
+  color: var(--tly-ct, var(--tly-white)); font-family: var(--tly-head); }
 .tly-event .stub span { font-size: var(--tly-t-xs); letter-spacing: .1em; } .tly-event .stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
-.tly-event .info { padding: 8px 16px 8px 8px; display: grid; gap: 4px; align-content: center; }
+.tly-event .info { padding: 8px 64px 8px 16px; display: grid; gap: 4px; align-content: center; }
 .tly-event .info b { font-family: var(--tly-head); font-size: var(--tly-t-lg); line-height: 1.2; color: var(--tly-ink); }
 .tly-event .info small { color: var(--tly-soft); }
+/* The club's initials, inked on the right end like a rubber stamp: tilted, faded, in a darker shade of the ticket color. */
+.tly-event .stamp, .tly-rip .stamp { position: absolute; right: 8px; top: calc(50% - 24px); width: 48px; height: 48px; box-sizing: border-box;
+  border: 2px solid; border-radius: 50%; outline: 1px solid; outline-offset: 2px; display: grid; place-content: center; text-align: center;
+  color: color-mix(in srgb, var(--tly-c), var(--tly-ink) 35%); opacity: .4; transform: rotate(-14deg); pointer-events: none;
+  font-family: var(--tly-head); font-weight: 600; line-height: 1; }
+.tly-event .stamp b, .tly-rip .stamp b { font-size: var(--tly-t-md); color: inherit; letter-spacing: .04em; }
+.tly-event .stamp i, .tly-rip .stamp i { font-style: normal; font-size: var(--tly-t-xs); white-space: nowrap; width: 144px; margin-top: 4px;
+  overflow: hidden; transform: scale(.25); transform-origin: 50% 0; justify-self: center; }
 .st-key-edit-event [data-testid="stExpander"] details { border: 2px solid var(--tly-forest); border-radius: var(--tly-r);
   background: var(--tly-green-tint); }
 .st-key-edit-event [data-testid="stExpander"] summary { color: var(--tly-forest); font-weight: 700; }
@@ -149,6 +171,14 @@
   font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg);
   color: var(--tly-ink); line-height: 1.25; }
 [class*="st-key-guide-"] { margin: 4px 0 8px; }
+/* A missed receipt's way back to the finish: four small numbered steps inside Tally's bubble */
+.tly-trail { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 0; }
+.tly-trail span { display: inline-flex; align-items: center; gap: 8px; font-family: var(--tly-head) !important; font-weight: 600; color: var(--tly-soft); }
+.tly-trail i { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-style: normal;
+  font-size: var(--tly-t-xs); border: 2px solid var(--tly-line-strong); }
+.tly-trail .now, .tly-trail .done { color: var(--tly-forest); }
+.tly-trail .now i { background: var(--tly-forest); border-color: var(--tly-forest); color: var(--tly-white); }
+.tly-trail .done i { background: var(--tly-done); border-color: var(--tly-done); }
 [class*="st-key-bubble-"] [data-testid="stBaseButton-primary"] p { color: var(--tly-white) !important; font-weight: 600; }
 
 /* No link icon next to headers: it only jumps to the same page */
@@ -178,12 +208,10 @@
   border-radius: 999px; padding: 4px 8px; }
 .tly-status.ok { background: var(--tly-done); color: var(--tly-forest); } .tly-status.no { background: var(--tly-berry-tint); color: var(--tly-berry-deep); }
 .tly-status.wait { background: var(--tly-sun-soft); color: var(--tly-sun-ink); } .tly-status.post { background: var(--tly-forest); color: var(--tly-white); }
-/* Past events: torn-off stubs, all one size, with the zigzag edge where they were ripped. */
-.tly-stub { width: 92px; height: 112px; margin: 0 auto 8px; display: flex; flex-direction: column; justify-content: center;
-  text-align: center; line-height: 1.05; padding: 8px 8px 8px 4px; border-radius: var(--tly-r-in) 0 0 var(--tly-r-in);
-  background: var(--tly-c); color: var(--tly-ct); font-family: var(--tly-head);
-  clip-path: polygon(0 0,100% 0,92% 6%,100% 12%,92% 18%,100% 24%,92% 30%,100% 36%,92% 42%,100% 48%,92% 54%,
-    100% 60%,92% 66%,100% 72%,92% 78%,100% 84%,92% 90%,100% 96%,92% 100%,0 100%); }
+/* Past events: torn-off stubs, all one size, with half a notch on each corner where they were ripped. */
+.tly-stub { --mx: 100%; --ml: 0; width: 92px; height: 112px; margin: 0 auto 8px; display: flex; flex-direction: column;
+  justify-content: center; text-align: center; line-height: 1.05; padding: 8px 4px; background: var(--tly-c); color: var(--tly-ct);
+  font-family: var(--tly-head); }
 .tly-stub span { font-size: var(--tly-t-xs); letter-spacing: .08em; } .tly-stub b { font-size: var(--tly-t-xl); margin: 4px 0; }
 .tly-stub i { font-style: normal; font-size: var(--tly-t-xs); margin-top: 4px; line-height: 1.15; }
 [class*="st-key-past-"] { gap: 0; margin-bottom: 8px; }
@@ -202,12 +230,29 @@
 @keyframes tly-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
 
 /* Who paid grid with photos */
-[class*="st-key-who-"] { padding: 8px; gap: 8px; }
+.st-key-photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; }
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-who-wide-"]), [class*="st-key-who-wide-"] { grid-column: span 2; }
+[class*="st-key-who-"] { padding: 8px; gap: 8px; position: relative; }
+[class*="st-key-who-"]:has(input[type="checkbox"]:checked) { outline: 4px solid var(--tly-forest); }
+[class*="st-key-who-"] [class*="st-key-pick-"] { position: absolute; top: 16px; left: 16px; z-index: 2; width: auto; }
+[class*="st-key-who-"] [class*="st-key-drop-"] { position: absolute; top: 16px; right: 16px; z-index: 2; width: auto; }
+[class*="st-key-who-"] [class*="st-key-drop-"] button { min-height: 32px; padding: 0 8px; }
+[class*="st-key-who-"] [data-testid="stFullScreenFrame"]:has(img) [data-testid="stElementToolbar"] { top: auto !important; bottom: 8px; }  /* Fullscreen: clear of the X */
+[class*="st-key-who-"] [class*="st-key-pick-"] label { background: var(--tly-card); border-radius: var(--tly-r-in); padding: 4px; }
+.st-key-join-start button, [class*="st-key-split-"] button { color: var(--tly-forest); text-decoration: underline; text-underline-offset: 4px; }
+[class*="st-key-who-wide-"] b { font-family: var(--tly-head); font-weight: 500; }
+.tly-joined { background: var(--tly-green-tint); color: var(--tly-forest); border-radius: 999px; padding: 0 8px;
+  font-family: var(--tly-head); font-weight: 500; font-size: var(--tly-t-sm); }
 [class*="st-key-who-"] img { border-radius: var(--tly-r-in); max-height: 150px; object-fit: cover; }
 .tly-nothumb { height: 110px; border-radius: var(--tly-r-in); background: var(--tly-paper); display: grid; place-items: center;
   font-family: var(--tly-head); font-weight: 600; color: var(--tly-forest); }
 /* Check results as cards */
-[class*="st-key-flag-"] { border-radius: var(--tly-r); padding: 8px 16px; margin-bottom: 4px; }
+[class*="st-key-flag-"] { border-radius: var(--tly-r); padding: 16px; margin-bottom: 8px; gap: 8px; }
+[class*="st-key-flag-note-"] { background: var(--tly-paper-soft); }
+.tly-notes { margin: 0; padding: 0 0 0 16px; font-size: var(--tly-t-sm); line-height: 1.45; color: var(--tly-ink-2); }
+.tly-notes li { margin: 0; padding: 0; }
+[class*="st-key-flag-"] [data-testid="stElementContainer"] + [data-testid="stElementContainer"]:has(.tly-notes) {
+  border-top: 1px solid var(--tly-line); padding-top: 8px; }
 /* Streamlit pulls markdown up by -1rem at the bottom, which pushed the message into the card's edge */
 [class*="st-key-flag-"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 [class*="st-key-flag-"] p { margin: 0; color: var(--tly-ink); line-height: 1.35; }
@@ -223,9 +268,9 @@
 [class*="st-key-flag-info-"] span[role="img"] { color: var(--tly-forest); }
 .tly-flagpill { font-family: var(--tly-head); font-weight: 500; font-size: var(--tly-t-xs); color: var(--tly-white); border-radius: 999px;
   padding: 4px 8px; margin-left: 8px; vertical-align: 1px; }
-[class*="st-key-flag-block-"] .tly-flagpill { background: var(--tly-berry); }
-[class*="st-key-flag-warn-"] .tly-flagpill { background: var(--tly-sun-deep); color: var(--tly-sun-ink); }
-[class*="st-key-flag-info-"] .tly-flagpill { background: var(--tly-forest); }
+.tly-flagpill.block { background: var(--tly-berry); }
+.tly-flagpill.warn { background: var(--tly-sun-deep); color: var(--tly-sun-ink); }
+.tly-flagpill.info { background: var(--tly-forest); }
 .tly-decided { border-radius: var(--tly-r); padding: 16px 16px; font-size: var(--tly-t-md); line-height: 1.5; }
 .tly-decided small { font-size: var(--tly-t-sm); opacity: .85; }
 .st-key-leave-out button { background: var(--tly-berry); border-color: var(--tly-berry); color: var(--tly-white); }
@@ -258,6 +303,19 @@
 /* Both lines in one font (Outfit), close together. */
 .tly-confirm-note { font-family: var(--tly-body); line-height: 1.45; margin: 16px 0 16px; }
 .tly-confirm-note b { font-family: var(--tly-body); color: var(--tly-forest); font-weight: 700; }
+.tly-left-out { display: inline-flex; align-items: center; gap: 8px; padding: 4px 16px; border-radius: 999px;
+  background: var(--tly-sun-tint); border: 1.5px solid var(--tly-sun); color: var(--tly-sun-ink); font: 600 var(--tly-t-sm) var(--tly-head); }
+.tly-left-out em { font: 500 var(--tly-t-sm) var(--tly-body); font-style: normal; }
+.tly-check-all { list-style: none; padding: 0; margin: 0; display: grid; }
+.tly-check-all li { display: flex; justify-content: space-between; gap: 16px; font-family: var(--tly-body);
+  padding: 8px 8px; border-bottom: 1px solid var(--tly-paper); }
+.tly-check-all li small { color: var(--tly-sun-ink); font-size: var(--tly-t-xs); margin-left: 8px; }
+.tly-check-all li:not(.big) small { color: var(--tly-soft); }
+.tly-check-all li.big { background: var(--tly-sun-tint); border-radius: var(--tly-r-in); }
+.tly-check-all b { font-family: var(--tly-head); }
+[class*="st-key-check-"] summary > span, [class*="st-key-check-"] summary > span > div { flex: 1; }
+[class*="st-key-check-"] summary [data-testid="stMarkdownContainer"] { width: 100%; }
+[class*="st-key-check-"] summary p { display: flex; justify-content: space-between; gap: 16px; width: 100%; font-family: var(--tly-head); font-weight: 600; }
 .tly-confirm-note small { font-size: var(--tly-t-sm); color: var(--tly-soft); }
 .tly-confirm { display: flex; align-items: center; gap: 16px; justify-content: center; margin-bottom: 16px; } .tly-confirm .tly-event { width: 300px; }
 div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-family: var(--tly-head) !important; font-weight: 600; }
@@ -284,14 +342,17 @@ div[role="dialog"] h2, div[role="dialog"] [data-testid="stHeading"] { font-famil
 p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: var(--tly-soft); margin: -8px 0 8px; }
 .tly-live { position: relative; padding-top: 80px; max-width: 460px; margin: 0 auto; }  /* keeps its size when the sidebar folds */
 .tly-live img { position: absolute; right: 8px; top: -16px; width: 88px; transform: rotate(8deg); z-index: 2; }
-.tly-live .bubble { position: absolute; left: 0; top: 12px; max-width: calc(100% - 120px); background: var(--tly-card);
+.tly-live .bubble { position: absolute; right: 88px; top: 16px; max-width: calc(100% - 88px); background: var(--tly-card);
   border: 2px solid var(--tly-ink); border-radius: var(--tly-r); padding: 8px 16px; font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-ink); }
-.tly-live .bubble::after { content: ""; position: absolute; right: 26px; bottom: -8px; width: 12px; height: 12px;
-  background: var(--tly-card); border-right: 2px solid var(--tly-ink); border-bottom: 2px solid var(--tly-ink); transform: rotate(45deg); }
-.tly-live .tly-event { grid-template-columns: 104px 1fr; border-width: 3px; border-radius: var(--tly-r); transform: rotate(-3deg);
-  box-shadow: var(--tly-shadow); }
-.tly-live .tly-event .stub { padding: 16px 16px 16px 0; } .tly-live .tly-event .stub span { font-size: var(--tly-t-sm); }
-.tly-live .tly-event .stub b { font-size: var(--tly-t-2xl); } .tly-live .tly-event .info { padding: 16px; }
+/* The tail points at Tally: an ink point with a white one inside it, so the outline runs into it without a seam. */
+.tly-live .bubble::before, .tly-live .bubble::after { content: ""; position: absolute; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.tly-live .bubble::before { right: -14px; top: calc(50% - 6px); width: 14px; height: 12px; background: var(--tly-ink); }
+.tly-live .bubble::after { right: -10px; top: calc(50% - 4px); width: 11px; height: 8px; background: var(--tly-card); }
+.tly-live .tk { transform: rotate(-3deg); filter: drop-shadow(0 4px 0 rgba(31,42,34,.14)); }  /* a mask cuts off box-shadow */
+.tly-live .tly-event { --tp: 104px; --tb: 3px; --tn: 10px; --ts: 5px; }
+.tly-live .tly-event .stamp { right: 24px; top: calc(100% - 64px); transform: rotate(-14deg) scale(1.25); }
+.tly-live .tly-event .stub { padding: 16px 0; } .tly-live .tly-event .stub span { font-size: var(--tly-t-sm); }
+.tly-live .tly-event .stub b { font-size: var(--tly-t-2xl); } .tly-live .tly-event .info { padding: 16px 96px 16px 24px; }
 .tly-live .tly-event .info b { font-size: var(--tly-t-xl); } .tly-live .tly-event .info small { font-size: var(--tly-t-sm); }
 .tly-live .who { display: flex; margin-top: 8px; }
 .tly-live .who span { flex: none; width: 28px; height: 28px; margin-right: -8px; border: 2px solid var(--tly-white); border-radius: 50%; color: var(--tly-white);
@@ -328,6 +389,12 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* Helper sentences inside cards one size down, so boxes stay short */
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] p { font-size: var(--tly-t-sm); line-height: 1.45; }
 
+/* The bar is the page's last thing and the page is at least a screen tall, so the bar sits on the
+   bottom edge of the screen whether the page is short or long. */
+[data-testid="stMainBlockContainer"]:has(.st-key-upload-next, .st-key-finish-next) { display: flex; flex-direction: column;
+  min-height: 100vh; padding-bottom: 0; }
+[data-testid="stMainBlockContainer"]:has(.st-key-upload-next, .st-key-finish-next) > [data-testid="stVerticalBlock"] { flex: 1; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { margin-top: auto; }
 /* Upload: the page's last step stays pinned to the bottom of the screen, so a pile of photos never hides it */
 [data-testid="stLayoutWrapper"]:has(> .st-key-upload-next), [data-testid="stLayoutWrapper"]:has(> .st-key-finish-next) { position: sticky; bottom: 0; z-index: 5; padding: 8px 0;
   background: var(--tly-page); }
@@ -337,8 +404,8 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* Undo is a safe fix but takes money back: red outline, so it reads "careful" next to Mark paid */
 .st-key-undo-paid button { color: var(--tly-berry-deep); border-color: var(--tly-berry); }
 .st-key-undo-paid button:hover { color: var(--tly-berry-deep); border-color: var(--tly-berry-deep); background: var(--tly-berry-tint); }
-.tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 16px; border-radius: var(--tly-r-in);
-  background: var(--tly-sun-tint); font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-ink); }
+.tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0 16px;
+  font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-soft); }
 .tly-edit-hint .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-lg); color: var(--tly-sun-ink); }
 .tly-led.paid { position: relative; }
 .tly-paid-pop { display: inline-block; animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
@@ -358,3 +425,28 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-nav-count { margin: 0; font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-md); color: var(--tly-ink); }
 .st-key-review-nav [data-testid="stMarkdownContainer"] { margin: 0; }
 .st-key-review-nav [data-testid="stMarkdown"] { align-self: center; }
+/* A photo's Fullscreen button sits on the photo, not above it where it covered the next-receipt arrow */
+[data-testid="stFullScreenFrame"]:has(img) [data-testid="stElementToolbar"] { top: 8px !important; right: 8px; }
+/* The demo's peek at the book (ui/sheet_peek.py): a tab drawn like a spreadsheet. */
+.tly-sheet { overflow: auto; max-height: 360px; border: 1px solid var(--tly-line); border-radius: var(--tly-r-in); background: var(--tly-white); }
+.tly-sheet table { border-collapse: collapse; table-layout: fixed; width: max-content; font: var(--tly-t-sm) var(--tly-body); color: var(--tly-ink); }
+.tly-sheet td, .tly-sheet th { border: 1px solid var(--tly-line); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.tly-sheet th { background: var(--tly-paper-soft); color: var(--tly-soft); font-weight: 500; text-align: center; position: sticky; top: 0; }
+.tly-sheet tr th:first-child { position: sticky; left: 0; }
+/* Loading (Kevin's pick: the thin bar): while the app works, a green bar runs across the very top. After a click it
+   waits .3s, so a quick one doesn't flash. No blur (it "flashbanged" on every short wait, Kevin 2026-11-17): only a
+   wait past 1.5s fades the page a little, so it reads as busy. Pages with their own loading card (Tally reading,
+   writing to the sheet) stay as they are. On a first load the bar finishes and the page fades in over .8s once it's
+   drawn (app.py turns that on for the first run only). */
+[data-testid="stApp"]::before { content: ""; position: fixed; z-index: 1000002; left: 0; top: 0; height: 4px; width: 0;
+  background: var(--tly-forest); animation: var(--tly-bar-in, none) .8s ease-in both; }
+[data-testid="stApp"]:is([data-test-script-state="running"], [data-test-script-state="initial"]):not(:has(.tly-loading))::before {
+  animation: tly-load-bar 4s cubic-bezier(.1, .7, .3, 1) .3s both; }
+@keyframes tly-load-bar { from { width: 0; } to { width: 90%; } }
+@keyframes tly-bar-in { from { width: 60%; } 80% { width: 100%; opacity: 1; } to { width: 100%; opacity: 0; } }
+[data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: var(--tly-load-in, none) .8s ease-in both; }
+[data-testid="stApp"]:is([data-test-script-state="running"], [data-test-script-state="initial"]):not(:has(.tly-loading))
+  :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: tly-load-fade .4s ease-out 1.5s both; }
+@keyframes tly-load-fade { to { opacity: .6; } }
+@keyframes tly-load-in { from, 50% { opacity: .6; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { [data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: none !important; } }

@@ -54,10 +54,10 @@ def test_qty_zero_line_is_not_charged():  # Dollar Tree: "Bag Fee 0 0.10 0.00N" 
     assert [i.item for i in r.items] == ["Mini cups"]
 
 
-def test_a_cart_screenshot_is_called_out_as_not_a_final_receipt():
+def test_a_cart_screenshot_keeps_what_kind_of_proof_it_is():
     r = ClaudeExtractor(client=FakeClient(reading(proof="cart"))).extract(b"x", "cart.png", "EVT", "R01")
-    assert "not a final receipt" in r.review_note
-    assert ClaudeExtractor(client=FakeClient(reading())).extract(b"x", "R01.jpg", "EVT", "R01").review_note is None
+    assert r.proof == "cart" and r.review_note is None  # the check words it, not a note that could pre-fill the override
+    assert ClaudeExtractor(client=FakeClient(reading())).extract(b"x", "R01.jpg", "EVT", "R01").proof == "receipt"
 
 
 def test_reader_uses_stub_in_tests():
@@ -75,3 +75,11 @@ def test_discount_prices_parse_as_negative():
     from treasurer.claude_extract import _money
     for text in ("-$4.00", "$-4.00", "−4.00", "($4.00)"):
         assert _money(text, "price", "x.png") == Decimal("-4.00")
+
+
+def test_more_screenshots_go_in_the_same_call():
+    client = FakeClient(reading())
+    ClaudeExtractor(client=client).extract(b"a", "cart-1.png", "EVT", "R01", more=[(b"b", "cart-2.jpg")])
+    *images, ask = client.calls[0]["messages"][0]["content"]
+    assert [i["source"]["media_type"] for i in images] == ["image/png", "image/jpeg"]
+    assert "ONE receipt" in ask["text"]

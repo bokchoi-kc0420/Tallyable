@@ -67,6 +67,8 @@ def prepare(data: bytes, filename: str) -> Prepared:
         im.load()
     except UnsupportedFile:
         raise
+    except Image.DecompressionBombError as e:  # 180+ megapixels: opening it could eat all the memory
+        raise UnsupportedFile(f"{name} is way too big to open. Screenshot the receipt, or enter it by hand below.") from e
     except (UnidentifiedImageError, OSError) as e:
         raise UnsupportedFile(f"{name} won't open as an image (it may be damaged). Enter it by hand below.") from e
 
@@ -86,3 +88,18 @@ def prepare(data: bytes, filename: str) -> Prepared:
     buf = io.BytesIO()
     im.convert("RGB").save(buf, "JPEG", quality=90)
     return Prepared(buf.getvalue(), Path(name).stem + ".jpg", "image/jpeg", warnings)
+
+
+def stack(parts: list[bytes]) -> bytes:
+    """Screenshots of one receipt, top to bottom as one JPG: what Review and the photo PDF show."""
+    ims = [Image.open(io.BytesIO(d)).convert("RGB") for d in parts]
+    w = min(im.width for im in ims)
+    ims = [im.resize((w, round(im.height * w / im.width))) for im in ims]
+    out = Image.new("RGB", (w, sum(im.height for im in ims)), "white")
+    y = 0
+    for im in ims:
+        out.paste(im, (0, y))
+        y += im.height
+    buf = io.BytesIO()
+    out.save(buf, "JPEG", quality=90)
+    return buf.getvalue()

@@ -16,7 +16,7 @@ def test_validate_blocks_bad_paybacks():
 
 def test_csv_sink_keeps_reimbursements_per_event(tmp_path):
     sink = LocalCsvSink(tmp_path / "tx.csv")
-    sink.record_reimbursement(Reimbursement("E1", "Member A", date(2026, 11, 20), Decimal("10.00"), "Zelle"))
-    sink.record_reimbursement(Reimbursement("E1", "Member A", date(2026, 11, 21), Decimal("5.50"), "Cash"))
-    sink.record_reimbursement(Reimbursement("E2", "Member A", date(2026, 11, 21), Decimal("1.00"), "Cash"))
+    sink.record_reimbursements([Reimbursement("E1", "Member A", date(2026, 11, 20), Decimal("10.00"), "Zelle"),
+                                Reimbursement("E1", "Member A", date(2026, 11, 21), Decimal("5.50"), "Cash")])  # Mark all paid
+    sink.record_reimbursements([Reimbursement("E2", "Member A", date(2026, 11, 21), Decimal("1.00"), "Cash")])
     assert totals_by_payer(sink.reimbursements(), "E1") == {"Member A": Decimal("15.50")}

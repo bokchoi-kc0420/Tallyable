@@ -16,8 +16,23 @@ from treasurer.runlog import log_run, minutes, read_runs
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo, local_transactions, local_views
 from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
-from ui import connect, done_card
-from ui.common import dec, get_sink, go, guide, html_table, loading, md, money_panel, out, saved_reimbursements, ss, step_bar, usd
+from ui import club, connect, done_card, sheet_peek
+from ui.common import (
+    dec,
+    get_sink,
+    go,
+    guide,
+    html_table,
+    is_demo,
+    loading,
+    md,
+    money_panel,
+    out,
+    saved_reimbursements,
+    ss,
+    step_bar,
+    usd,
+)
 
 INCOME_CHOICES = ["Zelle", "Venmo", "Cash", "Card / Square", "Ticket sales", "Dues", "Sponsorship",
                   "Grants and funding", "Donations", "Fundraiser", "Other"]
@@ -132,7 +147,7 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
         if rec.status is Status.APPROVED:
             ss.receipts[rid] = rec.model_copy(update={"status": Status.POSTED})
     if written:
-        now, flags = time.time(), run_checks(receipts)
+        now, flags = time.time(), run_checks(receipts, club.earlier_receipts())
         ex, reader = make_extractor()
         log_run(out() / "run_log.csv", {
             "event_id": event.event_id, "reader": reader, "model": getattr(ex, "model", "stub"),
@@ -146,11 +161,11 @@ def push(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
     st.rerun()  # redraw the table and step bar with the posted status
 
 
-def excel_button(views: dict, receipts: list[Receipt], event: EventInfo, label: str, key: str, **kw) -> bool:
-    """The whole book as one Excel file, built on click. True on the rerun after a click."""
-    return st.download_button(label, icon=":material/download:", key=key, **kw,
-                              data=lambda: book_xlsx(views, local_transactions(receipts), TX_FIELDS),
-                              file_name=f"{event.event_id}_books.xlsx",
+def excel_button(xlsx: bytes, event: EventInfo, label: str, key: str, **kw) -> bool:
+    """The whole book as one Excel file. True on the rerun after a click.
+    The bytes are built before the click, not in a lambda: a click that also saves and reruns threw a
+    built-on-click file away before the browser fetched it (no file, a spinning button)."""
+    return st.download_button(label, xlsx, icon=":material/download:", key=key, **kw, file_name=f"{event.event_id}_books.xlsx",
                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
@@ -162,20 +177,30 @@ def csv_downloads(views: dict, event: EventInfo) -> None:
                                 mime="text/csv", key=f"dl-{title}")
 
 
-def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], views: dict, waiting: list) -> None:
+def push_buttons(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], xlsx: bytes | None,
+                 waiting: list, kind: str) -> None:
+    with st.container(horizontal=True, key="push-row"):
+        if sink.label == "Google Sheets":
+            if st.button("Push to Google Sheets", type=kind, disabled=bool(waiting), icon=":material/upload:",
+                         key="push-sheets"):
+                push(sink, receipts, event, income)
+            if xlsx and excel_button(xlsx, event, "Download as Excel", "dl-xlsx-row"):
+                ss.event = {**ss.event, "excel_at": time.strftime("%I:%M %p").lstrip("0")}
+                st.rerun()
+        elif xlsx and excel_button(xlsx, event, "Save and get Excel", "push-excel", type=kind, disabled=bool(waiting)):
+            push(sink, receipts, event, income)  # without Sheets, saving the books is the push
+
+
+def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Decimal], views: dict,
+              xlsx: bytes | None, waiting: list) -> None:
     """Push to Google Sheets and/or get the Excel file. Whichever is done first, Close out becomes the green button."""
     done = bool(ss.event.get("pushed_at") or ss.event.get("excel_at"))
     kind = "secondary" if done else "primary"
-    with st.container(horizontal=True, key="push-row"):
-        if sink.label == "Google Sheets":
-            if st.button("Push to Google Sheets", type=kind, disabled=bool(waiting), icon=":material/upload:"):
-                push(sink, receipts, event, income)
-            if views and excel_button(views, receipts, event, "Download as Excel", "dl-xlsx-row"):
-                ss.event = {**ss.event, "excel_at": time.strftime("%I:%M %p").lstrip("0")}
-                st.rerun()
-        elif views and excel_button(views, receipts, event, "Save and get Excel", "dl-xlsx-row", type=kind,
-                                    disabled=bool(waiting)):
-            push(sink, receipts, event, income)  # without Sheets, saving the books is the push
+    if is_demo():  # no club sheet in the demo: Sheets opens a peek at the book, with the Excel file in it
+        sheet_peek.show(views, done, waiting, lambda: excel_button(xlsx, event, "Download as Excel", "push-excel", type=kind)
+                        and push(sink, receipts, event, income))
+    else:
+        push_buttons(sink, receipts, event, income, xlsx, waiting, kind)
     if not done and not waiting:  # pushing is optional: a club can go straight on
         with st.container(border=True, key="next-card"):
             c = st.columns([4, 1.3], vertical_alignment="center")
@@ -211,13 +236,16 @@ def show(event: EventInfo) -> None:
     sink, err = get_sink()
     if err:
         st.error(err)
-    if sink.label != "Google Sheets":
+    if sink.label != "Google Sheets" and not is_demo():
         with st.expander("Connect Google Sheets (optional - otherwise your books come out as an Excel file)",
                          icon=":material/link:", expanded=not err):
             connect.box("summary")
     views = local_views(receipts, event, income, saved_reimbursements(sink)) if any(r.counts for r in receipts) else {}
-    books_row(sink, receipts, event, income, views, waiting)
-    done_card.show(sink, receipts, event, income, lambda: push(sink, receipts, event, income))
+    xlsx = book_xlsx(views, local_transactions(receipts), TX_FIELDS) if views else None
+    books_row(sink, receipts, event, income, views, xlsx, waiting)
+    again = None if sink.label == "Google Sheets" or not xlsx else (
+        lambda: excel_button(xlsx, event, "Save again", "push-again", type="primary", width="stretch"))
+    done_card.show(sink, receipts, event, income, lambda: push(sink, receipts, event, income), again)
     if views:
         csv_downloads(views, event)
 
@@ -225,7 +253,8 @@ def show(event: EventInfo) -> None:
     s = st.columns(3)
     s[0].metric("Minutes in tool", f"{(time.time() - ss.started) / 60:.1f}")
     s[1].metric("Edits to drafts", ss.edits)
-    s[2].metric("Flags open", sum(1 for fl in run_checks(receipts).values() for f in fl if f.severity is Severity.BLOCK))
+    flags = run_checks(receipts, club.earlier_receipts())
+    s[2].metric("Flags open", sum(1 for fl in flags.values() for f in fl if f.severity is Severity.BLOCK))
     runs = read_runs(out() / "run_log.csv")
     if runs:
         st.caption(f"Past runs, from {out() / 'run_log.csv'}")

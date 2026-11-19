@@ -12,13 +12,16 @@ import time
 
 import streamlit as st
 
-from treasurer import session_store
-from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, upload
-from ui.common import ART, ROOT, is_demo, out, ss
+from treasurer import backup, session_store
+from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
+from ui.common import ART, DATA, ROOT, base, hosted, is_demo, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
+first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
+ss.loaded = True
+settle = "[data-testid=stApp]{--tly-load-in:tly-load-in;--tly-bar-in:tly-bar-in}" if first_load else ""
 st.markdown("<style>" + "".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "ui").glob("*.css")))
-            + "</style>", unsafe_allow_html=True)
+            + settle + "</style>", unsafe_allow_html=True)
 
 # Password gate. Only on when APP_PASSWORD is set (always set it before deploying:
 # the app can spend API credit). compare_digest avoids leaking the password by timing.
@@ -32,6 +35,15 @@ if os.getenv("APP_PASSWORD") and not ss.get("authed"):
         st.error("Wrong password.")
     st.stop()
 
+# The hosted link: each treasurer signs in with Google, so their clubs, events and sheets stay theirs.
+if hosted() and not st.user.is_logged_in:
+    st.header("Tallyable")
+    st.button("Sign in with Google", type="primary", icon=":material/login:", on_click=st.login)
+    st.stop()
+
+if backup.on():  # Heroku wipes its disk on restart: put this account's folder back, then save the last run's changes
+    ss.backed_up = backup.push(base(), DATA, ss.get("backed_up") or backup.restore(base(), DATA))
+welcome.start_demo_from_link()  # the intro's Skip / "Try it with these receipts" link
 if "event" not in ss and (saved := session_store.load(out() / "session.json")):  # a new tab: back where you left off
     ss.update(saved)
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
@@ -39,12 +51,16 @@ ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to t
 ss.setdefault("notes", {})      # receipt_id -> photo warnings (blurry, rotated)
 ss.setdefault("failed", {})     # file name -> (bytes, reason) for files that could not be read
 ss.setdefault("skipped", {})    # file name -> receipt id it repeats, so a photo uploaded twice is read once
+ss.setdefault("joins", {})      # screenshot file name -> the file it was joined to on Upload (one receipt)
 ss.setdefault("started", time.time())
 ss.setdefault("edits", 0)
 ss.setdefault("drafted_at", None)    # first Draft click, for the run log
 ss.setdefault("review_started", None)
 ss.setdefault("income", {})
 
+if ss.get("view") == "intro":
+    welcome.intro()
+    st.stop()
 st.logo(str(ART / "logo.png"), size="large", link=sidebar.HOME_URL)
 if "event" in ss:
     club.seed(ss.event)  # events from before clubs existed start "My club"
@@ -75,4 +91,7 @@ if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: 
     st.html("<script>document.querySelector('[data-testid=\"stMain\"]')?.scrollTo(0, 0)</script>",
             unsafe_allow_javascript=True)
 ss.last_screen = screen
+tour.show()
 sidebar.save_session()
+if backup.on():
+    ss.backed_up = backup.push(base(), DATA, ss.backed_up)

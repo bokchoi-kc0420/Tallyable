@@ -10,13 +10,15 @@ import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
 from treasurer.models import LineItem, Status
-from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, md, next_step, payers, plural, reviewed, ss, step_bar, usd
+from ui import club
+from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, is_demo, md, next_step, payers, plural, reviewed, ss, step_bar, usd
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
              "missing_payer": (":material/person_alert:", "Who paid for this?"),
              "missing_receipt": (":material/hide_image:", "No photo attached"),
              "unusual_tax": (":material/percent:", "Tax looks high"),
-             "returned_item": (":material/undo:", "Returned item"),
+             "returned_item": (":material/undo:", "Left out of the books"),
+             "not_final": (":material/receipt_long:", "Not a final receipt"),
              "possible_duplicate": (":material/content_copy:", "Possible duplicate")}
 FLAG_TONE = {Severity.BLOCK: ("block", "Must fix"), Severity.WARN: ("warn", "Check"), Severity.INFO: ("info", "FYI")}
 
@@ -44,6 +46,37 @@ def approve_all(rids: list[str]) -> None:
     ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
 
 
+@st.dialog("Approve these?", on_dismiss=lambda: ss.pop("check_all", None))
+def check_all(rids: list[str]) -> None:
+    """Grouped by who gets paid back, like Who's owed, so "$51.19 for Kevin?" is what you check. The biggest receipt
+    is marked, and each person opens to their photos."""
+    people: dict[str, list[str]] = {}
+    for x in rids:
+        people.setdefault(ss.receipts[x].payer or "No payer", []).append(x)
+    big = max(rids, key=lambda x: ss.receipts[x].posted_amount)
+    for who, mine in people.items():
+        total = sum((ss.receipts[x].posted_amount for x in mine), Decimal("0"))
+        with st.expander(f"**{who}**  {usd(total)}", key=f"check-{who}"):
+            lines = "".join(f'<li{" class=big" if x == big and len(rids) > 1 else ""}><span>{html.escape(ss.receipts[x].place)}'
+                            f'<small>{plural(len(ss.receipts[x].items), "item")}</small></span>'
+                            f"<b>{usd(ss.receipts[x].posted_amount)}</b></li>" for x in mine)
+            st.markdown(f'<ul class="tly-check-all">{lines}</ul>', unsafe_allow_html=True)
+            shots = [ss.images[x][0] for x in mine if ss.images.get(x) and ss.images[x][1] != "application/pdf"]
+            for row in range(0, len(shots), 4):
+                for col, img in zip(st.columns(4), shots[row:row + 4], strict=False):
+                    col.image(img, width="stretch")
+    st.markdown('<p class="tly-confirm-note">Anything the club didn\'t pay for? Go back and tick it under '
+                "<b>Leave out</b>.</p>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if c[0].button("Go back", key="check-all-no", width="stretch"):
+        ss.pop("check_all", None)
+        st.rerun()
+    if c[1].button(f"Approve all {len(rids)}", type="primary", key="check-all-yes", width="stretch"):
+        ss.pop("check_all", None)
+        approve_all(rids)
+        st.rerun()
+
+
 def approve_clean(flags: dict) -> None:
     """One click for every receipt with nothing to fix, so a big event goes fast. Flagged ones stay one by one."""
     clean = [x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED and not needs_look(x, flags)]
@@ -52,11 +85,16 @@ def approve_clean(flags: dict) -> None:
     n = len(clean)
     with st.container(border=True, key="clean-card"):
         c = st.columns([3.2, 1.4], vertical_alignment="center")
-        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} look{"s" if n == 1 else ""} good!</p>'
-                      '<p class="tly-done-sub">The math adds up - peek at the photos to make sure I read them right!</p>',
+        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} add{"s" if n == 1 else ""} up!</p>'
+                      '<p class="tly-done-sub">Peek at the photos to make sure I read them right - '
+                      "and leave out anything that wasn't the club's!</p>",
                       unsafe_allow_html=True)
+        # The demo's fake receipts go straight through, so the tour isn't covered by the check.
+        go = approve_all if is_demo() else lambda c: ss.update(check_all=c)
         c[1].button(f"Approve all {n}" if n > 1 else "Approve it", type="primary", icon=":material/done_all:",
-                    key="approve-clean", width="stretch", on_click=approve_all, args=(clean,))
+                    key="approve-clean", width="stretch", on_click=go, args=(clean,))
+    if ss.get("check_all"):
+        check_all(ss.check_all)
 
 
 def photo(rid: str) -> None:
@@ -71,11 +109,27 @@ def photo(rid: str) -> None:
     st.download_button("Open the PDF", image[0], file_name=f"{rid}.pdf", mime="application/pdf")
 
 
+def look_card(rid: str, flags: list) -> None:
+    """Everything to check on one receipt in ONE card: what must be fixed first, then the smaller notes
+    (blurry photo, what the reader couldn't see). The card takes the colour of its worst flag."""
+    notes = ss.notes.get(rid, [])
+    if not flags and not notes:
+        return
+    flags = sorted(flags, key=lambda f: list(FLAG_TONE).index(f.severity))
+    tone = FLAG_TONE[flags[0].severity][0] if flags else "note"
+    with st.container(key=f"flag-{tone}-{rid}"):
+        for f in flags:
+            icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
+            st.markdown(f"{icon} **{title}** <span class='tly-flagpill {FLAG_TONE[f.severity][0]}'>{FLAG_TONE[f.severity][1]}"
+                        f"</span>\n\n<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
+        if notes:
+            lines = "".join(f"<li>{html.escape(n)}</li>" for n in notes)
+            st.markdown(f"<ul class='tly-notes'>{lines}</ul>", unsafe_allow_html=True)
+
+
 def edit_form(rid: str, flags: list) -> None:
     """The receipt's fields, line items, and the Approve / Leave out / Reopen buttons."""
     r = ss.receipts[rid]
-    for note in ss.notes.get(rid, []):
-        st.warning(md(note))
     if r.status is not Status.DRAFTED:  # decided: one card says what happened, the flags are done with
         label, tone = STATUS_CHIP[r.status]
         why = f" · {html.escape(r.review_note)}" if r.review_note else ""
@@ -83,12 +137,8 @@ def edit_form(rid: str, flags: list) -> None:
                 else "<br><small>Changed your mind? Hit Reopen.</small>")
         st.markdown(f'<div class="tly-decided {tone}"><b>{label.capitalize()}</b>{why}{undo}</div>',
                     unsafe_allow_html=True)
-    for n, f in enumerate(flags if r.status is Status.DRAFTED else []):
-        icon, title = FLAG_LOOK.get(f.code, (":material/flag:", "Check this"))
-        tone, hint = FLAG_TONE[f.severity]
-        with st.container(key=f"flag-{tone}-{rid}-{n}"):
-            st.markdown(f"{icon} **{title}** <span class='tly-flagpill'>{hint}</span>\n\n"
-                        f"<span class='tly-flagmsg'>{md(html.escape(f.message))}</span>", unsafe_allow_html=True)
+    # Left-out lines get a small chip by the table instead of a card: the ticks already say which ones.
+    look_card(rid, [f for f in flags if f.code != "returned_item"] if r.status is Status.DRAFTED else [])
     st.markdown('<p class="tly-edit-hint"><i class="ms">edit</i>Got something wrong? Click any box or cell to fix it.</p>',
                 unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
@@ -96,12 +146,34 @@ def edit_form(rid: str, flags: list) -> None:
     d = c2.date_input("Date", r.date, key=f"date-{rid}")
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
     payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
-    df = pd.DataFrame([{"category": i.category, "item": i.item, "unit": i.unit, "price": float(i.price),
-                        "returned": i.returned} for i in r.items])
-    columns = {"category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"]),
-               "item": "Item", "unit": "Qty", "returned": "Returned",
-               "price": st.column_config.NumberColumn("Price", format="%.2f")}
-    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns)
+    df = pd.DataFrame([{"unit": i.unit, "item": i.item, "price": float(i.price), "category": i.category,
+                        "returned": i.returned, "taxed": i.taxed, "for_item_above": i.for_item_above} for i in r.items],
+                      columns=["unit", "item", "price", "category", "returned", "taxed", "for_item_above"])
+    # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
+    columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
+               "item": st.column_config.TextColumn("Item", width=188),
+               "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
+               "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
+               "returned": st.column_config.CheckboxColumn("Leave out", width=92,
+                                                           help="Not the club's: a personal buy, or taken back")}
+    if r.status is Status.DRAFTED and not all(i.returned for i in r.items) and len(r.items) > 2:
+        # A grocery run where only a line or two was for the club: leave everything out, then untick the club's.
+        if st.button("Mostly personal? Leave out all", key=f"all-out-{rid}", type="tertiary"):
+            ss.receipts[rid] = r.model_copy(update={"items": [i.model_copy(update={"returned": True}) for i in r.items]})
+            ss.pop(f"items-{rid}", None)
+            st.rerun()
+    out = [i for i in r.items if i.returned]
+    if out:
+        st.markdown(f'<span class="tly-left-out">↺ {len(out)} left out '
+                    f'<em>({r.left_out_why})</em><b>&minus;{usd(r.returned_amount)}</b></span>', unsafe_allow_html=True)
+    # Tax marks and discount links ride along hidden, so an edit never drops them.
+    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns,
+                            column_order=list(columns))
+    why = r.left_out_why
+    if any(i.returned for i in r.items):
+        why = st.segmented_control("Left out because", ["personal", "returned"], default=r.left_out_why,
+                                   format_func={"personal": "Personal", "returned": "Returned"}.get,
+                                   key=f"why-{rid}") or r.left_out_why
     c1, c2, c3 = st.columns(3)
     tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
     tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
@@ -109,9 +181,11 @@ def edit_form(rid: str, flags: list) -> None:
 
     try:
         items = [LineItem(category=row.category, item=str(row.item), unit=int(row.unit),
-                          price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned))
+                          price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned),
+                          taxed=None if pd.isna(row.taxed) else bool(row.taxed),
+                          for_item_above=bool(row.for_item_above) if pd.notna(row.for_item_above) else False)
                  for row in edited.itertuples() if pd.notna(row.item) and str(row.item).strip()]
-        new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items,
+        new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items, left_out_why=why,
                                        tax=dec(tax), tip=dec(tip), total=dec(total)))
     except (ValueError, TypeError):
         st.error("Something's off in the line items! Each line needs an item, a qty and a price.")
@@ -121,14 +195,21 @@ def edit_form(rid: str, flags: list) -> None:
             ss.receipts[rid] = new
             st.rerun()  # re-run checks on the edited values
 
-    st.caption(md(f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
-    note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
-                         placeholder="Why you're approving a red flag, or leaving this out (duplicate, personal...)",
-                         help="Needed to approve a receipt with a red flag, and to leave one out. "
-                              "It's saved with the receipt, so you can explain the call later.")
-    b1, b2, b3 = st.columns(3)
+    st.caption(md(f"Goes in the books as {usd(r.posted_amount)}" if out else
+                  f"Items + tax + tip = {usd(r.computed_total)} · goes in the books as {usd(r.posted_amount)}"))
     decided = r.status is not Status.DRAFTED
-    approve = b1.button("Approve", type="primary", disabled=decided or not can_approve(flags, note))
+    blocked = not decided and not can_approve(flags)
+    note = st.text_input("Note", r.review_note or "", key=f"note-{rid}",
+                         placeholder="Why you're leaving this out (duplicate, personal...), or anything to remember",
+                         help="Needed to leave a receipt out. It's saved with the receipt.")
+    # One row, each button as wide as its label, so Leave out sits right beside Approve whatever the label says.
+    b1 = b2 = b3 = st.container(horizontal=True, key="decide")
+    # With a red flag open, the button says what it will do: the receipt's own total goes in the books.
+    # No payer is the one flag that can't be booked past: nobody would get paid back.
+    no_payer = any(f.code == "missing_payer" for f in flags)
+    approve = b1.button(f"Book {usd(r.posted_amount)} anyway" if blocked else "Approve", type="primary",
+                        key=f"approve-{rid}", disabled=decided or no_payer,
+                        help="Pick who paid first." if no_payer and not decided else None)
     leave_out = b2.container(key="leave-out").button("Leave out", disabled=decided or not note.strip(),
                           help="Not a club expense (a duplicate, a personal buy, another event). "
                                "Write why in the note first.")
@@ -149,7 +230,7 @@ def show() -> None:
               key="review-empty", to="1. Upload")
         return
     ss.review_started = ss.review_started or time.time()
-    flags = run_checks(list(ss.receipts.values()))
+    flags = run_checks(list(ss.receipts.values()), club.earlier_receipts())
     checked = reviewed()
     st.progress(checked / len(ss.receipts), text=f"{checked} of {len(ss.receipts)} reviewed")
     approve_clean(flags)
@@ -168,10 +249,10 @@ def show() -> None:
         return
     labels = {x: f"{ICON[ss.receipts[x].status]} {x} · {ss.receipts[x].place}" + (f" {FLAG_ICON}" if needs_look(x, flags) else "")
               for x in ids}
-    if ss.get("next_pick") in ids:  # set by "Approve" so the next receipt opens by itself
-        ss["review-pick"] = ss.pop("next_pick")
-    elif ss.get("review-pick") not in ids:
-        ss["review-pick"] = ids[0]
+    # next_pick is set by "Approve" so the next receipt opens by itself. The pick is written back on every run:
+    # the labels change as you edit (place, status), and Streamlit then forgets a pick it wasn't just handed.
+    pick = ss.pop("next_pick") if ss.get("next_pick") in ids else ss.get("review-pick")
+    ss["review-pick"] = pick if pick in ids else ids[0]
     rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
                            help=f"{ICON[Status.DRAFTED]} to review · {ICON[Status.APPROVED]} approved · "
                                 f"{ICON[Status.REJECTED]} left out · {ICON[Status.POSTED]} posted · {FLAG_ICON} has a flag")

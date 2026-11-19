@@ -17,11 +17,18 @@ TX_FIELDS = ["event_id", "receipt_id", "date", "place", "payer", "category", "it
              "amount", "returned", "receipt_tax", "receipt_tip", "receipt_total", "receipt_posted", "image_file"]
 
 
+def left_out_cell(r: Receipt, i) -> str:
+    """The Transactions `returned` cell: FALSE, TRUE (taken back to the store) or PERSONAL (the payer's own buy)."""
+    if not i.returned:
+        return "FALSE"
+    return "TRUE" if r.left_out_why == "returned" else "PERSONAL"
+
+
 def transaction_rows(r: Receipt) -> list[dict]:
     """Long format: one row per line item. Every sheet layout is built from these."""
     return [dict(event_id=r.event_id, receipt_id=r.receipt_id, date=r.date.isoformat(), place=r.place,
                  payer=r.payer or "", category=i.category, item=i.item, unit=i.unit, price=str(i.price),
-                 amount=str(i.amount), returned="TRUE" if i.returned else "FALSE", receipt_tax=str(r.tax),
+                 amount=str(i.amount), returned=left_out_cell(r, i), receipt_tax=str(r.tax),
                  receipt_tip=str(r.tip), receipt_total=str(r.total), receipt_posted=str(r.posted_amount),
                  image_file=r.image_file or "") for i in r.items]
 
@@ -50,7 +57,7 @@ class LocalCsvSink:
             with open(self.path, newline="") as fh:
                 kept = [row for row in csv.DictReader(fh) if (row["event_id"], row["receipt_id"]) not in reopened]
         done = {(row["event_id"], row["receipt_id"]) for row in kept}
-        todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
+        todo = [r for r in receipts if r.counts and (r.event_id, r.receipt_id) not in done]  # posted to the other book still lands
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=TX_FIELDS)
@@ -71,14 +78,17 @@ class LocalCsvSink:
         with open(self._reimb_path, newline="") as fh:
             return list(csv.DictReader(fh))
 
-    def record_reimbursement(self, r) -> None:
+    def record_reimbursements(self, paybacks: list) -> None:
         new_file = not self._reimb_path.exists()
         self._reimb_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._reimb_path, "a", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=REIMB_FIELDS)
             if new_file:
                 w.writeheader()
-            w.writerow(r.row())
+            w.writerows(r.row() for r in paybacks)
+
+    def refresh_receipts(self) -> None:
+        """Nothing to redraw: the Excel book is built fresh each time it's downloaded."""
 
     def undo_reimbursement(self, event_id: str) -> None:
         """Delete this event's most recent payback (a misclicked Mark paid)."""

@@ -39,6 +39,10 @@ class LineItem(BaseModel):
     # so the lines still add up to the printed total and the math check stays honest.
     price: Decimal = Field(description="Price per unit, before tax. Negative for a discount line.")
     returned: bool = False
+    # As the receipt marks it (T vs S/N/F). None when the receipt doesn't say: tax is then split by amount.
+    taxed: bool | None = None
+    # A discount printed under one item (Member Savings): it is part of that item, so it leaves with it.
+    for_item_above: bool = False
 
     @property
     def amount(self) -> Decimal:
@@ -59,6 +63,10 @@ class Receipt(BaseModel):
     image_hash: str | None = None
     status: Status = Status.DRAFTED
     review_note: str | None = None
+    # What the photo shows. Anything but a receipt is not proof that money was spent (see checks.check_proof).
+    proof: Literal["receipt", "cart", "estimate", "pending_charge"] = "receipt"
+    # Why the left-out lines (LineItem.returned) are out: the payer's own stuff, or taken back to the store.
+    left_out_why: Literal["personal", "returned"] = "personal"
 
     @model_validator(mode="after")
     def _not_a_refund(self):
@@ -83,15 +91,24 @@ class Receipt(BaseModel):
 
     @property
     def returned_amount(self) -> Decimal:
-        """Cost of returned items plus their share of the tax.
+        """Cost of left-out items plus their share of the tax.
 
-        The receipt does not say which items were taxed, so tax is split in
-        proportion to each item's amount. Exact when every item is taxable.
+        A discount printed under an item belongs to that item. Tax follows the lines the receipt
+        marks as taxed; when it marks none, tax is split in proportion to each line's amount.
         """
-        returned = sum((i.amount for i in self.items if i.returned), Decimal("0"))
-        if returned == 0 or self.subtotal == 0:
+        owner, owners = None, []
+        for i in self.items:
+            if not (i.for_item_above and i.price < 0 and owner):
+                owner = i
+            owners.append(owner)
+        out = sum((i.amount for i, o in zip(self.items, owners, strict=True) if o.returned), Decimal("0"))
+        if out == 0:
             return Decimal("0.00")
-        return money(returned + self.tax * returned / self.subtotal)
+        marked = any(i.taxed is not None for i in self.items)
+        base = [(i, o) for i, o in zip(self.items, owners, strict=True) if o.taxed or not marked]
+        base_amt = sum((i.amount for i, _ in base), Decimal("0"))
+        out_base = sum((i.amount for i, o in base if o.returned), Decimal("0"))
+        return money(out + (self.tax * out_base / base_amt if base_amt else Decimal("0")))
 
     @property
     def posted_amount(self) -> Decimal:

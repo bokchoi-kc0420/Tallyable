@@ -1,8 +1,11 @@
 """The "Books are in!" card after Push, and finishing an event."""
+import csv
+import os
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
-from test_app import draft, new_app
+from test_app import new_app, upload_and_draft
 
 from treasurer.models import Status
 
@@ -10,18 +13,14 @@ from treasurer.models import Status
 def pushed_app():
     """Fake event with R01 approved (Member A paid), the rest left out, $100 cash in, pushed."""
     at = new_app().run()
-    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    for sb in at.selectbox:
-        if sb.key and sb.key.startswith("payer-R"):
-            sb.set_value("Member A")
-    at.run()
-    draft(at)
+    upload_and_draft(at)
     for rid in list(at.session_state["receipts"]):
         at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.text_input(key="income-Cash").set_value("100.00").run()
-    at.download_button(key="dl-xlsx-row").click().run()  # no Google Sheet: saving is the push
+    at.button(key="push-sheets").click().run()  # the demo has no club sheet: it opens a peek at the book
+    at.download_button(key="push-excel").click().run()  # saving the Excel file is the push
     assert not at.exception
     return at
 
@@ -34,7 +33,9 @@ def test_done_card_counts_left_out_and_goes_stale_after_an_edit():
     assert at.button(key="to-closeout").proto.type == "primary"  # Close out is the next step now
     at.text_input(key="income-Cash").set_value("120.00").run()
     assert any("You changed something since" in m.value for m in at.markdown)
-    next(b for b in at.button if b.label == "Save again").click().run()
+    again = at.download_button(key="push-again")  # no sheet: Save again hands over a fresh Excel file too
+    assert again.proto.label == "Save again"
+    again.click().run()
     assert any("Your book is ready!" in m.value for m in at.markdown)
 
 
@@ -45,12 +46,16 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     assert not at.exception
     page = " ".join(h.value for h in at.get("html"))
     assert "is closed out!" in page and "Set your starting balance" in page  # never set: no made-up balance
+    assert page.count('class="band"') == 19 and "tly-confetti" in page  # the ticket rip (a stub in 19 bands), then confetti
+    assert "tly-rip" not in " ".join(h.value for h in at.run().get("html"))  # once, not on every visit to the page
     assert any("1 person still owed" in m.value for m in at.markdown)  # honest about Member A
-    assert any(b.label == "Reopen" for b in at.sidebar.button)  # its stub sits in Past events
+    assert any(b.label == "Open" for b in at.sidebar.button)  # its stub sits in Past events
     assert any('class="tly-stub"' in m.value for m in at.sidebar.markdown)  # finished = torn-off stub
     hidden = ".st-key-event-group { display: none; }"
     assert any(hidden in h.value for h in at.get("html"))  # its ticket left the sidebar
     at.button(key="reopen-event").click().run()
+    assert at.session_state["event"]["finished"]  # a closed book asks first
+    at.button(key="reopen-yes").click().run()
     assert not at.session_state["event"]["finished"]
     assert at.sidebar.radio(key="step").value == "4. Close out"
     assert any(b.key == "finish-event" for b in at.button)
@@ -73,11 +78,12 @@ def test_club_balance_adds_this_years_saved_events(tmp_path, monkeypatch):
     from ui import finish
 
     monkeypatch.setattr(finish, "past", lambda: tmp_path)
-    old = {"event": {"event_id": "EVT-A", "name": "A", "date": date(2026, 10, 1)}, "receipts": {}, "images": {},
-           "income": {"Cash": "50.00"}}
-    last_year = {**old, "event": {"event_id": "EVT-B", "name": "B", "date": date(2025, 10, 1)}}
-    session_store.save(tmp_path / "a.json", old)
-    session_store.save(tmp_path / "b.json", last_year)
+    old = {"event": {"event_id": "EVT-A", "name": "A", "date": date(2026, 10, 1), "finished": True}, "receipts": {},
+           "images": {}, "income": {"Cash": "50.00"}}
+    last_year = {**old, "event": {"event_id": "EVT-B", "name": "B", "date": date(2025, 10, 1), "finished": True}}
+    still_open = {**old, "event": {"event_id": "EVT-D", "name": "D", "date": date(2026, 11, 1)}}  # not finished: not counted
+    for name, saved in [("a", old), ("b", last_year), ("d", still_open)]:
+        session_store.save(tmp_path / f"{name}.json", saved)
     ev = EventInfo("EVT-C", "C", date(2026, 11, 14), 10, start_balance=Decimal("1000"))
     assert finish.club_balance(ev, Decimal("-20")) == Decimal("1030")
 
@@ -96,3 +102,98 @@ def test_new_event_from_the_sidebar_opens_on_the_first_step():
     at.sidebar.button(key="new-event").click().run()  # a finished event needs no confirm
     assert at.sidebar.radio(key="step").value == "1. Upload"  # was stuck on Close out
     assert at.header[0].value == "Start a new event"
+
+
+def test_upload_says_so_when_the_photos_were_already_read():
+    at = new_app().run()
+    upload_and_draft(at)
+    del at.session_state["last_draft"]  # as after coming back to the event later...
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()  # ...and picking them again
+    assert any("Nothing new to read" in m.value and "R01.jpg" in m.value for m in at.markdown)
+    assert at.button(key="to-review")
+
+
+def test_mark_all_paid_pays_everyone_the_way_their_row_says():
+    at = new_app().run()
+    upload_and_draft(at)
+    for rid, payer in [("R01", "Member A"), ("R03", "Member B")]:
+        at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
+            update={"status": Status.APPROVED, "payer": payer})
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.selectbox(key="method-Member B").set_value("Venmo").run()
+    at.button(key="paid-all").click().run()
+    assert not at.exception
+    assert not [b for b in at.button if b.key.startswith("paid-")]  # everyone shows Paid
+    saved = list(csv.DictReader(Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv").open()))
+    assert {(r["payer"], r["method"]) for r in saved} == {("Member A", "Zelle"), ("Member B", "Venmo")}
+
+
+def test_add_a_missed_receipt_reopens_on_upload_and_shows_the_way_back():
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    at.button(key="add-missed").click().run()
+    assert at.sidebar.radio[0].value == "1. Upload" and not at.session_state["event"]["finished"]
+    assert any("Adding a missed receipt" in m.value for m in at.markdown)
+    at.session_state["view"] = "club"  # left halfway: Club home says it's being finished AGAIN
+    at.run()
+    assert any("REOPENED FOR A MISSED RECEIPT" in h.value for h in at.get("html"))
+    at.session_state["view"] = "event"
+    at.run()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    assert any("Pay them back" in m.value for m in at.markdown)  # the trail follows every step
+    at.button(key="finish-event").click().run()
+    assert not at.session_state["event"]["late"]  # finished again: the trail is done
+
+
+def test_remove_takes_a_photo_off_upload_before_its_read():
+    at = new_app().run()
+    next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
+    at.button(key="drop-R02.jpg").click().run()
+    next(b for b in at.button if b.label == "Apply to all").click().run()
+    assert at.button(key="read").label == "Read 13 receipts"
+    at.button(key="read").click().run()
+    assert "R02" not in at.session_state["receipts"]
+    assert not [b for b in at.button if (b.key or "").startswith("drop-")]  # read ones: Leave out on Review
+
+
+def test_last_school_years_event_is_locked():
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    at.session_state["event"] = {**at.session_state["event"], "date": date(2025, 10, 1)}
+    at.run()
+    keys = {b.key for b in at.button}
+    assert "add-missed" not in keys and "reopen-event" not in keys
+    assert any("2025–2026 school year" in c.value for c in at.caption)
+
+
+def test_a_must_fix_receipt_says_what_it_books_and_no_payer_cant_be_booked():
+    at = new_app().run()
+    upload_and_draft(at)
+    at.sidebar.radio[0].set_value("2. Review").run()
+    at.sidebar.radio(key="review-pick").set_value("R02").run()  # its math doesn't add up
+    approve = at.button(key="approve-R02")
+    assert approve.label.startswith("Book $") and not approve.disabled
+    at.selectbox(key="payer-R02").set_value("").run()
+    assert at.button(key="approve-R02").disabled  # nobody to pay back
+    at.selectbox(key="payer-R02").set_value("Member A").run()
+    at.button(key="approve-R02").click().run()
+    assert at.session_state["receipts"]["R02"].status is Status.APPROVED
+
+
+def test_club_balance_on_club_home_waits_for_finish(monkeypatch):
+    from ui import home
+    monkeypatch.setattr(home.club, "load", lambda: {"start_balance": 300})
+    events = [{"net": Decimal("50"), "finished": True}, {"net": Decimal("-225"), "finished": False}]
+    assert home.balance(events) == Decimal("350")
+
+
+def test_finish_catches_the_books_up_on_paybacks(monkeypatch):
+    from treasurer.post import LocalCsvSink
+    calls = []
+    monkeypatch.setattr(LocalCsvSink, "refresh_receipts", lambda self: calls.append(1))
+    at = pushed_app()
+    at.sidebar.radio[0].set_value("4. Close out").run()
+    at.button(key="finish-event").click().run()
+    assert calls == [1]  # paybacks only save their own row; Finish redraws the sheet's Receipts tab once

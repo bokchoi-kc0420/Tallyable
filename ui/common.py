@@ -3,20 +3,21 @@ walker bar, tables, the money bars)."""
 from __future__ import annotations
 
 import base64
+import hashlib
 import html
+import json
 import os
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import streamlit as st
 
-from treasurer.models import Receipt, Status
+from treasurer.models import CENT, Receipt, Status
 from treasurer.post import LocalCsvSink, event_totals
 from treasurer.sheets import GoogleSheetsSink
 
 ROOT = Path(__file__).parent.parent
-BASE = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
-MODE_FILE = BASE / "mode.txt"  # "demo" or "real": which folder a new tab opens (none yet: demo)
+DATA = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
@@ -32,17 +33,43 @@ TALLY = {"1. Upload": "tally-upload-small.png", "2. Review": "tally-review-small
 ss = st.session_state
 
 
+def hosted() -> bool:
+    """The hosted link: Google sign-in is set up in secrets.toml. Locally there is none."""
+    try:
+        return "auth" in st.secrets
+    except Exception:  # no secrets.toml
+        return False
+
+
+def signed_in_email() -> str | None:
+    try:
+        return st.user.email.lower() if st.user.is_logged_in else None
+    except Exception:  # sign-in isn't set up (running locally)
+        return None
+
+
+def base() -> Path:
+    """Locally, output/. On the hosted link each Google account gets its own folder,
+    so one club never opens another club's events or saved progress."""
+    email = signed_in_email()
+    return DATA / "users" / hashlib.sha256(email.encode()).hexdigest()[:16] if email else DATA
+
+
+def mode_file() -> Path:
+    return base() / "mode.txt"  # "demo" or "real": which folder a new tab opens (none yet: real)
+
+
 def is_demo() -> bool:
     """Demo (sample club, fake receipts) or real (your club). Each tab keeps the mode it opened in,
     so a switch in one tab can't send another tab's event into the wrong folder."""
     if "demo_mode" not in ss:
-        ss.demo_mode = not MODE_FILE.exists() or MODE_FILE.read_text().strip() == "demo"  # a new install opens the demo
+        ss.demo_mode = mode_file().exists() and mode_file().read_text().strip() == "demo"  # a new install opens the real app
     return ss.demo_mode
 
 
 def out() -> Path:
     """This mode's own data folder. Demo and real never share a file."""
-    return BASE / ("demo" if is_demo() else "real")
+    return base() / ("demo" if is_demo() else "real")
 
 
 def past() -> Path:
@@ -64,7 +91,10 @@ def load_cloud_secrets() -> dict | None:
         return None
 
 
-GCP_KEY = load_cloud_secrets()
+# The Google bot's key: from secrets.toml, or (on the hosted link) the whole service_account.json
+# pasted into Doppler as GOOGLE_SERVICE_ACCOUNT_JSON. Locally neither is set and the file in .env is used.
+GCP_KEY = load_cloud_secrets() or (json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+                                   if os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") else None)
 
 
 def dec(text: str, default: str = "0") -> Decimal:
@@ -119,7 +149,7 @@ def get_sink():
     try:
         from ui.connect import linked
         link = linked() or {}
-        if not link and not is_demo():  # real books only go to a sheet linked in the app, never the .env test sheet
+        if is_demo() or not link:  # real books only go to a sheet linked in the app; the demo's stay on this computer
             return LocalCsvSink(out() / "transactions.csv"), None
         return sheets_sink(link.get("book"), link.get("ledger")) or LocalCsvSink(out() / "transactions.csv"), None
     except Exception as e:  # bad key file, sheet not shared, no network
@@ -214,6 +244,22 @@ def step_bar(current: str) -> None:
                 f'<div class="track"><div class="fill" style="width:{pct}%"></div>{"".join(dots)}'
                 f'<img src="{mascot_uri(TALLY[current])}" alt="" style="left:{pct}%"></div>'
                 f'<div class="stops">{"".join(labels)}</div></div>', unsafe_allow_html=True)
+    if ss.event.get("late"):
+        late_trail(i)
+
+
+LATE = [("Drop it", "Drop it below - I'll walk you back to the finish!"),
+        ("Check it", "Give it a look, then approve it."),
+        ("Push again", "Push again so the books get it."),
+        ("Pay back + finish", "Pay them back, then hit Finish event.")]
+
+
+def late_trail(now: int) -> None:
+    """A receipt added after closing out: Tally names the four steps back to the finish, on every one of them."""
+    chips = "".join(f'<span class="{"now" if n == now else "done" if n < now else ""}"><i>{"✓" if n < now else n + 1}</i>'
+                    f'{label}</span>' for n, (label, _) in enumerate(LATE))
+    bubble = guide(f"Adding a missed receipt to {ss.event['name']}.", LATE[now][1], key="late", tip=True)
+    bubble.markdown(f'<p class="tly-trail">{chips}</p>', unsafe_allow_html=True)
 
 
 def html_table(rows: list[dict], numeric: tuple[str, ...] = ()) -> None:
@@ -250,8 +296,16 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
     else:
         pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> more out than in</span>'
     cats: dict[str, Decimal] = {}
-    for i in (i for r in receipts if r.counts for i in r.items if not i.returned):
-        cats[i.category] = cats.get(i.category, Decimal("0")) + i.amount
+    for r in (r for r in receipts if r.counts):
+        own: dict[str, Decimal] = {}
+        for i in (i for i in r.items if not i.returned):
+            own[i.category] = own.get(i.category, Decimal("0")) + i.amount
+        # Approved with the math flag overridden: the lines can't be trusted, the total can.
+        # So the whole total goes under the receipt's biggest category and the bars still add up.
+        if own and abs(r.computed_total - r.total) > CENT:
+            own = {max(own, key=own.get): r.posted_amount}
+        for k, v in own.items():
+            cats[k] = cats.get(k, Decimal("0")) + v
     cats = {k: v for k, v in cats.items() if v > 0}
     rest = t["expenses"] - sum(cats.values(), Decimal("0"))
     if rest > 0:

@@ -11,11 +11,12 @@ from collections import OrderedDict, defaultdict
 from datetime import date
 from decimal import Decimal
 
+from .models import CENT
 from .models import cell_decimal as D
 from .views import DARK, INK, MUTED, RED, TINT, TINT2, VIEW_NOTE, View, is_returned, num
 
 HEADER = ["Place", "Category", "Items", "Unit", "Price($)", "VAT (TAX)", "TIP", "Total", "Paid by"]
-WIDTHS = [112, 62, 172, 38, 72, 72, 60, 78, 88]  # 754 px: a letter page, portrait
+WIDTHS = [112, 72, 162, 38, 72, 72, 60, 78, 88]  # 754 px: a letter page, portrait
 TOP = 8  # rows above the first receipt: note, title, event line, gap, cards (2), gap, header
 
 
@@ -47,11 +48,20 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
     for n, (rid, items) in enumerate(ordered):
         f, top = items[0], len(rows)
         payer = f["payer"] or "No payer"
+        own = defaultdict(Decimal)
         for i in items:
-            rows.append(["", i["category"], i["item"] + (" (returned)" if is_returned(i) else ""),
+            why = {"TRUE": " (returned)", "PERSONAL": " (personal)"}.get(str(i["returned"]).upper(), "")
+            rows.append(["", i["category"], i["item"] + why,
                          int(D(i["unit"])), num(D(i["price"])), "", "", "", ""])
             if not is_returned(i):
-                by_cat[i["category"]] += D(i["amount"])
+                own[i["category"]] += D(i["amount"])
+        extras = D(f["receipt_tax"]) + D(f["receipt_tip"])
+        # Lines that don't add up to the total (approved with a note): the total is what was paid,
+        # so all of it goes under the receipt's biggest category.
+        if own and abs(sum(D(i["amount"]) for i in items) + extras - D(f["receipt_total"])) > CENT:
+            own = {max(own, key=own.get): D(f["receipt_posted"]) - extras}
+        for k, v in own.items():
+            by_cat[k] += v
         rows[top][0] = f"{f['place']}\n{date.fromisoformat(str(f['date'])[:10]):%m/%d}"
         rows[top][5:9] = [num(D(f["receipt_tax"])), num(D(f["receipt_tip"])), num(D(f["receipt_posted"])),
                           f"{payer}\n{rid}"]
@@ -69,8 +79,10 @@ def render_expense_report(event: dict, receipts: OrderedDict[str, list[dict]]) -
         view.look(top, bottom, 8, 9, align="center", **({"bold": True, "color": RED} if not f["payer"] else {}))
         view.look(top, bottom, 7, 8, bold=True)
         view.look(top, bottom, 0, 9, border="box")
-        if bottom - top == 1:
-            view.heights[top] = 34  # room for the two-line place and payer cells
+        lines = -(-len(f["place"]) // 15) + 1  # the bold place wraps at about 15 letters, then its date line
+        tall = -(-lines * 17 // (bottom - top))
+        if tall > 21:  # taller rows, so a long place name (or a one-line receipt) isn't cut off
+            view.heights.update(dict.fromkeys(range(top, bottom), tall))
     last = len(rows)
     rows.append(["Total expenses", "", "", "", "", "", "", num(total), ""])
     extras = _breakdowns(rows, by_cat, by_payer)

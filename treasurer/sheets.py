@@ -165,7 +165,7 @@ class GoogleSheetsSink:
         for n in reversed([n for n, key in enumerate(rows_now) if key in reopened]):
             tx_ws.delete_rows(n + 2)  # +1 for the header, +1 because sheet rows count from 1
         done = set(rows_now) - reopened
-        todo = [r for r in receipts if r.status is Status.APPROVED and (r.event_id, r.receipt_id) not in done]
+        todo = [r for r in receipts if r.counts and (r.event_id, r.receipt_id) not in done]  # posted to the other book still lands
         rows = [[_cell(f, row[f]) for f in TX_FIELDS] for r in todo for row in transaction_rows(r)]
         if rows:
             tx_ws.append_rows(rows, value_input_option="RAW")
@@ -188,36 +188,40 @@ class GoogleSheetsSink:
         ev_header = [h for h in ev_ws.row_values(1) if h]
         self._tidy_format(ev_ws, ev_header, len(events) + 1, money=set(ev_header) - set(BASE_EVENT_FIELDS))
         self._tidy_format(reimb_ws, REIMB_FIELDS, len(reimb) + 1)
+        for book in {id(b): b for b in (self.book, self.ledger_book)}.values():
+            _drop_blank_sheet1(book)  # once per push, not per tab or per payback: each check is a trip to Google
         self._apply_format()
         return [r.receipt_id for r in todo]
 
     def reimbursements(self) -> list[dict]:
         return self._records(REIMB, REIMB_FIELDS)
 
-    def record_reimbursement(self, r) -> None:
-        """Append to the Reimbursements tab and rebuild the Receipts tab."""
-        row = r.row()
+    def record_reimbursements(self, paybacks: list) -> None:
+        """Append to the Reimbursements tab, and nothing else: redrawing the Receipts tab on every payback
+        cost ~15 trips to Google, and a few paybacks in a minute hit its limit (a 40 second freeze).
+        refresh_receipts catches the tab up when the event is finished; a push redraws it too."""
+        rows = [r.row() for r in paybacks]
         ws = self._tab(REIMB, REIMB_FIELDS)
-        ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS]], value_input_option="RAW")
-        self._refresh_receipts(ws)
+        ws.append_rows([[float(row[f]) if f == "amount" else row[f] for f in REIMB_FIELDS] for row in rows],
+                       value_input_option="RAW")
 
     def undo_reimbursement(self, event_id: str) -> None:
-        """Delete this event's most recent payback (a misclicked Mark paid) and rebuild the Receipts tab."""
+        """Delete this event's most recent payback (a misclicked Mark paid)."""
         ws = self._tab(REIMB, REIMB_FIELDS)
         rows = ws.get_all_records()
         last = max((i for i, r in enumerate(rows) if str(r["event_id"]) == event_id), default=None)
         if last is None:
             return
         ws.delete_rows(last + 2)  # +1 for the header, +1 because sheet rows count from 1
-        self._refresh_receipts(ws)
 
-    def _refresh_receipts(self, ws) -> None:
-        """A payback shows on the Receipts tab. The ledger has no row for it: it settles an
-        expense already counted there."""
-        reimb = ws.get_all_records()
-        events, tx = self._records(EVENTS, EVENT_FIELDS), self._records(TX, TX_FIELDS)
+    def refresh_receipts(self) -> None:
+        """Redraw the Receipts tab so its Paid back column shows the paybacks. The ledger has no row
+        for a payback: it settles an expense already counted there."""
+        tabs = {w.title: w for w in self.book.worksheets()}  # one lookup for all three tabs: each is a trip to Google
+        reimb, events, tx = (tabs[t].get_all_records() if t in tabs else [] for t in (REIMB, EVENTS, TX))
         self._rewrite(RECEIPTS, render_receipts(events, tx, reimb))
-        self._tidy_format(ws, REIMB_FIELDS, len(reimb) + 1)
+        if REIMB in tabs:
+            self._tidy_format(tabs[REIMB], REIMB_FIELDS, len(reimb) + 1)
         self._apply_format()
 
     def _upsert_event(self, event: EventInfo, income: dict[str, Decimal]) -> None:
@@ -255,7 +259,6 @@ class GoogleSheetsSink:
         if view.grid:
             ws.update(values=view.grid, range_name="A1", value_input_option="RAW")
         self._pending.append((book, title, fmt.view_requests(ws.id, view)))
-        _drop_blank_sheet1(book)
 
 
 

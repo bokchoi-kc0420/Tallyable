@@ -33,7 +33,7 @@ def event_id_for(name: str, d: date) -> str:
 def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
     Income sources carry over; who's in starts as the whole club list."""
-    ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished")}
+    ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished", "late")}
     ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": date.today(), "set_up": False,
                 "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color")),
                 "club": club.current()}
@@ -46,16 +46,17 @@ def start_new_event() -> None:
     ss.step = STEPS[0]  # the new event opens on its first step, not where the last one ended
     ss.view = "event"
     session_store.clear(out() / "session.json")
+    ss.pop("_saved", None)
 
 
 def close_confirm() -> None:
-    ss.confirm_new = False
+    ss.pop("confirm", None)
 
 
 @st.dialog("Start a new event?", on_dismiss=close_confirm)
 def confirm_new_event() -> None:
     """Ask before clearing the screen, so a stray click can't wipe an event in progress.
-    Shown while `confirm_new` is set, so each button click redraws it until one closes it."""
+    Shown while `confirm` is "new", so each button click redraws it until one closes it."""
     n = len(ss.receipts)
     st.markdown(f'<div class="tly-confirm">{ticket(ss.event["date"], ss.event["name"], n, ss.event.get("color"))}</div>',
                 unsafe_allow_html=True)
@@ -72,11 +73,7 @@ def confirm_new_event() -> None:
         st.rerun()
 
 
-def close_delete() -> None:
-    ss.confirm_delete = False
-
-
-@st.dialog("Delete this event?", on_dismiss=close_delete)
+@st.dialog("Delete this event?", on_dismiss=close_confirm)
 def confirm_delete() -> None:
     """Delete the open event for good: its saved file and the screen. The sheet isn't touched."""
     n = len(ss.receipts)
@@ -87,13 +84,12 @@ def confirm_delete() -> None:
                 f"Its receipts, photos and notes go away for good.{pushed}</p>", unsafe_allow_html=True)
     c = st.columns(2)
     if c[0].button("Keep it", key="delete-no", width="stretch"):
-        close_delete()
+        close_confirm()
         st.rerun()
     if c[1].button("Yes, delete it", type="primary", key="delete-yes", width="stretch"):
-        close_delete()
+        close_confirm()
         session_store.clear(past() / f"{ss.event['event_id']}.json")
         start_new_event()
-        ss.pop("_saved", None)
         st.rerun()
 
 
@@ -122,7 +118,7 @@ def open_past(path: Path) -> None:
         return
     ss.update(saved)
     ss.pop("ticket-color", None)
-    ss.failed, ss.skipped = {}, {}
+    ss.failed, ss.skipped, ss.joins = {}, {}, {}
     ss.pop("last_draft", None)
     ss.pop("_saved", None)
     ss.pop("_saved_photos", None)
@@ -130,16 +126,16 @@ def open_past(path: Path) -> None:
     ss.view = "event"
 
 
-def reopen() -> None:
-    """Button callback: un-finish this event and go back to Close out."""
-    ss.event = {**ss.event, "finished": False}
+def show_finished() -> None:
+    """Button callback: the finished event on screen, opened on its finish page like any other stub.
+    Reopen and Add a missed receipt live there."""
     ss.step = "4. Close out"
     ss.view = "event"
 
 
 def past_events_box() -> None:
     """Past events in two tabs: Still open (full tickets) and Finished (torn-off stubs)."""
-    here = ss.event["event_id"]  # the current event joins once it's finished, with Reopen
+    here = ss.event["event_id"]  # the current event joins once it's finished
     saved = [e for e in session_store.past_events(past())
             if club.owns(e) and (e["event_id"] != here or ss.event.get("finished"))]
     if not saved:
@@ -162,8 +158,8 @@ def past_events_box() -> None:
                 st.markdown(art, unsafe_allow_html=True)
                 # The whole ticket or stub is the button: an invisible one laid over it (finish.css).
                 here_now = e["event_id"] == here
-                st.button("Reopen", key=f"open-past-{n}", on_click=reopen if here_now else open_past,
-                          args=() if here_now else (e["path"],), help=f"Reopen {e['name']}")
+                st.button("Open", key=f"open-past-{n}", on_click=show_finished if here_now else open_past,
+                          args=() if here_now else (e["path"],), help=f"Open {e['name']}")
 
 
 def leave_home() -> None:
@@ -213,13 +209,14 @@ def show() -> tuple[str, EventInfo]:
             save_session()
             start_new_event()
             st.rerun()
-        ss.confirm_new = True
-    if ss.get("confirm_new"):
+        ss.confirm = "new"
+    if ss.get("confirm") == "new":
         confirm_new_event()
-    if ss.get("confirm_delete"):
+    if ss.get("confirm") == "delete":
         confirm_delete()
     event_group = st.sidebar.container(border=True, key="event-group")  # ticket, steps and Edit event in one box
-    event_card = event_group.empty()  # filled below, once the event fields are read
+    # Filled below, once the event fields are read. Not st.empty(): that blanks the ticket on every rerun (a flicker).
+    event_card = event_group.container()
     steps_slot = event_group.container()  # the stepper sits under the ticket; Edit event goes below it
     with event_group.container(key="edit-event"), st.expander("Edit event", icon=":material/edit:"):
         locked = bool(ss.event.get("pushed_at"))  # the sheet's tabs are named after the event
@@ -242,7 +239,7 @@ def show() -> tuple[str, EventInfo]:
         if locked:
             st.caption("Name and date are locked once the books are pushed.")
         st.button("Delete event", icon=":material/delete:", key="delete-event", width="stretch",
-                  on_click=lambda: ss.update(confirm_delete=True))
+                  on_click=ss.update, kwargs={"confirm": "delete"})
     start = ss.event.get("start_balance")
     event = EventInfo(ss.event["event_id"], ss.event["name"], ss.event["date"], ss.event["attendees"],
                       start_balance=None if start is None else Decimal(str(start)))

@@ -150,6 +150,14 @@ def test_push_writes_tidy_tabs_and_is_idempotent(approved):
     assert len(book.tabs[EVENTS].cells) == 2                  # event upserted, not duplicated
 
 
+def test_sheet_connected_after_excel_save_still_gets_every_receipt(approved):
+    """Kevin's run: Save and get Excel marked all 6 posted, then he linked a sheet and pushed. Nothing landed."""
+    posted = [r.model_copy(update={"status": Status.POSTED}) for r in approved]
+    book = FakeBook()
+    assert len(GoogleSheetsSink(book).post(posted, EVENT, INCOME)) == len(approved)
+    assert len(book.tabs[TX].cells) == 1 + sum(len(r.items) for r in approved)
+
+
 def test_old_per_term_tabs_are_cleared_on_push(approved):
     book = FakeBook()
     book.add_worksheet("Balance Sheet: Fall 2026", 10, 5)  # from an older version
@@ -210,9 +218,12 @@ def test_ledger_can_live_in_its_own_google_sheet(approved):
     ledger_book.add_worksheet("Sheet1", 1000, 26)  # what a new Google Sheet comes with
     sink = GoogleSheetsSink(books, ledger_book)
     sink.post(approved, EVENT, INCOME)
-    sink.record_reimbursement(Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle"))
+    sink.record_reimbursements([Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle")])
     assert list(ledger_book.tabs) == [LEDGER]  # the blank Sheet1 is gone
     assert LEDGER not in books.tabs and "Receipts" in books.tabs
+    paid_before = {r[2]: r[6] for r in books.tabs["Receipts"].cells[3:]}
+    assert paid_before["R01"] == "Not yet"  # a payback only saves its own row: no redraw, so it's quick
+    sink.refresh_receipts()  # Finish event catches the tab up
     receipts = books.tabs["Receipts"].cells
     paid = {r[2]: r[6] for r in receipts[3:]}
     # Member A was paid $31.07: that settles R01 ($31.07, the oldest), not R04 or R10
@@ -229,7 +240,7 @@ def test_a_payback_leaves_the_ledger_alone(approved):
     sink = GoogleSheetsSink(book)
     sink.post(approved, EVENT, INCOME)
     before = book.tabs[LEDGER].cells
-    sink.record_reimbursement(Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle"))
+    sink.record_reimbursements([Reimbursement(EVENT.event_id, "Member A", date(2026, 11, 20), Decimal("31.07"), "Zelle")])
     assert book.tabs[LEDGER].cells == before  # it settles an expense the ledger already counts
     assert totals_by_payer(sink.reimbursements(), EVENT.event_id) == {"Member A": Decimal("31.07")}
     sink.undo_reimbursement(EVENT.event_id)                    # a misclicked Mark paid
@@ -418,3 +429,26 @@ def test_events_sharing_a_name_get_their_own_expense_tab():
     titles = [expense_tab_title(e, events) for e in events]
     assert len({t.lower() for t in titles}) == 4  # Sheets refuses a repeat, caps aside
     assert titles[0] == "Expense Report: Picnic (Oct 3)" and titles[3] == "Expense Report: Mixer"
+
+
+def test_formula_text_stays_plain_in_excel_and_csv():
+    """A doctored receipt whose Place reads "=HYPERLINK(...)" must not become a live formula in a download."""
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from treasurer.models import LineItem, Receipt, Status
+    from treasurer.post import TX_FIELDS
+    from treasurer.sheets import local_transactions, local_views
+    from treasurer.views import grid_to_csv
+    from treasurer.xlsx_export import book_xlsx
+    evil = '=HYPERLINK("http://evil.example","Open receipt")'
+    r = Receipt(receipt_id="R1", event_id=EVENT.event_id, place=evil, date=EVENT.date, payer="@Ana", status=Status.APPROVED,
+                items=[LineItem(category="Food", item="+Chips", unit=1, price=Decimal("5"))], total=Decimal("5"))
+    views = local_views([r], EVENT, {})
+    wb = load_workbook(BytesIO(book_xlsx(views, local_transactions([r]), TX_FIELDS)))
+    cells = [c for ws in wb for row in ws.iter_rows() for c in row]
+    assert not [c.coordinate for c in cells if c.data_type == "f"]
+    assert any(c.value == evil for c in cells)  # still readable, just not run
+    csv_text = grid_to_csv(views["Receipts"].grid)
+    assert "'" + evil.replace('"', '""') in csv_text and "\n=" not in csv_text and ",=" not in csv_text

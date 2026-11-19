@@ -105,8 +105,8 @@ def past_events(folder: Path) -> list[dict]:
 
 
 def past_nets(folder: Path) -> list[dict]:
-    """Every saved event's money: event_id, name, date, finished, club, and net (income minus
-    counted receipts), for the club balance. Photos aren't decoded, so this stays quick."""
+    """Every saved event's money: event_id, name, date, finished, club, net (income minus counted
+    receipts) for the club balance, and those counted receipts. Photos aren't decoded, so this stays quick."""
     from decimal import Decimal
 
     from .models import cell_decimal
@@ -119,6 +119,7 @@ def past_nets(folder: Path) -> list[dict]:
             got = sum((cell_decimal(v or 0) for v in (raw.get("income") or {}).values()), Decimal("0"))
             ev = raw["event"]
             out.append({"event_id": ev["event_id"], "name": ev["name"], "date": ev["date"], "net": got - spent,
+                        "counted": [r for r in receipts if r.counts],
                         "color": ev.get("color"), "finished": bool(ev.get("finished")), "club": ev.get("club")})
         except (OSError, ValueError, KeyError, TypeError):
             continue

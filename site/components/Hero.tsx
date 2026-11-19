@@ -69,9 +69,9 @@ export function Hero() {
           For club treasurers
         </p>
         <h1 className="mt-3 font-display text-5xl font-bold leading-[1.05] text-ink sm:text-6xl lg:text-7xl">
-          Every receipt,
+          Receipts in,
           <br />
-          accounted for.
+          books done.
         </h1>
         <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-soft">
           Snap your event&apos;s receipts. Tallyable checks the math, shows who&apos;s owed, and builds the funder
@@ -83,7 +83,6 @@ export function Hero() {
           </a>
           <a href="#payoff" className="btn btn-ghost">See what you get</a>
         </div>
-        <p className="mt-5 text-sm text-ink-soft">Works for any club · Your Google Sheet stays the record</p>
       </div>
 
       <div className="relative mx-auto aspect-[1/1] w-full max-w-[520px]">

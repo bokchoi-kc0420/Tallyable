@@ -13,7 +13,7 @@ const QA = [
   },
   {
     q: "Where does my data live?",
-    a: "In your own Google Sheet, which stays the record. No Sheet? Download the whole book as one Excel file instead.",
+    a: "In your own Google Sheet. No Sheet? Grab the whole book as one Excel file.",
   },
   {
     q: "What happens when I hand off to the next treasurer?",

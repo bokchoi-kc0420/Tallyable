@@ -63,8 +63,9 @@ def income_sources(event: dict) -> list[str]:
 
 
 def is_returned(row: dict) -> bool:
-    """A Transactions row's `returned` cell, which comes back as TRUE/FALSE text or a bool."""
-    return str(row["returned"]).upper() == "TRUE"
+    """A Transactions row is left out of the books: its `returned` cell is TRUE (returned) or PERSONAL.
+    The cell comes back as text or a bool."""
+    return str(row["returned"]).upper() in ("TRUE", "PERSONAL")
 
 
 def group(tx: list[dict]) -> OrderedDict[str, OrderedDict[str, list[dict]]]:
@@ -146,9 +147,18 @@ def render_balance_sheet(events: list[dict], tx: list[dict]) -> View:
     return view
 
 
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def safe_row(row: list) -> list:
+    """A CSV row Excel can't run: text that starts like a formula (a Place read off a doctored receipt,
+    say "=HYPERLINK(...)") gets a leading ' so it opens as plain text. Numbers are left alone."""
+    return ["'" + v if isinstance(v, str) and v.startswith(FORMULA_START) else v for v in row]
+
+
 def grid_to_csv(grid: list[list]) -> str:
     import csv
     import io
     buf = io.StringIO()
-    csv.writer(buf).writerows(grid)
+    csv.writer(buf).writerows(safe_row(r) for r in grid)
     return buf.getvalue()

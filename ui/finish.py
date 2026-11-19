@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import random
+from datetime import date
 from decimal import Decimal
 
 import streamlit as st
@@ -22,6 +23,7 @@ from ui import club, done_card
 from ui.common import dec, get_sink, mascot_uri, past, saved_reimbursements, ss, usd
 from ui.home import go_home
 from ui.sidebar import save_session, start_new_event
+from ui.tickets import rip
 
 FIX = {"2. Review": "Fix in Review", "3. Summary": "Go push", "4. Close out": "Pay back"}
 
@@ -45,18 +47,41 @@ def open_items(lines: list) -> list[tuple[str, str]]:
     return items
 
 
+REOPEN_HELP = "Back to Close out. It leaves Past events until you finish again."
+
+
 def payback_lines(sink, event: EventInfo) -> list:
     done = [r for r in ss.receipts.values() if r.counts]
     paybacks = [p for p in saved_reimbursements(sink) if str(p["event_id"]) == event.event_id]
     return co.payer_summary(done, totals_by_payer(paybacks, event.event_id))
 
 
-def set_finished(done: bool, step: str = "4. Close out") -> None:
-    """Button callback: finish (or reopen) the event and save it, so Past events shows it right away."""
-    ss.event = {**ss.event, "finished": done}
-    ss.confetti = done  # once, right after Finish event: not on every visit to the page
+def set_finished(done: bool, step: str = "4. Close out", late: bool = False) -> None:
+    """Button callback: finish (or reopen) the event and save it, so Past events shows it right away.
+    late: reopened to add a missed receipt, so every step shows the way back to the finish."""
+    if done and ss.event.get("pushed_at"):  # paybacks only save their own row: the sheet's Receipts tab catches up here
+        try:
+            get_sink()[0].refresh_receipts()
+        except Exception as e:
+            ss.finish_note = f"Finished, but the sheet's Receipts tab didn't update ({e}). Push again on Summary to redraw it."
+    ss.event = {**ss.event, "finished": done, "late": late}
+    ss.pop("last_draft", None)  # "Done! I read all 14" is old news on a reopened Upload
+    ss.rip = done  # the ticket rip plays once, right after Finish event: not on every visit to the page
     ss.step = step
     save_session()
+
+
+@st.dialog("Reopen this event?", on_dismiss=lambda: ss.pop("confirm_reopen", None))
+def confirm_reopen(name: str, net: Decimal) -> None:
+    gone = f"its {usd(net)}" if net >= 0 else f"its {usd(-net)} loss"
+    st.markdown(f'<p class="tly-confirm-note"><b>{html.escape(name)}</b> goes back to Close out. The club balance '
+                f"leaves out {gone} until you finish it again.</p>", unsafe_allow_html=True)
+    c = st.columns(2)
+    if c[0].button("Keep it closed", key="reopen-no", width="stretch"):
+        ss.pop("confirm_reopen", None)
+        st.rerun()
+    c[1].button("Reopen it", type="primary", key="reopen-yes", width="stretch",
+                on_click=lambda: (ss.pop("confirm_reopen", None), set_finished(False)))
 
 
 def next_event() -> None:
@@ -87,12 +112,12 @@ def club_balance(event: EventInfo, net: Decimal) -> Decimal | None:
         return None
     year = school_year(event.date)
     others = [e["net"] for e in session_store.past_nets(past())
-              if club.owns(e) and e["event_id"] != event.event_id and school_year(e["date"]) == year]
+              if club.owns(e) and e["finished"] and e["event_id"] != event.event_id and school_year(e["date"]) == year]
     return event.start_balance + sum(others, Decimal("0")) + net
 
 
 def confetti() -> str:
-    """Paper bits in the app's colors falling over the page (CSS only, ignores clicks, gone in ~4s)."""
+    """Paper bits in the app's colors falling over the page once the ticket rip is done (CSS only, ignores clicks)."""
     rng = random.Random(7)
     colors = ["#1C5C36", "#3F8A5A", "#F7BE3F", "#C44536", "#8FB38A", "#6B4E8A"]
     bits = "".join(f'<i style="left:{rng.uniform(0, 100):.1f}%;background:{rng.choice(colors)};'
@@ -125,6 +150,11 @@ def show(event: EventInfo) -> None:
     left_out = sum(1 for r in ss.receipts.values() if r.status is Status.REJECTED)
     count = f"{len(done)} receipt{'s' if len(done) != 1 else ''}" + (f" ({left_out} left out)" if left_out else "")
     paid = "everyone paid back" if not any(x.owed > 0 for x in lines) else "paybacks still open"
+    # Last school year's books are closed: a late receipt would change a year that's already reported.
+    # 60 days of grace, so a July event can still take a receipt found in August.
+    locked = school_year(event.date) != school_year(date.today()) and (date.today() - event.date).days > 60
+    if ss.get("finish_note"):
+        st.warning(ss.pop("finish_note"))
     with st.container(border=True, key="finish-page"):
         st.html(f'<div class="tly-finish"><img src="{mascot_uri("tally-flag.png")}" alt="">'
                 f'<h2>{html.escape(event.name)} is closed out!</h2>'
@@ -138,10 +168,13 @@ def show(event: EventInfo) -> None:
                     row[0].markdown(f'<p class="tly-open-item"><i class="tly-warn">!</i>{html.escape(text)}</p>',
                                    unsafe_allow_html=True)
                     row[1].button(FIX[step], key=f"fix-{n}", icon=":material/arrow_forward:", width="stretch",
-                                  icon_position="right", on_click=set_finished, args=(False, step))
+                                  icon_position="right", on_click=set_finished, args=(False, step), disabled=locked)
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-buttons"):
             st.button("Back to club home", type="primary", key="to-home", icon=":material/home:", on_click=go_home)
             st.button("Start the next event", key="next-event", on_click=next_event)
+            if not locked:
+                st.button("Add a missed receipt", key="add-missed", icon=":material/add:", on_click=set_finished,
+                          args=(False, "1. Upload", True))
         # The downloads sit a row lower and quieter, so the two ways on don't compete with them.
         with st.container(horizontal=True, horizontal_alignment="center", key="finish-downloads"):
             ledger = getattr(getattr(sink, "ledger_book", None), "url", None)
@@ -163,7 +196,14 @@ def show(event: EventInfo) -> None:
             st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf", on_click="ignore",
                                type="tertiary", icon=":material/download:",
                                file_name=f"{event.event_id}_receipt_photos.pdf", data=lambda: receipts_pdf(done, images, state))
-    st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
-              on_click=set_finished, args=(False,), help="Back to Close out. It leaves Past events until you finish again.")
-    if ss.pop("confetti", False):  # last, so it falls once the whole page is built
-        st.html(confetti())
+    if locked:
+        st.caption(f"Locked: this event is from the {school_year(event.date).replace('-', '–')} school year, "
+                   "so it can't be reopened or take new receipts.")
+    else:
+        # Reopening takes a closed event out of the club balance, so one stray click can't do it.
+        st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
+                  on_click=lambda: ss.update(confirm_reopen=True), help=REOPEN_HELP)
+        if ss.get("confirm_reopen"):
+            confirm_reopen(event.name, t["net"])
+    if ss.pop("rip", False):  # last, once the whole page is built: its script looks for the Past events row
+        st.html(rip(event.date, event.name, len(ss.receipts), ss.event.get("color")) + confetti(), unsafe_allow_javascript=True)

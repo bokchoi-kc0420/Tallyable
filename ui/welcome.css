@@ -1,0 +1,58 @@
+/* Welcome (welcome.py): sage page, a printer at the top, and the close-out receipt sliding out of its slot in one
+   smooth feed (the printer hides the paper still inside it). Tally stands to its left; his bubble pops once the receipt is torn off. */
+.stApp:has(.st-key-welcome) { background: var(--tly-sage); }
+.stApp:has(.st-key-welcome) [data-testid="stMainBlockContainer"] { padding-top: 0; }
+.stApp:has(.st-key-welcome) [data-testid="stHeader"] { background: transparent; }
+.st-key-welcome { position: relative; width: 528px; margin: -48px auto 0; gap: 0; }
+.st-key-welcome [data-testid="stElementContainer"]:has(.tly-printer) { height: 80px; }
+.st-key-welcome [data-testid="stElementContainer"]:has(.tly-printer), .st-key-welcome [data-testid="stElementContainer"]:has(.tly-printer) > div { position: static; }  /* so Tally lines up with the receipt's bottom */
+.st-key-welcome .tly-printer { position: absolute; left: -56px; top: 0; width: 640px; height: 104px; z-index: 5; background: var(--tly-printer);
+  border: 4px solid var(--tly-outline); border-top: none; border-radius: 0 0 var(--tly-r) var(--tly-r); box-shadow: var(--tly-shadow);
+  animation: tly-buzz .09s linear .6s 29 alternate; }
+.tly-printer::before { content: ""; position: absolute; left: 48px; right: 48px; bottom: 16px; height: 12px; border-radius: 999px; background: var(--tly-printer-slot); }
+.tly-printer span { position: absolute; left: 32px; top: 40px; font: 600 var(--tly-t-sm) var(--tly-head); letter-spacing: .14em; color: var(--tly-sage); }
+.tly-printer i { position: absolute; right: 32px; top: 40px; width: 16px; height: 16px; border-radius: 50%; background: var(--tly-led); }
+@keyframes tly-buzz { from { transform: translate(-1px, 0); } to { transform: translate(1px, 1px); } }
+.st-key-welcome-rc { position: relative; z-index: 4; gap: 0; padding: 48px 48px 56px; background: var(--tly-paper-soft);
+  -webkit-mask: linear-gradient(black, black) top / 100% calc(100% - 12px) no-repeat, conic-gradient(from -45deg at 50% 100%, black 90deg, transparent 0) bottom / 16px 12px repeat-x;
+  mask: linear-gradient(black, black) top / 100% calc(100% - 12px) no-repeat, conic-gradient(from -45deg at 50% 100%, black 90deg, transparent 0) bottom / 16px 12px repeat-x;
+  animation: tly-print 2.4s cubic-bezier(.33, 0, .2, 1) .6s both, tly-tug .35s ease-out 3.2s; }
+@keyframes tly-print { from { transform: translateY(-100%); } }
+@keyframes tly-tug { 50% { transform: translateY(8px); } }
+.st-key-welcome-rc .logo { display: block; height: 40px; margin: 0 auto 8px; }
+.st-key-welcome-rc .ce { margin: 0; text-align: center; font: 600 var(--tly-t-sm) var(--tly-head); letter-spacing: .12em; color: var(--tly-soft); }
+.st-key-welcome-rc .big { margin: 16px 0 0; text-align: center; font: 700 var(--tly-t-2xl) / 1.1 var(--tly-head); color: var(--tly-ink); }
+.st-key-welcome-rc .hr { border-top: 2px dashed var(--tly-line-strong); margin: 16px 0; }
+.st-key-welcome-rc .ln { display: flex; gap: 8px; margin: 8px 0; font-size: var(--tly-t-lg); color: var(--tly-ink); }
+.st-key-welcome-rc .ln i { flex: 1; border-bottom: 2px dotted var(--tly-line-strong); margin-bottom: 8px; }
+.st-key-welcome-rc .ok { color: var(--tly-forest); font-weight: 600; }
+.st-key-welcome-rc .tot { display: flex; justify-content: space-between; font: 700 var(--tly-t-xl) var(--tly-head); color: var(--tly-ink); }
+.st-key-welcome-rc .stButton { margin-top: 16px; }
+.st-key-welcome-rc .stButton button { min-height: 56px; }
+.st-key-welcome-rc .stButton button p { font-size: var(--tly-t-lg) !important; }
+.st-key-welcome-demo button { background: transparent; border: 2px solid var(--tly-outline); }
+.st-key-welcome-rc .bc { height: 40px; margin-top: 24px; background: repeating-linear-gradient(90deg, var(--tly-ink) 0 3px, transparent 3px 6px, var(--tly-ink) 6px 7px,
+  transparent 7px 11px, var(--tly-ink) 11px 15px, transparent 15px 17px); }
+.st-key-welcome { --tly-side: max(-408px, calc(280px - 50vw)); }  /* Tally + bubble sit left of the receipt, kept on screen */
+.st-key-welcome .tly-welcome-tally { position: absolute; left: calc(var(--tly-side) + 80px); bottom: 8px; height: 320px; z-index: 3; }
+.st-key-welcome .tly-welcome-bub { position: absolute; left: var(--tly-side); bottom: 344px; width: 272px; z-index: 6; margin: 0; padding: 16px 24px; background: var(--tly-white);
+  border: 3px solid var(--tly-outline); border-radius: var(--tly-r); font-size: var(--tly-t-md); line-height: 1.35; color: var(--tly-ink);
+  transform-origin: 184px 100%; animation: tly-pop .35s cubic-bezier(.3, 1.8, .5, 1) 3.4s both; }
+.st-key-welcome .tly-welcome-bub::after { content: ""; position: absolute; left: 176px; bottom: -11px; width: 16px; height: 16px; background: var(--tly-white);
+  border-right: 3px solid var(--tly-outline); border-bottom: 3px solid var(--tly-outline); transform: rotate(45deg); }
+@keyframes tly-pop { from { transform: scale(0); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .tly-printer, .st-key-welcome-rc, .tly-welcome-bub { animation: none; } }
+/* The intro as a popup over the blurred home page, kept at the 16:10 it's drawn in, with an X on its corner */
+#tly-intro { position: fixed; inset: 0; z-index: 999998; display: grid; place-items: center; background: rgba(31,42,34,.45);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#tly-intro .frame { position: relative; width: min(90vw, 88vh * 1.6); aspect-ratio: 16 / 10; border: 4px solid var(--tly-outline);
+  border-radius: var(--tly-r); box-shadow: var(--tly-shadow); background: var(--tly-page); }
+#tly-intro iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: var(--tly-r-in); }
+#tly-intro .tly-intro-x { position: absolute; right: -24px; top: -24px; display: grid; place-items: center; width: 48px; height: 48px;
+  border-radius: 50%; background: var(--tly-white); border: 3px solid var(--tly-outline); box-shadow: var(--tly-shadow);
+  font: 700 var(--tly-t-lg) var(--tly-head); color: var(--tly-ink); text-decoration: none; }
+#tly-intro .tly-intro-x:hover { background: var(--tly-sun-tint); }
+#tly-intro .tly-intro-skip { position: absolute; right: 0; bottom: -48px; padding: 8px 16px; border-radius: 999px;
+  background: var(--tly-white); border: 2px solid var(--tly-outline); font: 600 var(--tly-t-md) var(--tly-head);
+  color: var(--tly-ink); text-decoration: none; }
+#tly-intro .tly-intro-skip:hover { background: var(--tly-sun-tint); }

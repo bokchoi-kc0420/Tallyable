@@ -43,13 +43,22 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 - Never invent a line (no "tax", "fee" or "adjustment" line that is not on the paper).
 - If part of the receipt is folded, torn, blurry or cut off, set `unreadable_note`
   to say where, and leave out what you cannot see. Do not guess.
-- `price` is the unit price before tax. `unit` is the quantity. If only a line total is
-  printed, put it in price with unit 1.
+- Keep `unreadable_note` to ONE short plain sentence, 15 words at most, saying what the
+  treasurer should check. Do not repeat numbers that are already in the fields, and do not
+  explain how you worked.
+- `price` is the unit price before tax. `unit` is the quantity. If a quantity and a line total are
+  printed but no unit price (a shopping cart), keep the quantity in `unit` and put the line
+  total divided by the quantity in `price`: the one calculation you may do. If only a line
+  total is printed with no quantity, put it in price with unit 1.
 - `total` is the total as printed, even if it is handwritten or looks wrong. On an order
   screenshot it is the order total actually charged.
 - Fees (delivery, service, bag, small-order) are their own lines, category Other.
 - A discount, coupon, promo or member saving is its own line with a NEGATIVE price,
-  category Other. Copy its wording as the item name.
+  category Other. Copy its wording as the item name. Set `for_item_above` when it is printed
+  under one item and saves on that item (e.g. "Member Savings" under it); leave it false for a
+  discount on the whole order.
+- Set `taxed` on each line only if the receipt marks which lines are taxed (e.g. T or TX vs S, N
+  or F after the price). Leave it empty when the receipt has no such marks.
 - Dates as YYYY-MM-DD. Money as plain decimals with two places, no currency symbol.
 - Receipts may be partly in Korean. Copy item names as printed; add an English gloss
   in parentheses only if you are sure of it.
@@ -70,6 +79,8 @@ class ExtractedItem(BaseModel):
     unit: int
     price: str = Field(description="Unit price before tax, e.g. '4.99'; negative for a discount, e.g. '-4.00'")
     returned: bool = False
+    taxed: bool | None = None
+    for_item_above: bool = False
 
 
 class ExtractedReceipt(BaseModel):
@@ -86,12 +97,6 @@ class ExtractedReceipt(BaseModel):
         "card app showing a charge, not the seller's receipt.")
 
 
-# Not proof that money was spent: the treasurer decides, Tally only says so on Review.
-NOT_FINAL = {"cart": "This is a cart before checkout, not a final receipt - ask for the order confirmation.",
-             "estimate": "This is a price estimate, not a final receipt - ask for the receipt from after the ride or service.",
-             "pending_charge": "This is a bank charge, not the seller's receipt - ask for the receipt if there is one."}
-
-
 def _money(text: str, field: str, filename: str) -> Decimal:
     t = str(text).replace("$", "").replace(",", "").replace("\u2212", "-").strip()
     if t.startswith("(") and t.endswith(")"):  # accounting style: (4.00) is -4.00
@@ -102,6 +107,15 @@ def _money(text: str, field: str, filename: str) -> Decimal:
         raise ExtractionError(f"Claude returned a bad {field} for {filename}: {text!r}") from e
 
 
+def _source(data: bytes, filename: str) -> dict:
+    ext = filename.lower().rsplit(".", 1)[-1]
+    b64 = base64.standard_b64encode(data).decode()
+    if ext == "pdf":  # Claude reads PDFs directly
+        return {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}
+    media = {"png": "image/png", "webp": "image/webp", "gif": "image/gif"}.get(ext, "image/jpeg")
+    return {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+
+
 class ClaudeExtractor:
     def __init__(self, client: anthropic.Anthropic | None = None, model: str = MODEL, effort: str = EFFORT):
         self._client = client or anthropic.Anthropic()
@@ -109,14 +123,12 @@ class ClaudeExtractor:
         self.effort = effort
         self.usage: list[dict] = []  # per-receipt token counts
 
-    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str) -> Receipt:
-        ext = filename.lower().rsplit(".", 1)[-1]
-        b64 = base64.standard_b64encode(image).decode()
-        if ext == "pdf":  # Claude reads PDFs directly
-            source = {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}
-        else:
-            media = {"png": "image/png", "webp": "image/webp", "gif": "image/gif"}.get(ext, "image/jpeg")
-            source = {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
+                more: list[tuple[bytes, str]] = ()) -> Receipt:
+        sources = [_source(data, name) for data, name in [(image, filename), *more]]
+        ask = "Transcribe this receipt." if not more else (
+            f"These {len(sources)} files are screenshots of ONE receipt or order, in order. Transcribe them as a "
+            "single receipt: an item that shows on two screenshots is listed once, and `total` is the one order total.")
         try:
             resp = self._client.beta.messages.parse(
                 model=self.model,
@@ -126,10 +138,7 @@ class ClaudeExtractor:
                 output_config={"effort": self.effort},
                 betas=["server-side-fallback-2026-07-01"],
                 fallbacks="default",  # if a safety check declines, the API retries on another model
-                messages=[{"role": "user", "content": [
-                    source,
-                    {"type": "text", "text": "Transcribe this receipt."},
-                ]}],
+                messages=[{"role": "user", "content": [*sources, {"type": "text", "text": ask}]}],
             )
         except anthropic.AuthenticationError as e:
             raise ExtractionError("Claude rejected the API key. Check ANTHROPIC_API_KEY in .env.") from e
@@ -150,21 +159,23 @@ class ClaudeExtractor:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
-        note = "; ".join(filter(None, [NOT_FINAL.get(x.proof), x.unreadable_note])) or None
+        note = x.unreadable_note or None
         if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
             x.date = date.today().isoformat()
-            note = "; ".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
+            note = "\n".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
         try:
             d = date.fromisoformat(x.date)
             # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
             items = [LineItem(category=i.category, item=i.item, unit=i.unit,
-                              price=_money(i.price, "price", filename), returned=i.returned) for i in x.items if i.unit > 0]
+                              price=_money(i.price, "price", filename), returned=i.returned,
+                              taxed=i.taxed, for_item_above=i.for_item_above) for i in x.items if i.unit > 0]
             return Receipt(
                 receipt_id=receipt_id, event_id=event_id, place=x.place, date=d,
                 payer=None,  # payer comes from the upload tag, never from the AI
                 items=items, tax=_money(x.tax, "tax", filename), tip=_money(x.tip, "tip", filename),
                 total=_money(x.total, "total", filename), image_file=filename,
-                image_hash=hashlib.sha256(image).hexdigest(), review_note=note,
+                image_hash=hashlib.sha256(image).hexdigest(), review_note=note, proof=x.proof,
+                left_out_why="returned" if any(i.returned for i in items) else "personal",
             )
         except ValueError as e:  # bad date, no items, negative money
             raise ExtractionError(f"Claude's reading of {filename} did not fit the receipt format: {e}") from e

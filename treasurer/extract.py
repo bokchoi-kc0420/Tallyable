@@ -19,7 +19,10 @@ class ExtractionError(Exception):
 
 
 class Extractor(Protocol):
-    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str) -> Receipt: ...
+    """`more` is the rest of the screenshots (bytes, file name) when one receipt came as several."""
+
+    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
+                more: list[tuple[bytes, str]] = ()) -> Receipt: ...
 
 
 # Misreads a vision model plausibly makes. Each one should be caught in review,
@@ -39,7 +42,8 @@ class StubExtractor:
         self._truth = {r.receipt_id: r for r in load_answer_key(answer_key)}
         self._misreads = STUB_MISREADS if misreads is None else misreads
 
-    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str) -> Receipt:
+    def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
+                more: list[tuple[bytes, str]] = ()) -> Receipt:
         key = Path(filename).stem.upper()
         if key not in self._truth:
             raise ExtractionError(f"Demo mode only reads the fake event's receipts, so it can't read {filename}.")

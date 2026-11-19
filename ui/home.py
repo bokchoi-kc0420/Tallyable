@@ -3,6 +3,7 @@ club's balance, and the "Which club?" page when there's more than one. The page 
 from __future__ import annotations
 
 import html
+import secrets
 import shutil
 from datetime import date
 from decimal import Decimal
@@ -11,9 +12,9 @@ import streamlit as st
 
 from treasurer import session_store
 from treasurer.ledger_view import school_year
-from ui import club
-from ui.common import BASE, FAKE, MODE_FILE, STEPS, is_demo, mascot_uri, out, past, ss, usd
-from ui.sidebar import DEFAULT_EVENT, open_past, save_session, start_new_event
+from ui import club, welcome
+from ui.common import FAKE, STEPS, base, is_demo, mascot_uri, mode_file, out, past, ss, usd
+from ui.sidebar import DEFAULT_EVENT, event_id_for, open_past, save_session, start_new_event
 
 
 def year_events() -> list[dict]:
@@ -24,9 +25,11 @@ def year_events() -> list[dict]:
 
 
 def balance(events: list[dict]) -> Decimal | None:
-    """Starting balance plus every event's net this year. None until the starting balance is typed."""
+    """Starting balance plus every FINISHED event's net this year: an event still open would move the
+    number with every approve. None until the starting balance is typed."""
     start = club.load()["start_balance"]
-    return None if start is None else Decimal(str(start)) + sum((e["net"] for e in events), Decimal("0"))
+    done = sum((e["net"] for e in events if e["finished"]), Decimal("0"))
+    return None if start is None else Decimal(str(start)) + done
 
 
 def badge(name: str, size: str = "") -> str:
@@ -146,14 +149,14 @@ def go_home() -> None:
 
 def switch_mode(demo: bool) -> None:
     """Switch callback: save this event, then reopen the app in the other mode's folder. The demo
-    starts fresh every time: a sample club with the fake event's receipts already loaded."""
+    starts fresh every time: a sample club with the fake event's receipts already loaded on Upload."""
     if "event" in ss:
         save_session()
     authed = ss.get("authed")
     ss.clear()
     ss.authed, ss.demo_mode = authed, demo
-    BASE.mkdir(parents=True, exist_ok=True)
-    MODE_FILE.write_text("demo" if demo else "real")
+    base().mkdir(parents=True, exist_ok=True)
+    mode_file().write_text("demo" if demo else "real")
     if not demo:
         ss.view = "club"  # app.py reopens the real club's last event behind it
         return
@@ -161,9 +164,10 @@ def switch_mode(demo: bool) -> None:
     club.add("Sunrise Hiking Club", 1200.0, ["Alex Kim", "Jordan Diaz", "Sam Patel", "Riley Chen"])
     ss.club_picked = True
     ss.event = dict(DEFAULT_EVENT)
-    start_new_event()
+    start_new_event()  # the intro's Boba Social, set up and on Upload with its receipts, where the tour starts
+    ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", date.today())}
     ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
-    go_home()
+    ss.tour = secrets.token_hex(4)  # a fresh demo gets a fresh tour
 
 
 def demo_band() -> None:
@@ -171,11 +175,13 @@ def demo_band() -> None:
     if not is_demo():
         st.button("Try the demo", icon=":material/science:", key="to-demo", type="tertiary",
                   help="A sample club with fake receipts, so you can play around. Your club stays as it is.",
-                  on_click=switch_mode, args=(True,))
+                  on_click=welcome.watch_demo)
         return
     with st.container(key="demo-band", horizontal=True, vertical_alignment="center"):
         st.markdown("**You're in the demo** - a sample club with fake receipts. Play around, nothing here is real!")
-        label = "Back to my club" if (BASE / "real" / "clubs.json").exists() else "Set up my club"
+        label = "Back to my club" if (base() / "real" / "clubs.json").exists() else "Set up my club"
+        st.button("Watch the intro again", icon=":material/play_circle:", key="intro-again", type="tertiary",
+                  on_click=lambda: ss.update(view="intro"))
         st.button(label, icon=":material/arrow_forward:", icon_position="right", key="to-real",
                   on_click=switch_mode, args=(False,))
 
@@ -219,6 +225,9 @@ def needs_picking() -> bool:
 def picker() -> None:
     """Which club are you doing the books for? One card per club, then Add a club."""
     have = club.clubs()
+    if not have and not ss.get("club_form"):
+        welcome.receipt()
+        return
     if not have:
         with st.container(key="first-club"):
             art, form = st.columns([2, 3], gap="large", vertical_alignment="center")
@@ -226,8 +235,8 @@ def picker() -> None:
                      f'<img src="{mascot_uri("tally-party.png")}" alt=""></div>')
             with form:
                 club_form("club-first")
-                st.button("Just looking? Try the demo", icon=":material/science:", key="first-demo", type="tertiary",
-                          on_click=switch_mode, args=(True,))
+                st.button("Just looking? Watch the demo", icon=":material/play_circle:", key="first-demo", type="tertiary",
+                          on_click=welcome.watch_demo)
         return
     st.header("Which club are you doing the books for?")
     cols = st.columns(3)
