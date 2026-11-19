@@ -93,15 +93,17 @@ def next_event() -> None:
 def finish_button(lines: list) -> None:
     """Bottom of Close out, pinned to the bottom of the screen (like Upload's), so it's found without scrolling."""
     items = open_items(lines)
-    note = ("Everything's wrapped up!" if not items else
-            "1 thing's still open, but you can finish anyway! It stays listed on the event." if len(items) == 1 else
-            f"{len(items)} things are still open, but you can finish anyway! They stay listed on the event.")
+    more = f" (+{len(items) - 1} more)" if len(items) > 1 else ""
+    note = (f"{items[0][0]}{more} - you can finish anyway, it stays listed on the event." if items else
+            "Everything's wrapped up!")
+    owing = any(x.owed > 0 and x.payer != "(no payer)" for x in lines)  # Mark paid is the green button until then
     with st.container(key="finish-next"), st.container(border=True, key="finish-row"):
         # Message on the left, button on the right: the same order as the other "what's next" boxes.
         c = st.columns([4, 1.3], vertical_alignment="center")
         c[0].markdown(f'<p class="tly-done-title">Ready to finish?</p><p class="tly-done-sub">{html.escape(note)}</p>',
                       unsafe_allow_html=True)
-        c[1].button("Finish event", type="primary", icon=":material/check:", icon_position="right", key="finish-event",
+        c[1].button("Finish event", type="secondary" if owing else "primary", icon=":material/check:", icon_position="right",
+                    key="finish-event",
                     on_click=set_finished, args=(True,), width="stretch")
 
 

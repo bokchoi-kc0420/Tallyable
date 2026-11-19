@@ -248,6 +248,8 @@ def show(event: EventInfo) -> None:
     done_card.show(sink, receipts, event, income, lambda: push(sink, receipts, event, income), again)
     if views:
         csv_downloads(views, event)
+    if is_demo():  # the timing and edit counts are for Kevin's own runs, not for someone trying it out
+        return
 
     st.subheader("Run stats")
     s = st.columns(3)
