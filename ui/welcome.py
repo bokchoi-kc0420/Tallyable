@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.common import base, mascot_uri, ss
+from ui.common import PRIVACY, base, mascot_uri, ss
 
 LINES = [("Receipts in", "done"), ("Read by Tally", "done"), ("Math checked", "done"), ("Who's owed", "done"),
          ("Pushed to your Sheet", "done")]
@@ -68,3 +68,5 @@ def receipt() -> None:
             st.button("Just looking? Watch the demo", icon=":material/play_circle:", key="welcome-demo",
                       width="stretch", on_click=watch_demo)
             st.html('<div class="bc"></div>')
+        st.html('<p class="tly-fine">Tallyable is a free student project, provided as is. Double-check the numbers '
+                f'before you pay anyone back! <a href="{PRIVACY}" target="_blank">Privacy</a></p>')

@@ -53,6 +53,8 @@
 .tly-cheer { text-align: center; font-family: var(--tly-head); font-size: var(--tly-t-xl); font-weight: 600;
   color: var(--tly-forest); margin: 8px 0 8px; }
 .tly-hint { text-align: center; font-weight: 600; margin: 4px 0 8px; }
+.tly-account { margin: 0; font: var(--tly-t-sm) var(--tly-body); color: var(--tly-soft); overflow-wrap: anywhere; }
+.tly-account a { color: inherit; font-weight: 600; }
 /* Who's owed: the payback ledger */
 .tly-led { margin: 0; font-size: var(--tly-t-md); font-variant-numeric: tabular-nums; }
 .tly-led.num { text-align: right; } .tly-led b { font-family: var(--tly-head); font-weight: 600; }

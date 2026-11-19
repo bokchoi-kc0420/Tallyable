@@ -7,6 +7,7 @@ planted misreads). Each step's screen is its own file in ui/.
 from __future__ import annotations
 
 import hmac
+import html
 import os
 import time
 
@@ -14,7 +15,7 @@ import streamlit as st
 
 from treasurer import backup, session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
-from ui.common import ART, DATA, FAKE, ROOT, base, hosted, is_demo, out, ss
+from ui.common import ART, DATA, FAKE, PRIVACY, ROOT, base, hosted, is_demo, out, signed_in_email, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
@@ -89,6 +90,11 @@ elif ss.event.get("finished"):
     finish.show(event)
 else:
     close_out.show(event)
+with st.sidebar.container(key="account"):  # the hosted link: whose books these are, and a way out on a shared laptop
+    if email := signed_in_email():
+        st.html(f'<p class="tly-account">Signed in as {html.escape(email)}</p>')  # text, not a mailto link
+        st.button("Sign out", type="tertiary", icon=":material/logout:", key="sign-out", on_click=st.logout)
+    st.html(f'<p class="tly-account"><a href="{PRIVACY}" target="_blank">Privacy</a></p>')
 screen = (ss.get("view"), page, ss.event.get("finished"))
 if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: a new step should open at its top.
     # Last on the page, so its empty block adds no gap above the header.
