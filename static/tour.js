@@ -50,7 +50,7 @@
 
     function pick() {
       const st = state();
-      if (!cfg || st.off || !document.querySelector(".tly-demo-pill") || document.querySelector('[role="dialog"]:not(#tly-tour .bub)')) return [-1, null];
+      if (!cfg || st.off || !document.querySelector(".tly-demo-pill") || document.querySelector('[role="dialog"]:not(#tly-tour .bub):not(:has(.st-key-sheet-peek))')) return [-1, null];
       for (let i = 0; i < cfg.stops.length; i++) {
         const s = cfg.stops[i];
         if ((st.done || []).includes(i)) continue;
