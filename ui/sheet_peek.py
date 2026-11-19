@@ -69,6 +69,9 @@ def grid(view: View) -> str:
     body = []
     for r, row in enumerate(rows):
         tds = []
+        if len([v for v in row if v not in (None, "")]) == 1 and row[0] not in (None, "") and (r, 0) not in spans:
+            spans[(r, 0)] = (1, w)  # a lone line (the note, a title) runs across the empty cells, as in Sheets
+            covered |= {(r, c) for c in range(1, w)}
         for c in range(w):
             if (r, c) in covered:
                 continue
