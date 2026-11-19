@@ -56,3 +56,6 @@
   background: var(--tly-white); border: 2px solid var(--tly-outline); font: 600 var(--tly-t-md) var(--tly-head);
   color: var(--tly-ink); text-decoration: none; }
 #tly-intro .tly-intro-skip:hover { background: var(--tly-sun-tint); }
+/* The "as is" line and the Privacy link, under the receipt. */
+.st-key-welcome .tly-fine { margin: 24px 0 0; text-align: center; font: var(--tly-t-sm) var(--tly-body); color: var(--tly-outline); }
+.st-key-welcome .tly-fine a { color: inherit; font-weight: 600; }

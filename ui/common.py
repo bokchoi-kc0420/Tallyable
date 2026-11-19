@@ -19,6 +19,7 @@ from treasurer.sheets import GoogleSheetsSink
 ROOT = Path(__file__).parent.parent
 DATA = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
+PRIVACY = "app/static/privacy.html"
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
 # Drawn (Material) icons, never emoji: they match the rest of the UI and take the theme colors.
@@ -301,9 +302,9 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
         for i in (i for i in r.items if not i.returned):
             own[i.category] = own.get(i.category, Decimal("0")) + i.amount
         # Approved with the math flag overridden: the lines can't be trusted, the total can.
-        # So the whole total goes under the receipt's biggest category and the bars still add up.
+        # So the total, less tax and tip, goes under the receipt's biggest category (as in the Excel and the Sheet).
         if own and abs(r.computed_total - r.total) > CENT:
-            own = {max(own, key=own.get): r.posted_amount}
+            own = {max(own, key=own.get): r.posted_amount - r.tax - r.tip}
         for k, v in own.items():
             cats[k] = cats.get(k, Decimal("0")) + v
     cats = {k: v for k, v in cats.items() if v > 0}

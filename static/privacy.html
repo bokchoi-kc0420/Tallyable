@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tallyable privacy</title>
+<style>
+@font-face { font-family: Fredoka; src: url(fonts/fredoka-latin-wght-normal.woff2) format("woff2"); font-weight: 300 700; }
+@font-face { font-family: Outfit; src: url(fonts/outfit-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+:root { --paper: #FBF7E6; --ink: #1F2A22; --soft: #6B6A60; --forest: #1C5C36; --line: #E3D9B6; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Outfit, sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 48px 16px 64px; }
+h1, h2 { font-family: Fredoka, sans-serif; color: var(--forest); line-height: 1.2; }
+h1 { font-size: 32px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 8px; }
+p, li { margin: 0 0 8px; }
+ul { padding-left: 24px; }
+a { color: var(--forest); }
+.soft { color: var(--soft); }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<main>
+  <h1>What happens to your receipts</h1>
+  <p class="soft">Last updated November 19, 2026</p>
+
+  <h2>What Tallyable keeps</h2>
+  <p>Your Google email (only to keep your club's books apart from everyone else's), your club's name and members,
+    your events, and your receipt photos. They're saved on the Tallyable server so they're still there next time you sign in.</p>
+
+  <h2>Who else sees it</h2>
+  <ul>
+    <li>Receipt photos go to Anthropic's Claude so it can read them. Anthropic doesn't train its models on what apps send it.</li>
+    <li>Your event name goes to Claude too, for Tally's one-line reaction.</li>
+    <li>If you link a Google Sheet, your rows get written there. That sheet is yours, so its sharing settings are up to you.</li>
+  </ul>
+
+  <h2>What Tallyable doesn't do</h2>
+  <p>No ads, no selling data, no tracking. The only cookies are the ones that keep you signed in and keep the app secure.</p>
+
+  <h2>Deleting</h2>
+  <p>Delete an event in the app and it's gone from the server too. Want everything wiped, club and all?
+    Email <a href="mailto:kevchoi@ucdavis.edu">kevchoi@ucdavis.edu</a> and it's done within a week.</p>
+
+  <h2>The fine print</h2>
+  <p>Tallyable is a free student project, provided as is, with no warranty. Double-check the numbers before you pay anyone back!</p>
+
+  <footer>Tallyable is run by Kevin, a student. Questions? <a href="mailto:kevchoi@ucdavis.edu">kevchoi@ucdavis.edu</a></footer>
+</main>
+</body>
+</html>
