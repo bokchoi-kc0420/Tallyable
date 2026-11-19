@@ -6,6 +6,7 @@ replays the fake answer key with a few realistic AI misreads. Week 2 adds a
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
@@ -19,10 +20,11 @@ class ExtractionError(Exception):
 
 
 class Extractor(Protocol):
-    """`more` is the rest of the screenshots (bytes, file name) when one receipt came as several."""
+    """`more` is the rest of the screenshots (bytes, file name) when one receipt came as several;
+    `undated` is the date to use when the receipt shows none (the event's)."""
 
     def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
-                more: list[tuple[bytes, str]] = ()) -> Receipt: ...
+                more: list[tuple[bytes, str]] = (), undated: date | None = None) -> Receipt: ...
 
 
 # Misreads a vision model plausibly makes. Each one should be caught in review,
@@ -43,7 +45,7 @@ class StubExtractor:
         self._misreads = STUB_MISREADS if misreads is None else misreads
 
     def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
-                more: list[tuple[bytes, str]] = ()) -> Receipt:
+                more: list[tuple[bytes, str]] = (), undated: date | None = None) -> Receipt:
         key = Path(filename).stem.upper()
         if key not in self._truth:
             raise ExtractionError(f"Demo mode only reads the fake event's receipts, so it can't read {filename}.")

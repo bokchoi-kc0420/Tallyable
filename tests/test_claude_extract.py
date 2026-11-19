@@ -41,10 +41,11 @@ def test_refusal_and_bad_date_raise_extraction_error():
         ClaudeExtractor(client=FakeClient(reading(date="Nov 12"))).extract(b"x", "R01.jpg", "EVT", "R01")
 
 
-def test_no_date_uses_today_and_says_so():  # a phone order screen with no date crashed the read
+def test_no_date_uses_the_event_date_and_says_so():  # a phone order screen with no date crashed the read
     from datetime import date
-    r = ClaudeExtractor(client=FakeClient(reading(date=""))).extract(b"x", "R01.png", "EVT", "R01")
-    assert r.date == date.today() and "No date" in r.review_note
+    day = date(2026, 11, 14)
+    r = ClaudeExtractor(client=FakeClient(reading(date=""))).extract(b"x", "R01.png", "EVT", "R01", undated=day)
+    assert r.date == day and "used the event date" in r.review_note
 
 
 def test_qty_zero_line_is_not_charged():  # Dollar Tree: "Bag Fee 0 0.10 0.00N" was counted as $0.10

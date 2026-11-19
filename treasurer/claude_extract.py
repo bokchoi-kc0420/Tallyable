@@ -124,7 +124,7 @@ class ClaudeExtractor:
         self.usage: list[dict] = []  # per-receipt token counts
 
     def extract(self, image: bytes, filename: str, event_id: str, receipt_id: str,
-                more: list[tuple[bytes, str]] = ()) -> Receipt:
+                more: list[tuple[bytes, str]] = (), undated: date | None = None) -> Receipt:
         sources = [_source(data, name) for data, name in [(image, filename), *more]]
         ask = "Transcribe this receipt." if not more else (
             f"These {len(sources)} files are screenshots of ONE receipt or order, in order. Transcribe them as a "
@@ -160,9 +160,10 @@ class ClaudeExtractor:
 
         x = resp.parsed_output
         note = x.unreadable_note or None
-        if not x.date.strip():  # online order screens often show no date: use today, and say so on Review
-            x.date = date.today().isoformat()
-            note = "\n".join(filter(None, [note, "No date on it, so I used today. Fix it if that's wrong!"]))
+        if not x.date.strip():  # online order screens often show no date: use the event's, and say so on Review
+            x.date = (undated or date.today()).isoformat()
+            used = "the event date" if undated else "today"
+            note = "\n".join(filter(None, [note, f"No date on it, so I used {used}. Fix it if that's wrong!"]))
         try:
             d = date.fromisoformat(x.date)
             # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
