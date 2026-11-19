@@ -197,7 +197,7 @@ def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
     done = bool(ss.event.get("pushed_at") or ss.event.get("excel_at"))
     kind = "secondary" if done else "primary"
     if is_demo():  # no club sheet in the demo: Sheets opens a peek at the book, with the Excel file in it
-        sheet_peek.show(views, done, waiting, lambda: excel_button(xlsx, event, "Download as Excel", "push-excel", type=kind),
+        sheet_peek.show(views, done, waiting, lambda: excel_button(xlsx, event, "Download as Excel", "push-excel"),
                         lambda: push(sink, receipts, event, income))
     else:
         push_buttons(sink, receipts, event, income, xlsx, waiting, kind)

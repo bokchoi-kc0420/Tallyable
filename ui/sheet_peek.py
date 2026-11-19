@@ -86,7 +86,8 @@ def grid(view: View) -> str:
 
 def show(views: dict, done: bool, waiting: list, download, save) -> None:
     """The green Push to Google Sheets button. It opens the book in a pop-up, with its Download as Excel
-    (`download` draws that button, True once clicked; `save` then writes the books)."""
+    (`download` draws that button, True once clicked) and a Looks good! that books it without the file
+    (`save` writes the books)."""
     with st.container(horizontal=True, key="push-row"):
         st.button("Push to Google Sheets", type="secondary" if done else "primary", disabled=bool(waiting) or not views,
                   icon=":material/upload:", key="push-sheets", on_click=peek, args=(True,))
@@ -101,9 +102,11 @@ def peek(on: bool) -> None:
 @st.dialog("Here's what goes in your sheet", width="large", on_dismiss=lambda: peek(False))
 def book(views: dict, download, save) -> None:
     with st.container(key="sheet-peek"):
-        st.markdown("Sheets is for real clubs - grab the Excel to keep this one!")
-        if download():
-            peek(False)
-            save()
+        st.markdown("Sheets is for real clubs - this is what would go in yours. Grab the Excel if you want a copy!")
+        with st.container(horizontal=True):
+            ok = st.button("Looks good!", type="primary", icon=":material/check:", key="peek-ok")
+            if download() or ok:
+                peek(False)
+                save()
         for tab, view in zip(st.tabs(list(views)), views.values(), strict=True):
             tab.html(grid(view))

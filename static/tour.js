@@ -59,6 +59,8 @@
         if (p === "explain" && s.typed && typed(s)) { add("seen", i); return [-1, null, ""]; }  // they put it in: on to the button
         const t = document.querySelector(p === "explain" ? s.spot : s.hand || s.spot);
         if (t && t.getBoundingClientRect().width > 0) return [i, t, p];
+        const b = p === "nudge" && s.back && document.querySelector(s.back);  // e.g. the pop-up was closed: open it again
+        if (b && b.getBoundingClientRect().width > 0) return [i, b, "back"];
       }
       return [-1, null, ""];
     }
@@ -72,7 +74,7 @@
       if (i !== cur || p !== phase) {
         cur = i; el = t; phase = p;
         const s = cfg.stops[i];
-        ui.querySelector(".bub p").textContent = p === "explain" ? s.explain : s.hint || "";
+        ui.querySelector(".bub p").textContent = p === "explain" ? s.explain : p === "back" ? s.back_hint : s.hint || "";
         ui.querySelector(".cnt").textContent = `Step ${i + 1} of ${cfg.stops.length}`;
         ui.dataset.stop = i; ui.dataset.phase = p;
         const img = ui.querySelector(".pose"), src = `${cfg.img}tally-${s.pose}.png`;
@@ -82,7 +84,7 @@
         ui.querySelector(".go").textContent = s.end ? "Set up my club" : "Got it";
         ui.querySelector(".skip").textContent = s.end ? "Try another demo event" : "Skip tour";
         ui.querySelector(".go").style.display = p === "explain" ? "" : "none";  // a nudge ends on its own button
-        ui.classList.toggle("nudge", p === "nudge");
+        ui.classList.toggle("nudge", p !== "explain");
         ui.style.display = "";
         ui.classList.remove("pop"); void ui.offsetWidth; ui.classList.add("pop");
         if (p === "explain" && !s.end) t.scrollIntoView({ block: "center", behavior: "smooth" });  // a nudge leaves the scroll alone
@@ -100,8 +102,8 @@
       if (!el || !el.isConnected) return check();
       if (cfg.stops[cur].end) return middle();
       const r = el.getBoundingClientRect(), W = innerWidth, H = innerHeight, pad = 8;
-      const t = phase === "nudge" && hand && hand.isConnected ? hand.getBoundingClientRect() : r;
-      ui.classList.toggle("away", phase === "nudge" && (t.bottom < 0 || t.top > H));
+      const t = phase !== "explain" && hand && hand.isConnected ? hand.getBoundingClientRect() : r;
+      ui.classList.toggle("away", phase !== "explain" && (t.bottom < 0 || t.top > H));
       const x0 = Math.max(4, r.left - pad), y0 = Math.max(4, r.top - pad), x1 = Math.min(W - 4, r.right + pad), y1 = Math.min(H - 4, r.bottom + pad);
       const rr = 16, hole = `M${x0 + rr},${y0} H${x1 - rr} Q${x1},${y0} ${x1},${y0 + rr} V${y1 - rr} Q${x1},${y1} ${x1 - rr},${y1} H${x0 + rr} Q${x0},${y1} ${x0},${y1 - rr} V${y0 + rr} Q${x0},${y0} ${x0 + rr},${y0} Z`;
       ui.querySelector(".veil").style.clipPath = `path(evenodd, "M0,0 H${W} V${H} H0 Z ${hole}")`;
