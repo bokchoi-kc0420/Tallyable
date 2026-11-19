@@ -134,3 +134,6 @@ Interview prep: [docs/interview_notes.md](docs/interview_notes.md).
 - The app works on one event at a time. Set the name, date, attendees, members and income sources in the sidebar, and use "Start a new event" when you finish one. Finished events stay under Past events, and the Sheets layer keeps every event.
 - Writing straight into a Google Sheet needs the sheet shared with the app's service account. The Excel download is the no-sharing route.
 - The example funder rules were copied from UC Davis CSI pages on 2026-11-04. Rules change; re-check them each term.
+
+## License
+MIT. See [LICENSE](LICENSE).

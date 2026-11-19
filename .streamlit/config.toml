@@ -13,8 +13,8 @@ maxUploadSize = 30  # MB per file, the same as the PDF limit in treasurer/images
 # Locked to light (Kevin, 2026-11-05): the app always opens light, whatever the system setting.
 [theme]
 base = "light"
-font = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap, sans-serif"
-headingFont = "Fredoka:https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap, sans-serif"
+font = "Outfit, sans-serif"  # fonts are served from static/fonts, so visitors never load anything from Google
+headingFont = "Fredoka, sans-serif"
 headingFontWeights = [700, 600, 600, 600, 600, 600]
 baseRadius = "1rem"
 buttonRadius = "1rem"
@@ -26,6 +26,16 @@ textColor = "#1F2A22"
 borderColor = "#E3D9B6"
 linkColor = "#1C5C36"
 dataframeHeaderBackgroundColor = "#F2ECD3"
+
+[[theme.fontFaces]]
+family = "Outfit"
+url = "app/static/fonts/outfit-latin-wght-normal.woff2"
+weight = "100 900"
+
+[[theme.fontFaces]]
+family = "Fredoka"
+url = "app/static/fonts/fredoka-latin-wght-normal.woff2"
+weight = "300 700"
 
 [theme.sidebar]
 backgroundColor = "#FAF7E7"

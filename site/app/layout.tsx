@@ -11,12 +11,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
-        />
+        {/* Fonts are served from public/fonts, so visitors never load anything from Google */}
+        <style>{`@font-face{font-family:Fredoka;src:url(fonts/fredoka-latin-wght-normal.woff2) format("woff2");font-weight:300 700;font-display:swap}@font-face{font-family:Inter;src:url(fonts/inter-latin-wght-normal.woff2) format("woff2");font-weight:100 900;font-display:swap}`}</style>
         <link rel="icon" href="art/mascot.png" />
       </head>
       <body className="font-sans antialiased">{children}</body>
