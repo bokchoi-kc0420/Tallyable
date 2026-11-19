@@ -14,7 +14,7 @@ import streamlit as st
 
 from treasurer import backup, session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
-from ui.common import ART, DATA, ROOT, base, hosted, is_demo, out, ss
+from ui.common import ART, DATA, FAKE, ROOT, base, hosted, is_demo, out, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
@@ -46,6 +46,10 @@ if backup.on():  # Heroku wipes its disk on restart: put this account's folder b
 welcome.start_demo_from_link()  # the intro's Skip / "Try it with these receipts" link
 if "event" not in ss and (saved := session_store.load(out() / "session.json")):  # a new tab: back where you left off
     ss.update(saved)
+if is_demo() and "tour" not in ss and (out() / "tour.txt").exists():  # a refresh mid-demo: same tour, same receipts
+    ss.tour = (out() / "tour.txt").read_text()
+    if not ss.get("receipts"):
+        ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
 ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to the reader
 ss.setdefault("notes", {})      # receipt_id -> photo warnings (blurry, rotated)

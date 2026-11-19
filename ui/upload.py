@@ -19,6 +19,7 @@ from treasurer.sheets import EventInfo
 from ui import start
 from ui.common import ART, FAKE, dec, guide, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
+DEMO_PACE = float(os.getenv("TALLYABLE_DEMO_PACE", "0.4"))  # seconds per demo receipt, so the reading shows (tests: 0)
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
 
 
@@ -143,6 +144,8 @@ def draft(sources: list[list[tuple[str, bytes]]], ex, reader: str, event_id: str
                 done.append(f"{r.receipt_id} · {r.place} · ${r.total:,.2f}")
             loading(bar, "Tally is reading your receipts", f"{n} of {len(sources)} read", n / len(sources),
                     done[-3:] + [None] * min(len(sources) - n, 3))
+            if is_demo():  # the demo's stand-in reader is instant: pace it so you can watch Tally read
+                time.sleep(DEMO_PACE)
     skipped = 0
     for parts, rid, job in zip(sources, rids, jobs, strict=True):  # in upload order, so R01 stays first
         name = parts[0][0]
@@ -314,8 +317,10 @@ def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo)
                              help="Tag who paid for every receipt first" if untagged else None):
                     draft(todo, ex, reader, event.event_id)
                     st.rerun()
-        elif ss.get("last_draft") or again:
-            next_step(ss.get("last_draft") or f"**Nothing new to read.** Already in this event: {again}.",
+        elif ss.get("last_draft") or again or ss.receipts:  # receipts already read (after a refresh too): on to Review
+            n = len(ss.receipts)
+            next_step(ss.get("last_draft") or (f"**Nothing new to read.** Already in this event: {again}." if again else
+                      f"**{plural(n, 'receipt')} read!** Now make sure I got {'them' if n > 1 else 'it'} right."),
                       "Go to Review →", "2. Review", "to-review")
 
 

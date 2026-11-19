@@ -433,6 +433,8 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-sheet td, .tly-sheet th { border: 1px solid var(--tly-line); padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .tly-sheet th { background: var(--tly-paper-soft); color: var(--tly-soft); font-weight: 500; text-align: center; position: sticky; top: 0; }
 .tly-sheet tr th:first-child { position: sticky; left: 0; }
+.st-key-sheet-peek .tly-sheet { max-height: 60vh; }
+.tly-sheet td { vertical-align: middle; }
 /* Loading (Kevin's pick: the thin bar): while the app works, a green bar runs across the very top. After a click it
    waits .3s, so a quick one doesn't flash. No blur (it "flashbanged" on every short wait, Kevin 2026-11-17): only a
    wait past 1.5s fades the page a little, so it reads as busy. Pages with their own loading card (Tally reading,

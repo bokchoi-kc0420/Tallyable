@@ -168,6 +168,8 @@ def switch_mode(demo: bool) -> None:
     ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", date.today())}
     ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
     ss.tour = secrets.token_hex(4)  # a fresh demo gets a fresh tour
+    out().mkdir(parents=True, exist_ok=True)
+    (out() / "tour.txt").write_text(ss.tour)  # a refresh picks the tour back up where it was (app.py)
 
 
 def demo_band() -> None:

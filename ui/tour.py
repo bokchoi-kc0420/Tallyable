@@ -12,34 +12,37 @@ from ui.common import get_sink, is_demo, ss
 # Each stop has up to two phases. Explain: the page blurs except `spot`, Tally says `explain`, and "Got it" hands
 # the page back so it can be tried out. Nudge: no blur, a pulsing ring on the green button (`hand`, the spot if not
 # given) with Tally peeking over it and a one-line `hint`; the stop ends when that button is clicked, or when
-# `until` shows up (done another way). info = done at "Got it"; quiet = ring only (Tally would sit on the boxes);
+# `until` shows up (done another way). info = done at "Got it"; stay = clicking the button doesn't end it, only
+# `until` does (the flagged receipts: one stop for all of them); dock = "top": the card starts top right;
 # pose = which Tally (static/poses); end = the last one: a card in the middle
 # asking what's next (their own club, or another demo event at `spot`'s button); typed = the explain moves on
 # once the spot shows that text (the total, after they put the amount in).
+# back = where to point when the spot is gone (the book pop-up was closed), saying `back_hint`.
 # Copy is Kevin's call: casual, no filler.
 STOPS = [
     {"spot": ".st-key-event-group", "info": True, "pose": "hello",
      "explain": "This ticket is your Boba Social. 4 steps and it's closed - I'll show you around, then it's your turn!"},
-    {"spot": ".st-key-tag-all", "hand": ".st-key-tag-all [data-testid=stSelectbox]", "pose": "clipboard",
+    {"spot": ".st-key-tag-all", "hand": ".st-key-apply-all", "pose": "clipboard",
      "until": ".st-key-read button:not([disabled])",
      "explain": "First up: who paid? Set everyone at once up here, or pick a name under each photo. Try it!",
-     "hint": "Pick who paid for these."},
-    {"spot": ".st-key-apply-all", "until": ".st-key-read button:not([disabled])", "pose": "thumbs-up",
-     "hint": "Nice! Now hit Apply to all."},
+     "hint": "Pick who paid, then hit Apply to all."},
     {"spot": ".st-key-read", "pose": "magnify", "hint": "Everyone's tagged! Hit Read - I'll type them all up."},
     {"spot": ".st-key-to-review", "pose": "flag", "hint": "All read! Hit Go to Review."},
     {"spot": ".st-key-approve-clean", "pose": "calculator",
      "explain": "Here's what I read. Flip through with the arrows, open a photo, fix any box you want. Then approve!",
      "hint": "Looks right? Hit Approve all!"},
-    {"spot": "[class*='st-key-flag-']", "hand": "[class*='st-key-approve-R']", "quiet": True, "pose": "magnify",
+    {"spot": "[class*='st-key-flag-']", "stay": True, "dock": "top", "pose": "magnify",
+     "until": ".st-key-to-summary",
      "explain": "Hmm, this one doesn't add up. Check it against the photo, fix the box that's off, then hit Approve. "
-                "Same deal for the other flagged ones!"},
+                "Same deal for the other flagged ones!",
+     "hint": "Fix the box that's off - the button turns into Approve. Then on to the next flagged one!"},
     {"spot": ".st-key-to-summary", "pose": "tickets", "hint": "All checked! Hit Go to Summary."},
     {"spot": ".st-key-income-box", "hand": ".st-key-push-sheets, .st-key-push-excel", "until": ".st-key-books-in",
      "pose": "coin-jar", "typed": "$700.00", "push": True,
      "explain": "Add what came in - try $700 in dues and watch the money bar move!"},
-    {"spot": ".st-key-sheet-peek", "hand": ".st-key-push-excel", "until": ".st-key-books-in", "pose": "thumbs-up",
-     "hint": "That's your book! Hit Download as Excel to keep it."},
+    {"spot": ".st-key-sheet-peek", "hand": ".st-key-peek-ok", "until": ".st-key-books-in", "pose": "thumbs-up",
+     "back": ".st-key-push-sheets", "back_hint": "Hit Push to Google Sheets to open your book again.",
+     "hint": "That's your book - flip through the tabs, then hit Looks good!"},
     {"spot": ".st-key-to-closeout", "pose": "cheer", "hint": "Books are in! Hit Next: Close out."},
     {"spot": ".st-key-whos-owed", "hand": "[class*='st-key-paid-']", "pose": "high-five",
      "explain": "Here's who's owed what. Change how you paid them back if you want.",
