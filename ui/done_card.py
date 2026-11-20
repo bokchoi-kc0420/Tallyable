@@ -14,7 +14,7 @@ import streamlit as st
 
 from treasurer.models import Receipt, Status
 from treasurer.sheets import EventInfo
-from ui.common import go, mascot_uri, md, ss, usd
+from ui.common import go, is_demo, mascot_uri, md, ss, usd
 
 
 def fingerprint() -> str:
@@ -55,6 +55,8 @@ def show(sink, receipts: list[Receipt], event: EventInfo, income: dict[str, Deci
         return
     if at and on_sheets:
         title, where = "Books are in!", f"went to your Google Sheet at {at}."
+    elif at and is_demo():  # Looks good! books it without a file
+        title, where = "Your book is ready!", f"are saved in it, as of {at}."
     elif at:
         title, where = "Your book is ready!", f"are saved, and your Excel file downloaded at {at}."
     elif ss.event.get("excel_at"):

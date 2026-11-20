@@ -44,7 +44,7 @@ STOPS = [
      "back": ".st-key-push-sheets", "back_hint": "Hit Push to Google Sheets to open your book again.",
      "hint": "That's your book - flip through the tabs, then hit Looks good!"},
     {"spot": ".st-key-to-closeout", "pose": "cheer", "hint": "Books are in! Hit Next: Close out."},
-    {"spot": ".st-key-whos-owed", "hand": "[class*='st-key-paid-']", "pose": "high-five",
+    {"spot": ".st-key-whos-owed", "hand": "[class*='st-key-paid-'] button", "pose": "high-five",
      "explain": "Here's who's owed what. Change how you paid them back if you want.",
      "hint": "Paid them back? Hit Mark paid!"},
     {"spot": ".st-key-finish-event", "pose": "ledger", "hint": "Last one! Hit Finish event to close it out."},
