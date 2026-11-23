@@ -6,6 +6,7 @@ The same models will validate the AI's JSON output in week 2.
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from enum import Enum
@@ -14,6 +15,8 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 CENT = Decimal("0.01")
+# Bottle deposits and fees: printed right under an item, so a saving under them is really that item's.
+FEE = re.compile(r"\b(CRV|DEPOSIT|DEP|BAG|FEE)\b", re.IGNORECASE)
 
 
 def money(x: Decimal) -> Decimal:
@@ -33,7 +36,8 @@ class Status(str, Enum):
 
 class LineItem(BaseModel):
     category: Category
-    item: str = Field(min_length=1)
+    item: str = Field(min_length=1)  # a plain name ("Kirkland bottled water, 40 pack")
+    printed: str | None = None  # as printed ("KS WATER 40PK"), when the reader gave one
     unit: int = Field(gt=0, description="Quantity bought")
     # Negative for a discount, coupon or promo line (common on online-order screenshots),
     # so the lines still add up to the printed total and the math check stays honest.
@@ -90,17 +94,27 @@ class Receipt(BaseModel):
         return money(self.subtotal + self.tax + self.tip)
 
     @property
+    def owners(self) -> list[LineItem]:
+        """The line each line belongs to: itself, or for a discount printed under an item, that item.
+        A deposit or fee line in between (Safeway prints CRV under the soda) is skipped."""
+        owners, last, item = [], None, None  # item: the last line that isn't a deposit or fee
+        for i in self.items:
+            if i.for_item_above and i.price < 0 and last:
+                owners.append(item or last)
+                continue
+            owners.append(i)
+            last = i
+            item = item if FEE.search(f"{i.item} {i.printed or ''}") else i
+        return owners
+
+    @property
     def returned_amount(self) -> Decimal:
         """Cost of left-out items plus their share of the tax.
 
         A discount printed under an item belongs to that item. Tax follows the lines the receipt
         marks as taxed; when it marks none, tax is split in proportion to each line's amount.
         """
-        owner, owners = None, []
-        for i in self.items:
-            if not (i.for_item_above and i.price < 0 and owner):
-                owner = i
-            owners.append(owner)
+        owners = self.owners
         out = sum((i.amount for i, o in zip(self.items, owners, strict=True) if o.returned), Decimal("0"))
         if out == 0:
             return Decimal("0.00")

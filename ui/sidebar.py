@@ -2,7 +2,6 @@
 Also saving the session, and opening a past event."""
 from __future__ import annotations
 
-import os
 import secrets
 import time
 from datetime import date
@@ -20,7 +19,6 @@ from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 # A first visit starts from zero: no name, no members. The fake event is one click away on Upload.
 DEFAULT_EVENT = {"event_id": "EVT-NEW", "name": "New event", "date": date.today(), "attendees": 30,
                  "members": "", "sources": ", ".join(DEFAULT_SOURCES)}
-HOME_URL = os.environ.get("TALLYABLE_HOME_URL", "http://localhost:3000")  # the landing page start.bat serves
 
 
 def event_id_for(name: str, d: date) -> str:

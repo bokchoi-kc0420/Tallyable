@@ -25,7 +25,9 @@ secondaryBackgroundColor = "#FFFFFF"  # inputs: white reads as "type here" on th
 textColor = "#1F2A22"
 borderColor = "#E3D9B6"
 linkColor = "#1C5C36"
-dataframeHeaderBackgroundColor = "#F2ECD3"
+dataframeHeaderBackgroundColor = "#1C5C36"  # green header, white text: tables stand off the cream page (Kevin's pick A)
+dataframeHeaderTextColor = "#FFFFFF"
+dataframeBorderColor = "#C9C2A6"
 
 [[theme.fontFaces]]
 family = "Outfit"

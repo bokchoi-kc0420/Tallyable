@@ -44,6 +44,8 @@ def approve_all(rids: list[str]) -> None:
     for x in rids:
         set_status(x, Status.APPROVED)
     ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
+    if not ss.next_pick:
+        ss.scroll_to = ".st-key-to-summary"
 
 
 @st.dialog("Approve these?", on_dismiss=lambda: ss.pop("check_all", None))
@@ -127,6 +129,70 @@ def look_card(rid: str, flags: list) -> None:
             st.markdown(f"<ul class='tly-notes'>{lines}</ul>", unsafe_allow_html=True)
 
 
+COLUMNS = ["unit", "item", "printed", "price", "category", "returned", "taxed", "for_item_above"]
+
+
+def frame(items: list[LineItem]) -> pd.DataFrame:
+    return pd.DataFrame([{c: float(i.price) if c == "price" else getattr(i, c) for c in COLUMNS} for i in items],
+                        columns=COLUMNS)
+
+
+def lines(edited: pd.DataFrame) -> list[LineItem]:
+    """The table's rows back as line items; a row with no item name yet is skipped."""
+    return [LineItem(category=row.category, item=str(row.item), printed=row.printed if isinstance(row.printed, str) else None,
+                     unit=int(row.unit),
+                     price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned),
+                     taxed=None if pd.isna(row.taxed) else bool(row.taxed),
+                     for_item_above=bool(row.for_item_above) if pd.notna(row.for_item_above) else False)
+            for row in edited.itertuples() if pd.notna(row.item) and str(row.item).strip()]
+
+
+def split_savings(items: list[LineItem]) -> tuple[list[LineItem], list[LineItem], list[int]]:
+    """Things bought, the savings (negative lines), and for each saving how many bought lines come before it,
+    so merge_savings can put it back where the receipt printed it."""
+    bought, savings, after = [], [], []
+    for i in items:
+        if i.price >= 0:
+            bought.append(i)
+            continue
+        savings.append(i)
+        after.append(len(bought))
+    return bought, savings, after
+
+
+def merge_savings(bought: list[LineItem], savings: list[LineItem], after: list[int]) -> list[LineItem]:
+    """Each saving back under the line it was printed under. A new saving, or one whose line was deleted,
+    goes last as a saving on the whole order."""
+    items = []
+    for n, i in enumerate(bought, 1):
+        items += [i, *(s for s, a in zip(savings, after, strict=False) if a == n)]
+    loose = [s for k, s in enumerate(savings) if k >= len(after) or not 1 <= after[k] <= len(bought)]
+    return items + [s.model_copy(update={"for_item_above": False}) for s in loose]
+
+
+def savings_box(rid: str, savings: list[LineItem], on: list[str]) -> pd.DataFrame | None:
+    """Member savings, coupons and promos in their own green box under the items (Kevin's pick B),
+    each saying which item it comes off. None when the receipt has none."""
+    if not savings:
+        return None
+    total = sum((s.amount for s in savings), Decimal("0"))
+    with st.container(key=f"savings-box-{rid}"):
+        st.html(f'<p class="tly-savings-head"><span>Savings</span><b>{usd(total)}</b></p>')
+        return st.data_editor(frame(savings).assign(on=on), key=f"savings-{rid}", width="stretch", hide_index=True,
+                              column_order=["item", "on", "price"], disabled=["on"],
+                              column_config={"item": st.column_config.TextColumn("Saving", width=188),
+                                             "on": st.column_config.TextColumn("Comes off"),
+                                             "price": st.column_config.NumberColumn("Price", format="%.2f", width=72)})
+
+
+def add_line(rid: str) -> None:
+    """Button callback: a blank line at the end of the receipt to fill in."""
+    r = ss.receipts[rid]
+    ss.receipts[rid] = r.model_copy(update={"items": [*r.items, LineItem(category="Other", item="New item", unit=1,
+                                                                         price=Decimal("0"))]})
+    ss.pop(f"items-{rid}", None)
+
+
 def edit_form(rid: str, flags: list) -> None:
     """The receipt's fields, line items, and the Approve / Leave out / Reopen buttons."""
     r = ss.receipts[rid]
@@ -146,12 +212,12 @@ def edit_form(rid: str, flags: list) -> None:
     d = c2.date_input("Date", r.date, key=f"date-{rid}")
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
     payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
-    df = pd.DataFrame([{"unit": i.unit, "item": i.item, "price": float(i.price), "category": i.category,
-                        "returned": i.returned, "taxed": i.taxed, "for_item_above": i.for_item_above} for i in r.items],
-                      columns=["unit", "item", "price", "category", "returned", "taxed", "for_item_above"])
+    bought, savings, after = split_savings(r.items)
+    comes_off = [o.item if o is not i else "Whole order" for i, o in zip(r.items, r.owners, strict=True) if i.price < 0]
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
-               "item": st.column_config.TextColumn("Item", width=188),
+               "item": st.column_config.TextColumn("Item", width=232, help="Clear a name to take that line off"),
+               "printed": st.column_config.TextColumn("On receipt", width=120, help="Exactly as the receipt prints it"),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
                "returned": st.column_config.CheckboxColumn("Leave out", width=92,
@@ -167,8 +233,14 @@ def edit_form(rid: str, flags: list) -> None:
         st.markdown(f'<span class="tly-left-out">↺ {len(out)} left out '
                     f'<em>({r.left_out_why})</em><b>&minus;{usd(r.returned_amount)}</b></span>', unsafe_allow_html=True)
     # Tax marks and discount links ride along hidden, so an edit never drops them.
-    edited = st.data_editor(df, num_rows="dynamic", key=f"items-{rid}", width="stretch", column_config=columns,
-                            column_order=list(columns))
+    # The receipt's own wording is shaded: it's there to check against the photo, not to edit.
+    table = frame(bought).assign(printed=[i.printed or i.item for i in bought]).style.set_properties(
+        subset=["printed"], **{"color": "#6B6A60", "background-color": "#F2ECD3"})
+    # A fixed table, so only the header is green (Kevin): the add/delete row and side strip took the header color.
+    edited = st.data_editor(table, key=f"items-{rid}", width="stretch", hide_index=True,
+                            column_config=columns, column_order=list(columns), disabled=["printed"])
+    st.button("Add a line", icon=":material/add:", type="tertiary", key=f"add-line-{rid}", on_click=add_line, args=(rid,))
+    saved = savings_box(rid, savings, comes_off)
     why = r.left_out_why
     if any(i.returned for i in r.items):
         why = st.segmented_control("Left out because", ["personal", "returned"], default=r.left_out_why,
@@ -180,11 +252,7 @@ def edit_form(rid: str, flags: list) -> None:
     total = c3.text_input("Total", str(r.total), key=f"total-{rid}")
 
     try:
-        items = [LineItem(category=row.category, item=str(row.item), unit=int(row.unit),
-                          price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned),
-                          taxed=None if pd.isna(row.taxed) else bool(row.taxed),
-                          for_item_above=bool(row.for_item_above) if pd.notna(row.for_item_above) else False)
-                 for row in edited.itertuples() if pd.notna(row.item) and str(row.item).strip()]
+        items = merge_savings(lines(edited), lines(saved) if saved is not None else [], after)
         new = r.model_copy(update=dict(place=place, date=d, payer=payer or None, items=items, left_out_why=why,
                                        tax=dec(tax), tip=dec(tip), total=dec(total)))
     except (ValueError, TypeError):
@@ -193,6 +261,9 @@ def edit_form(rid: str, flags: list) -> None:
         if new != r:
             ss.edits += 1
             ss.receipts[rid] = new
+            # A line can hop between the two tables (a price turned negative), so both redraw from the receipt.
+            ss.pop(f"items-{rid}", None)
+            ss.pop(f"savings-{rid}", None)
             st.rerun()  # re-run checks on the edited values
 
     st.caption(md(f"Goes in the books as {usd(r.posted_amount)}" if out else
@@ -217,6 +288,8 @@ def edit_form(rid: str, flags: list) -> None:
     if approve or leave_out:
         set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
+        if not ss.next_pick:  # the last one: Go to Summary sits at the top, out of sight on a long receipt
+            ss.scroll_to = ".st-key-to-summary"
         st.rerun()
     if b3.button("Reopen", disabled=not decided, help="Undo an approve or leave out, or fix one that's already in the books"):
         set_status(rid, Status.DRAFTED)

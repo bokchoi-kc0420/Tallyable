@@ -25,6 +25,10 @@
   transform: translateY(-2px); box-shadow: var(--tly-shadow); }
 .stButton button:active:not(:disabled), .stDownloadButton button:active:not(:disabled),
 .stFormSubmitButton button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+/* Room around a button's label, so the words don't sit tight against its edges. Attribute selectors only,
+   so a button styled by its own key (.st-key-... button) keeps its padding. */
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-primaryFormSubmit"], [data-testid="stBaseButton-secondaryFormSubmit"] { padding: 8px 24px; }
 [data-testid="stVerticalBlockBorderWrapper"], [data-testid="stMetric"] { transition: transform .2s, box-shadow .2s; }
 [data-testid="stMetric"]:hover { transform: translateY(-2px); box-shadow: var(--tly-shadow); }
 [data-testid="stFileUploaderDropzone"] { border: 2px dashed var(--tly-line-strong); transition: background-color .2s, border-color .2s; }
@@ -454,3 +458,21 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 @keyframes tly-load-fade { to { opacity: .6; } }
 @keyframes tly-load-in { from, 50% { opacity: .6; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { [data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: none !important; } }
+.st-key-logo-home { display: none; }
+[data-testid="stLogo"] { cursor: pointer; }
+/* Connect Google Sheets: two numbered steps, with the email, tip and links tucked under them (Kevin's pick) */
+[class*="st-key-sheets-"] { padding-left: 48px; gap: 8px; }
+.tly-sheets-step { position: relative; margin: 8px 0 0; font-size: var(--tly-t-md); color: var(--tly-ink-2); }
+.tly-sheets-step b { display: block; font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-lg); color: var(--tly-ink); }
+.tly-sheets-step::before { content: attr(data-n); position: absolute; left: -48px; top: 0; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--tly-forest); color: var(--tly-white); font-family: var(--tly-head); font-weight: 600; display: grid; place-items: center; }
+.tly-sheets-tip { display: flex; gap: 16px; align-items: center; background: var(--tly-sun-tint); border: 2px solid var(--tly-sun);
+  border-radius: var(--tly-r); padding: 8px 16px; margin: 8px 0; }
+.tly-sheets-tip img { width: 56px; flex: none; }
+.tly-sheets-tip p { margin: 0; color: var(--tly-ink); }
+.tly-sheets-tip strong { font-family: var(--tly-head); font-weight: 600; }
+/* Savings under the items: one green box, a solid line (Kevin's pick B) */
+[class*="st-key-savings-box-"] { background: var(--tly-green-tint); border: 2px solid var(--tly-forest); border-radius: var(--tly-r);
+  padding: 16px; gap: 8px; }
+.tly-savings-head { display: flex; justify-content: space-between; margin: 0; font-family: var(--tly-head); font-weight: 600;
+  font-size: var(--tly-t-lg); color: var(--tly-forest); }

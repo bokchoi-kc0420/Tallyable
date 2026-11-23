@@ -239,6 +239,8 @@ def show(event: EventInfo) -> None:
     reimbursed = totals_by_payer(paybacks, event.event_id)
     lines = co.payer_summary(done, reimbursed)
     owing = [x for x in lines if x.owed > 0]
+    if ss.get("just_paid") and not owing:  # the last Mark paid: Who's owed is done, on to the next part
+        ss.scroll_to = ".st-key-money-box"
     with st.container(border=True, key="whos-owed"):
         whos_owed(sink, done, lines, event.event_id, paybacks)
     with st.container(border=True, key="money-box"):

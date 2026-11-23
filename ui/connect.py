@@ -6,7 +6,7 @@ import streamlit as st
 
 from treasurer.sheets import bot_client, bot_email, sheet_id
 from ui import club
-from ui.common import GCP_KEY, ROOT, signed_in_email
+from ui.common import GCP_KEY, ROOT, mascot_uri, signed_in_email
 
 
 def linked() -> dict:
@@ -69,29 +69,32 @@ def box(key: str) -> None:
         st.caption("Google Sheets isn't set up on this copy of Tallyable, so your books come out as an Excel file.")
         return
     saved = linked()
-    st.markdown("**1. Share your sheets with Tally:** hit Share in Google Sheets, paste this into **Add people**, "
-                "and pick Editor.")
-    st.code(email, language=None)
-    st.caption("Leave General access on Restricted, so only Tally and the people you add can open your books.")
-    st.markdown("**2. Paste the links here.**")
-    book = st.text_input("Event books (balance sheet, expenses, receipts)", key=f"{key}-book",
-                         value=f"https://docs.google.com/spreadsheets/d/{saved['book']}" if saved.get("book") else "",
-                         placeholder="https://docs.google.com/spreadsheets/d/...")
-    ledger = st.text_input("General Ledger (optional: leave blank to keep it in the same sheet)", key=f"{key}-ledger",
-                           value=f"https://docs.google.com/spreadsheets/d/{saved['ledger']}" if saved.get("ledger") else "",
-                           placeholder="https://docs.google.com/spreadsheets/d/...")
-    if not st.button("Connect!", type="primary" if key == "dialog" else "secondary", icon=":material/link:",
-                     key=f"{key}-go"):  # on Summary, Push stays the one filled button
-        return
-    ids = {"book": sheet_id(book), "ledger": sheet_id(ledger)} if ledger.strip() else {"book": sheet_id(book)}
-    if not all(ids.values()):
-        st.error("That doesn't look like a Google Sheets link. Copy it from your browser's address bar!")
-        return
-    with st.spinner("Checking Tally can open it..."):
-        problem = check(ids, signed_in_email())
-    if problem:
-        st.error(problem + " Then hit Connect again.")
-        return
-    club.save(sheets=ids)
-    st.toast("Connected! Push sends your books there now.", icon=":material/celebration:")
-    st.rerun()
+    with st.container(key=f"sheets-{key}"):  # numbered steps with the email and links tucked under them (style.css)
+        st.html('<p class="tly-sheets-step" data-n="1"><b>Share your sheet with Tally</b>'
+                "Hit Share in Google Sheets, paste this into Add people, and pick Editor.</p>")
+        st.code(email, language=None, width="content")  # Copy sits right by the email
+        st.html(f'<div class="tly-sheets-tip"><img src="{mascot_uri("tally-lock.png")}" alt=""><p><strong>Keep it '
+                "Restricted!</strong> Leave General access on Restricted so only Tally and the people you add can see "
+                "your books.</p></div>")
+        st.html('<p class="tly-sheets-step" data-n="2"><b>Paste the links here</b></p>')
+        book = st.text_input("Event books (balance sheet, expenses, receipts)", key=f"{key}-book",
+                             value=f"https://docs.google.com/spreadsheets/d/{saved['book']}" if saved.get("book") else "",
+                             placeholder="https://docs.google.com/spreadsheets/d/...")
+        ledger = st.text_input("General Ledger (optional: leave blank to keep it in the same sheet)", key=f"{key}-ledger",
+                               value=f"https://docs.google.com/spreadsheets/d/{saved['ledger']}" if saved.get("ledger") else "",
+                               placeholder="https://docs.google.com/spreadsheets/d/...")
+        if not st.button("Connect!", type="primary" if key == "dialog" else "secondary", icon=":material/link:",
+                         key=f"{key}-go"):  # on Summary, Push stays the one filled button
+            return
+        ids = {"book": sheet_id(book), "ledger": sheet_id(ledger)} if ledger.strip() else {"book": sheet_id(book)}
+        if not all(ids.values()):
+            st.error("That doesn't look like a Google Sheets link. Copy it from your browser's address bar!")
+            return
+        with st.spinner("Checking Tally can open it..."):
+            problem = check(ids, signed_in_email())
+        if problem:
+            st.error(problem + " Then hit Connect again.")
+            return
+        club.save(sheets=ids)
+        st.toast("Connected! Push sends your books there now.", icon=":material/celebration:")
+        st.rerun()
