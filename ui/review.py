@@ -178,11 +178,19 @@ def savings_box(rid: str, savings: list[LineItem], on: list[str]) -> pd.DataFram
     total = sum((s.amount for s in savings), Decimal("0"))
     with st.container(key=f"savings-box-{rid}"):
         st.html(f'<p class="tly-savings-head"><span>Savings</span><b>{usd(total)}</b></p>')
-        return st.data_editor(frame(savings).assign(on=on), key=f"savings-{rid}", width="stretch",
+        return st.data_editor(frame(savings).assign(on=on), key=f"savings-{rid}", width="stretch", hide_index=True,
                               column_order=["item", "on", "price"], disabled=["on"],
                               column_config={"item": st.column_config.TextColumn("Saving", width=188),
                                              "on": st.column_config.TextColumn("Comes off"),
                                              "price": st.column_config.NumberColumn("Price", format="%.2f", width=72)})
+
+
+def add_line(rid: str) -> None:
+    """Button callback: a blank line at the end of the receipt to fill in."""
+    r = ss.receipts[rid]
+    ss.receipts[rid] = r.model_copy(update={"items": [*r.items, LineItem(category="Other", item="New item", unit=1,
+                                                                         price=Decimal("0"))]})
+    ss.pop(f"items-{rid}", None)
 
 
 def edit_form(rid: str, flags: list) -> None:
@@ -208,7 +216,7 @@ def edit_form(rid: str, flags: list) -> None:
     comes_off = [o.item if o is not i else "Whole order" for i, o in zip(r.items, r.owners, strict=True) if i.price < 0]
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
-               "item": st.column_config.TextColumn("Item", width=232),
+               "item": st.column_config.TextColumn("Item", width=232, help="Clear a name to take that line off"),
                "printed": st.column_config.TextColumn("On receipt", width=120, help="Exactly as the receipt prints it"),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
@@ -228,8 +236,10 @@ def edit_form(rid: str, flags: list) -> None:
     # The receipt's own wording is shaded: it's there to check against the photo, not to edit.
     table = frame(bought).assign(printed=[i.printed or i.item for i in bought]).style.set_properties(
         subset=["printed"], **{"color": "#6B6A60", "background-color": "#F2ECD3"})
-    edited = st.data_editor(table, num_rows="dynamic", key=f"items-{rid}", width="stretch",
+    # A fixed table, so only the header is green (Kevin): the add/delete row and side strip took the header color.
+    edited = st.data_editor(table, key=f"items-{rid}", width="stretch", hide_index=True,
                             column_config=columns, column_order=list(columns), disabled=["printed"])
+    st.button("Add a line", icon=":material/add:", type="tertiary", key=f"add-line-{rid}", on_click=add_line, args=(rid,))
     saved = savings_box(rid, savings, comes_off)
     why = r.left_out_why
     if any(i.returned for i in r.items):
