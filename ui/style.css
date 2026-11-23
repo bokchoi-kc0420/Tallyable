@@ -25,6 +25,10 @@
   transform: translateY(-2px); box-shadow: var(--tly-shadow); }
 .stButton button:active:not(:disabled), .stDownloadButton button:active:not(:disabled),
 .stFormSubmitButton button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+/* Room around a button's label, so the words don't sit tight against its edges. Attribute selectors only,
+   so a button styled by its own key (.st-key-... button) keeps its padding. */
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-primaryFormSubmit"], [data-testid="stBaseButton-secondaryFormSubmit"] { padding: 8px 24px; }
 [data-testid="stVerticalBlockBorderWrapper"], [data-testid="stMetric"] { transition: transform .2s, box-shadow .2s; }
 [data-testid="stMetric"]:hover { transform: translateY(-2px); box-shadow: var(--tly-shadow); }
 [data-testid="stFileUploaderDropzone"] { border: 2px dashed var(--tly-line-strong); transition: background-color .2s, border-color .2s; }

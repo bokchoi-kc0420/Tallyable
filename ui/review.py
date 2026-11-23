@@ -44,6 +44,8 @@ def approve_all(rids: list[str]) -> None:
     for x in rids:
         set_status(x, Status.APPROVED)
     ss.next_pick = next((x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED), None)
+    if not ss.next_pick:
+        ss.scroll_to = ".st-key-to-summary"
 
 
 @st.dialog("Approve these?", on_dismiss=lambda: ss.pop("check_all", None))
@@ -217,6 +219,8 @@ def edit_form(rid: str, flags: list) -> None:
     if approve or leave_out:
         set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
+        if not ss.next_pick:  # the last one: Go to Summary sits at the top, out of sight on a long receipt
+            ss.scroll_to = ".st-key-to-summary"
         st.rerun()
     if b3.button("Reopen", disabled=not decided, help="Undo an approve or leave out, or fix one that's already in the books"):
         set_status(rid, Status.DRAFTED)

@@ -71,7 +71,7 @@ def box(key: str) -> None:
     saved = linked()
     st.markdown("**1. Share your sheets with Tally:** hit Share in Google Sheets, paste this into **Add people**, "
                 "and pick Editor.")
-    st.code(email, language=None)
+    st.code(email, language=None, width="content")  # Copy sits right by the email
     st.caption("Leave General access on Restricted, so only Tally and the people you add can open your books.")
     st.markdown("**2. Paste the links here.**")
     book = st.text_input("Event books (balance sheet, expenses, receipts)", key=f"{key}-book",

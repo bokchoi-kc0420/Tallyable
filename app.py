@@ -96,10 +96,13 @@ with st.sidebar.container(key="account"):  # the hosted link: whose books these 
         st.button("Sign out", type="tertiary", icon=":material/logout:", key="sign-out", on_click=st.logout)
     st.html(f'<p class="tly-account"><a href="{PRIVACY}" target="_blank">Privacy</a></p>')
 screen = (ss.get("view"), page, ss.event.get("finished"))
+# Last on the page, so its empty block adds no gap above the header.
 if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: a new step should open at its top.
-    # Last on the page, so its empty block adds no gap above the header.
     st.html("<script>document.querySelector('[data-testid=\"stMain\"]')?.scrollTo(0, 0)</script>",
             unsafe_allow_javascript=True)
+elif target := ss.pop("scroll_to", None):  # a section just finished: bring up what comes next
+    st.html(f"<script>setTimeout(() => document.querySelector('{target}')?.scrollIntoView("
+            "{behavior: 'smooth', block: 'center'}), 300)</script>", unsafe_allow_javascript=True)
 ss.last_screen = screen
 tour.show()
 sidebar.save_session()
