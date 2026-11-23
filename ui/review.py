@@ -216,8 +216,8 @@ def edit_form(rid: str, flags: list) -> None:
     comes_off = [o.item if o is not i else "Whole order" for i, o in zip(r.items, r.owners, strict=True) if i.price < 0]
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
-               "item": st.column_config.TextColumn("Item", width=232, help="Clear a name to take that line off"),
-               "printed": st.column_config.TextColumn("On receipt", width=120, help="Exactly as the receipt prints it"),
+               "item": st.column_config.TextColumn("Item", width=184, help="Clear a name to take that line off"),
+               "printed": st.column_config.TextColumn("On receipt", width=104, help="Exactly as the receipt prints it"),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
                "returned": st.column_config.CheckboxColumn("Leave out", width=92,

@@ -10,7 +10,7 @@ import streamlit as st
 
 from treasurer.ledger_view import school_year
 from ui import club, connect, done_card
-from ui.common import STEPS, get_sink, is_demo, mascot_uri, reviewed, ss, usd
+from ui.common import STEPS, get_sink, is_demo, mascot_uri, now, reviewed, ss, usd
 from ui.home import badge, balance, demo_band, year_events
 from ui.sidebar import start_new_event
 from ui.tickets import PALETTE, _vars
@@ -56,7 +56,7 @@ def hero(me: dict, events: list[dict]) -> None:
                      f'<span class="tly-delta{" down" if up < 0 else ""}"><b>{"▲" if up >= 0 else "▼"}</b> '
                      f'{usd(abs(up))} since the year started</span>')
             st.html(f'<div class="tly-hero-id">{badge(me["name"], "mid")}<div><b>{html.escape(me["name"])}</b>'
-                    f'<small>{n} member{"s" if n != 1 else ""} · {school_year(date.today()).replace("-", "–")}</small></div></div>'
+                    f'<small>{n} member{"s" if n != 1 else ""} · {school_year(now().date()).replace("-", "–")}</small></div></div>'
                     f'<p class="tly-hero-money">{amount}</p><p class="tly-hero-sub">{sub}</p>{delta}'
                     f'<img class="tly-hero-jar" src="{mascot_uri("tally-coin-jar.png")}" alt="">')
         with st.container(key="hero-next"):

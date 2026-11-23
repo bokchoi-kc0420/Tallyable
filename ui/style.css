@@ -29,6 +29,7 @@
    so a button styled by its own key (.st-key-... button) keeps its padding. */
 [data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"],
 [data-testid="stBaseButton-primaryFormSubmit"], [data-testid="stBaseButton-secondaryFormSubmit"] { padding: 8px 24px; }
+:is(.st-key-club-add, .st-key-add-member) button { padding-inline: 8px; }  /* a narrow column: "Add" has to fit */
 [data-testid="stVerticalBlockBorderWrapper"], [data-testid="stMetric"] { transition: transform .2s, box-shadow .2s; }
 [data-testid="stMetric"]:hover { transform: translateY(-2px); box-shadow: var(--tly-shadow); }
 [data-testid="stFileUploaderDropzone"] { border: 2px dashed var(--tly-line-strong); transition: background-color .2s, border-color .2s; }
@@ -459,7 +460,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 @keyframes tly-load-in { from, 50% { opacity: .6; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { [data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: none !important; } }
 .st-key-logo-home { display: none; }
-[data-testid="stLogo"] { cursor: pointer; }
+.stLogo { cursor: pointer; }
 /* Connect Google Sheets: two numbered steps, with the email, tip and links tucked under them (Kevin's pick) */
 [class*="st-key-sheets-"] { padding-left: 48px; gap: 8px; }
 .tly-sheets-step { position: relative; margin: 8px 0 0; font-size: var(--tly-t-md); color: var(--tly-ink-2); }

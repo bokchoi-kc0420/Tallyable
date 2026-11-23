@@ -13,7 +13,7 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.sheets import DEFAULT_SOURCES, EventInfo
 from ui import club
-from ui.common import STEPS, out, past, reviewed, ss, step_label, step_status
+from ui.common import STEPS, now, out, past, reviewed, ss, step_label, step_status
 from ui.tickets import NAMES, PALETTE, next_color, stub, ticket
 
 # A first visit starts from zero: no name, no members. The fake event is one click away on Upload.
@@ -32,8 +32,8 @@ def start_new_event() -> None:
     """Clear the screen for the next event. The finished one stays under Past events.
     Income sources carry over; who's in starts as the whole club list."""
     ss.event = {k: v for k, v in ss.event.items() if k not in ("pushed_at", "pushed_sig", "finished", "late")}
-    ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": date.today(), "set_up": False,
-                "event_id": event_id_for("New event", date.today()), "color": next_color(ss.event.get("color")),
+    ss.event = {**ss.event, "members": ", ".join(club.load()["members"]), "name": "New event", "date": now().date(), "set_up": False,
+                "event_id": event_id_for("New event", now().date()), "color": next_color(ss.event.get("color")),
                 "club": club.current()}
     for k in ("receipts", "images", "notes", "failed", "skipped"):
         ss[k] = {}

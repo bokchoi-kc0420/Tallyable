@@ -7,14 +7,13 @@ from __future__ import annotations
 import hashlib
 import html
 import json
-import time
 from decimal import Decimal
 
 import streamlit as st
 
 from treasurer.models import Receipt, Status
 from treasurer.sheets import EventInfo
-from ui.common import go, is_demo, mascot_uri, md, ss, usd
+from ui.common import clock, go, is_demo, mascot_uri, md, ss, usd
 
 
 def fingerprint() -> str:
@@ -25,7 +24,7 @@ def fingerprint() -> str:
 
 def mark_pushed() -> None:
     """Call right after a push: the card shows from now on, until something changes."""
-    ss.event = {**ss.event, "pushed_at": time.strftime("%I:%M %p").lstrip("0"), "pushed_sig": fingerprint()}
+    ss.event = {**ss.event, "pushed_at": clock(), "pushed_sig": fingerprint()}
 
 
 def counts_line(receipts: list[Receipt], income: dict[str, Decimal]) -> str:

@@ -5,7 +5,6 @@ from __future__ import annotations
 import html
 import secrets
 import shutil
-from datetime import date
 from decimal import Decimal
 
 import streamlit as st
@@ -13,13 +12,13 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.ledger_view import school_year
 from ui import club, welcome
-from ui.common import FAKE, STEPS, base, is_demo, mascot_uri, mode_file, out, past, ss, usd
+from ui.common import FAKE, STEPS, base, is_demo, mascot_uri, mode_file, now, out, past, ss, usd
 from ui.sidebar import DEFAULT_EVENT, event_id_for, open_past, save_session, start_new_event
 
 
 def year_events() -> list[dict]:
     """The open club's saved events this school year, newest first, each with its net."""
-    year = school_year(date.today())
+    year = school_year(now().date())
     events = [e for e in session_store.past_nets(past()) if club.owns(e) and school_year(e["date"]) == year]
     return sorted(events, key=lambda e: str(e["date"]), reverse=True)
 
@@ -165,7 +164,7 @@ def switch_mode(demo: bool) -> None:
     ss.club_picked = True
     ss.event = dict(DEFAULT_EVENT)
     start_new_event()  # the intro's Boba Social, set up and on Upload with its receipts, where the tour starts
-    ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", date.today())}
+    ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", now().date())}
     ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
     ss.tour = secrets.token_hex(4)  # a fresh demo gets a fresh tour
     out().mkdir(parents=True, exist_ok=True)

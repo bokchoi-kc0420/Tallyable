@@ -15,7 +15,7 @@ from treasurer.photo_pdf import receipts_pdf
 from treasurer.reimburse import METHODS, Reimbursement, totals_by_payer, validate
 from treasurer.sheets import EventInfo
 from ui import finish
-from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, saved_reimbursements, ss, step_bar, usd
+from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, now, saved_reimbursements, ss, step_bar, usd
 
 EXAMPLES = {"Example: event grant (up to $2,500)": co.CFC, "Example: yearly grant ($250)": co.ORG}
 
@@ -96,7 +96,7 @@ def whos_owed(sink, done: list[Receipt], lines: list, event_id: str, paybacks: l
             cell(row[5], "Set a payer in Review", "soft")
             continue
         how = paid_with(row[5], x.payer)
-        unpaid.append(Reimbursement(event_id, x.payer, date.today(), x.owed, *how) if how else None)
+        unpaid.append(Reimbursement(event_id, x.payer, now().date(), x.owed, *how) if how else None)
         if not row[6].button("Mark paid", key=f"paid-{x.payer}", type="primary", width="stretch", disabled=not how,
                              help=f"Records {md('$' + str(x.owed))} paid back to {x.payer} today."):
             continue
@@ -131,7 +131,7 @@ def payback_form(sink, owing: list, event_id: str) -> None:
         who = c[0].selectbox("Payer", [x.payer for x in owing])
         amount = c[1].text_input("Amount", "", help="Leave blank to pay back everything owed")
         method = c[2].selectbox("Method", METHODS)
-        when = c[3].date_input("Date", value=date.today())
+        when = c[3].date_input("Date", value=now().date())
         note = st.text_input("Note (optional)")
         if not st.form_submit_button("Mark paid back"):
             return
@@ -186,7 +186,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     c = st.columns(3)
     attendees = int(c[0].number_input("Attendees", min_value=1, value=ss.event["attendees"]))
     req_text = c[1].text_input("Requested ($, optional)", "")
-    applied_on = c[2].date_input("Applying on", value=date.today())
+    applied_on = c[2].date_input("Applying on", value=now().date())
     requested = dec(req_text) if req_text.strip() else None
     event = co.Event(info.event_id, info.name, info.date, attendees=attendees)
     flags = co.check_funder_rules(event, done, pack, requested, applied_on)
