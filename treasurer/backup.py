@@ -1,5 +1,5 @@
-"""Hosted only: Heroku wipes its disk on every restart, so each account's folder is copied into
-Postgres (DATABASE_URL, set by the Heroku Postgres add-on). The app keeps reading and writing plain
+"""Hosted only: the host wipes its disk on every restart or deploy, so each account's folder is copied
+into Postgres (DATABASE_URL, from the dev database in .do/deploy.template.yaml). The app keeps reading and writing plain
 files: `restore` puts the folder back on a fresh disk, `push` sends what changed since the last push.
 Locally there is no DATABASE_URL and none of this runs."""
 from __future__ import annotations

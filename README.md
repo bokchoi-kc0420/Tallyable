@@ -91,7 +91,7 @@ Click "Use the fake event's 14 receipts instead", tag payers, then go through Dr
 
 - **Read receipts with Claude:** copy `.env.example` to `.env` and add `ANTHROPIC_API_KEY`. Try one receipt with `python -m treasurer.try_one fake_event/receipts/R01.jpg`, or score them all with `python -m treasurer.score_all` (`--model claude-haiku-5-5`, `--budget 0.50`, `--set holdout` for the unseen receipts). Never commit `.env`.
 - **Google Sheets:** [docs/google_sheets_setup.md](docs/google_sheets_setup.md). Without it, Push writes a local CSV.
-- **Put it online:** [docs/deploy_streamlit_cloud.md](docs/deploy_streamlit_cloud.md). Set `APP_PASSWORD` first.
+- **Put it online:** [![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/bokchoi-kc0420/Tallyable/tree/main) (settings in `.do/deploy.template.yaml`). Set `APP_PASSWORD` first.
 - **HEIC photos:** `python -m pip install pillow-heif`.
 - **Tests:** `python -m pytest` (109 tests with 93% coverage, run on every push; they never call the API or touch a real sheet).
 

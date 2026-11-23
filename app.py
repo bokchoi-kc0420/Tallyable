@@ -42,7 +42,7 @@ if hosted() and not st.user.is_logged_in:
     st.button("Sign in with Google", type="primary", icon=":material/login:", on_click=st.login)
     st.stop()
 
-if backup.on():  # Heroku wipes its disk on restart: put this account's folder back, then save the last run's changes
+if backup.on():  # the host wipes its disk on restart: put this account's folder back, then save the last run's changes
     ss.backed_up = backup.push(base(), DATA, ss.get("backed_up") or backup.restore(base(), DATA))
 welcome.start_demo_from_link()  # the intro's Skip / "Try it with these receipts" link
 if "event" not in ss and (saved := session_store.load(out() / "session.json")):  # a new tab: back where you left off
