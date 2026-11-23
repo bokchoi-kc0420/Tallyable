@@ -51,6 +51,8 @@ if is_demo() and "tour" not in ss and (out() / "tour.txt").exists():  # a refres
     ss.tour = (out() / "tour.txt").read_text()
     if not ss.get("receipts"):
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
+if first_load and "view" not in ss and not is_demo():  # every launch opens on club home, not where the last visit stopped
+    home.go_home()
 ss.setdefault("receipts", {})   # receipt_id -> Receipt
 ss.setdefault("images", {})     # receipt_id -> (bytes, media type) as sent to the reader
 ss.setdefault("notes", {})      # receipt_id -> photo warnings (blurry, rotated)
@@ -66,7 +68,13 @@ ss.setdefault("income", {})
 if ss.get("view") == "intro":
     welcome.intro()
     st.stop()
-st.logo(str(ART / "logo.png"), size="large", link=sidebar.HOME_URL)
+st.logo(str(ART / "logo.png"), size="large")
+# Clicking the logo opens club home: it presses this hidden button (style.css), since a logo link opens a new tab.
+with st.sidebar.container(key="logo-home"):
+    st.button("Club home", key="logo-home-go", on_click=home.go_home)
+    st.html("""<script>if (!window.tlyLogo) { window.tlyLogo = true; document.addEventListener("click", e => {
+      if (e.target.closest('[data-testid="stLogo"]')) document.querySelector(".st-key-logo-home button")?.click(); }); }
+    </script>""", unsafe_allow_javascript=True)
 if "event" in ss:
     club.seed(ss.event)  # events from before clubs existed start "My club"
 if is_demo() and not club.clubs():  # a new install: the sample club is ready to play with
