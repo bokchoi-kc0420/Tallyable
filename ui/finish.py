@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import html
 import random
-from datetime import date
 from decimal import Decimal
 
 import streamlit as st
@@ -20,7 +19,7 @@ from treasurer.reimburse import totals_by_payer
 from treasurer.sheets import EventInfo, local_transactions, local_views
 from treasurer.xlsx_export import book_xlsx
 from ui import club, done_card
-from ui.common import dec, get_sink, mascot_uri, past, saved_reimbursements, ss, usd
+from ui.common import dec, get_sink, mascot_uri, now, past, saved_reimbursements, ss, usd
 from ui.home import go_home
 from ui.sidebar import save_session, start_new_event
 from ui.tickets import rip
@@ -154,7 +153,7 @@ def show(event: EventInfo) -> None:
     paid = "everyone paid back" if not any(x.owed > 0 for x in lines) else "paybacks still open"
     # Last school year's books are closed: a late receipt would change a year that's already reported.
     # 60 days of grace, so a July event can still take a receipt found in August.
-    locked = school_year(event.date) != school_year(date.today()) and (date.today() - event.date).days > 60
+    locked = school_year(event.date) != school_year(now().date()) and (now().date() - event.date).days > 60
     if ss.get("finish_note"):
         st.warning(ss.pop("finish_note"))
     with st.container(border=True, key="finish-page"):

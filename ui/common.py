@@ -7,8 +7,10 @@ import hashlib
 import html
 import json
 import os
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -40,6 +42,18 @@ def hosted() -> bool:
         return "auth" in st.secrets
     except Exception:  # no secrets.toml
         return False
+
+
+def now() -> datetime:
+    """The treasurer's clock. The hosted server runs on UTC, so 2 PM in California read as 10 PM."""
+    try:
+        return datetime.now(ZoneInfo(st.context.timezone))
+    except Exception:  # no browser time zone (tests, scripts) or an unknown one: the computer's own clock
+        return datetime.now()
+
+
+def clock() -> str:
+    return now().strftime("%I:%M %p").lstrip("0")  # "2:07 PM"
 
 
 def signed_in_email() -> str | None:

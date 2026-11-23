@@ -60,10 +60,13 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 - Set `taxed` on each line only if the receipt marks which lines are taxed (e.g. T or TX vs S, N
   or F after the price). Leave it empty when the receipt has no such marks.
 - Dates as YYYY-MM-DD. Money as plain decimals with two places, no currency symbol.
-- Each line has two names. `printed` is the item exactly as printed, abbreviations and all.
-  `item` is a plain name a treasurer would understand: spell out store abbreviations and sizes
-  ("KS WATER 40PK" -> "Kirkland bottled water, 40 pack"; "CA CRV" -> "Bottle deposit"). Only
-  write what you are sure of: if you can't tell what the line is, copy `printed` into `item`.
+- Each line has two names. `printed` is the item exactly as printed, abbreviations and all, but
+  without the item or SKU number in front ("782796 KS WATER 40PK" -> "KS WATER 40PK").
+  `item` is a short plain name a treasurer would understand, 25 characters at most: spell out
+  store abbreviations and sizes, using what you know about that store's products ("KS WATER
+  40PK" -> "Kirkland water, 40 pack"; "CA CRV" -> "Bottle deposit"; a Costco "WHOLE CHEESE" ->
+  "Whole cheese pizza"). Only write what you are sure of: if you can't tell what the line is,
+  copy `printed` into `item`.
 - Receipts may be partly in Korean. Keep `printed` as printed; `item` may add an English gloss
   in parentheses only if you are sure of it.
 - Category is the one field you judge rather than copy. Decide by what the item IS, not by

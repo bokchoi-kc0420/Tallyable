@@ -18,10 +18,12 @@ from treasurer.views import grid_to_csv
 from treasurer.xlsx_export import book_xlsx
 from ui import club, connect, done_card, sheet_peek
 from ui.common import (
+    clock,
     dec,
     get_sink,
     go,
     guide,
+    hosted,
     html_table,
     is_demo,
     loading,
@@ -185,7 +187,7 @@ def push_buttons(sink, receipts: list[Receipt], event: EventInfo, income: dict[s
                          key="push-sheets"):
                 push(sink, receipts, event, income)
             if xlsx and excel_button(xlsx, event, "Download as Excel", "dl-xlsx-row"):
-                ss.event = {**ss.event, "excel_at": time.strftime("%I:%M %p").lstrip("0")}
+                ss.event = {**ss.event, "excel_at": clock()}
                 st.rerun()
         elif xlsx and excel_button(xlsx, event, "Save and get Excel", "push-excel", type=kind, disabled=bool(waiting)):
             push(sink, receipts, event, income)  # without Sheets, saving the books is the push
@@ -248,7 +250,7 @@ def show(event: EventInfo) -> None:
     done_card.show(sink, receipts, event, income, lambda: push(sink, receipts, event, income), again)
     if views:
         csv_downloads(views, event)
-    if is_demo():  # the timing and edit counts are for Kevin's own runs, not for someone trying it out
+    if is_demo() or hosted():  # the timing and edit counts are for Kevin's own runs, not for someone trying it out
         return
 
     st.subheader("Run stats")

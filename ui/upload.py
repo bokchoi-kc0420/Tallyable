@@ -18,7 +18,7 @@ from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
-from ui.common import ART, FAKE, dec, guide, is_demo, loading, md, next_step, payers, plural, ss, step_bar
+from ui.common import ART, FAKE, dec, guide, hosted, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
 DEMO_PACE = float(os.getenv("TALLYABLE_DEMO_PACE", "0.4"))  # seconds per demo receipt, so the reading shows (tests: 0)
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
@@ -345,7 +345,9 @@ def show(event: EventInfo) -> None:
     st.header("Upload receipts")
     step_bar("1. Upload")
     ex, reader = make_extractor(demo=is_demo())
-    if reader == "claude":
+    if reader == "claude" and hosted():
+        pass  # the hosted link always reads with Claude: nothing a treasurer needs to know
+    elif reader == "claude":  # locally: start-with-claude.bat opened the real reader
         st.success(f"Reading receipts with Claude ({ex.model}).")
     elif not is_demo() and os.getenv("TALLYABLE_EXTRACTOR", "").lower() == "stub":  # start.bat, not the key
         st.warning("You opened the free version - close it and open start-with-claude.bat to read real receipts.")

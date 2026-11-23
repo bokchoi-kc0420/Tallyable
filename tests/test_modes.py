@@ -78,3 +78,17 @@ def test_intro_has_every_picture_it_draws():
     names = set(re.findall(r"[\w/.-]+\.png", page))
     names |= {f"student/s1-{k}.png" for k in re.findall(r"'(look|cheer|dizzy)'", page)}  # built from a template
     assert names and not [n for n in names if not (intro / n).exists()]
+
+
+def test_a_new_tab_opens_club_home_even_after_the_password(monkeypatch):
+    """Kevin's live run: past the password page, a new tab reopened the last event instead of club home."""
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button(key="welcome-setup").click().run()
+    at.text_input(key="club-first-name").set_value("Chess Club").run()
+    at.button(key="club-first-add").click().run()
+    at.button(key="home-go").click().run()
+    assert at.session_state["view"] != "club"  # left off inside an event
+    monkeypatch.setenv("APP_PASSWORD", "fake-test-pw")
+    fresh = AppTest.from_file(APP, default_timeout=30).run()
+    fresh.text_input[0].set_value("fake-test-pw").run()
+    assert fresh.session_state["view"] == "club"
