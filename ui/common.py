@@ -63,6 +63,13 @@ def signed_in_email() -> str | None:
         return None
 
 
+def invited() -> bool:
+    """The hosted link reads real receipts with Claude only for testers in INVITED (comma-separated
+    Google emails in Secrets), so a stranger can't spend the API credit. Locally everyone is."""
+    emails = {e.strip().lower() for e in os.getenv("INVITED", "").split(",")}
+    return not hosted() or signed_in_email() in emails
+
+
 def base() -> Path:
     """Locally, output/. On the hosted link each Google account gets its own folder,
     so one club never opens another club's events or saved progress."""

@@ -7,7 +7,7 @@ import streamlit as st
 
 from treasurer.reaction import canned, react
 from ui import club
-from ui.common import is_demo, mascot_uri, payers, ss
+from ui.common import invited, is_demo, mascot_uri, payers, ss
 from ui.sidebar import event_id_for
 from ui.tickets import ticket
 
@@ -103,4 +103,4 @@ def show() -> None:
     slot = right.empty()
     slot.html(preview(name, d, people, names, "…" if named else "Name your event!"))
     if named:
-        slot.html(preview(name, d, people, names, reaction(name, is_demo())))
+        slot.html(preview(name, d, people, names, reaction(name, is_demo() or not invited())))
