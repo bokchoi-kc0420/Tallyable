@@ -93,7 +93,7 @@ def load_cloud_secrets() -> dict | None:
 
 
 # The Google bot's key: from secrets.toml, or (on the hosted link) the whole service_account.json
-# pasted into Doppler as GOOGLE_SERVICE_ACCOUNT_JSON. Locally neither is set and the file in .env is used.
+# pasted into the host's settings as GOOGLE_SERVICE_ACCOUNT_JSON. Locally neither is set and the file in .env is used.
 GCP_KEY = load_cloud_secrets() or (json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
                                    if os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") else None)
 

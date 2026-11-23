@@ -1,4 +1,4 @@
-"""The hosted link's saved data survives a Heroku restart (a wiped disk). Needs a Postgres to talk to:
+"""The hosted link's saved data survives a restart (a wiped disk). Needs a Postgres to talk to:
 set TEST_DATABASE_URL, otherwise these skip."""
 import os
 import shutil

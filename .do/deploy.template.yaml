@@ -1,0 +1,41 @@
+# One click from the "Deploy to DigitalOcean" button in README.md. DigitalOcean asks for each SECRET
+# when the app is created; the Google sign-in four can be added later (until then there is no sign-in,
+# only the APP_PASSWORD gate). ~$17/month: 1 GB app ($10) + dev Postgres ($7) for treasurer/backup.py.
+spec:
+  name: tallyable
+  region: sfo
+  services:
+  - name: web
+    git:
+      repo_clone_url: https://github.com/bokchoi-kc0420/Tallyable.git
+      branch: main
+    deploy_on_push: true
+    environment_slug: python
+    instance_size_slug: apps-s-1vcpu-1gb-fixed
+    instance_count: 1
+    http_port: 8080
+    health_check:
+      http_path: /_stcore/health
+    envs:
+    - key: APP_URL
+      scope: RUN_TIME
+      value: ${APP_URL}
+    - key: DATABASE_URL
+      scope: RUN_TIME
+      value: ${db.DATABASE_URL}
+    - key: APP_PASSWORD
+      scope: RUN_TIME
+      type: SECRET
+      value: change-me
+    - key: ANTHROPIC_API_KEY
+      scope: RUN_TIME
+      type: SECRET
+      value: paste-your-key
+    - key: GOOGLE_SERVICE_ACCOUNT_JSON
+      scope: RUN_TIME
+      type: SECRET
+      value: paste-service-account-json
+  databases:
+  - name: db
+    engine: PG
+    version: "16"
