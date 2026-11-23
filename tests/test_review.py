@@ -1,7 +1,8 @@
 """Savings get their own box on Review: splitting them out and back must never move or lose a line."""
+from datetime import date
 from decimal import Decimal
 
-from treasurer.models import LineItem
+from treasurer.models import LineItem, Receipt
 from ui.review import merge_savings, split_savings
 
 
@@ -23,3 +24,13 @@ def test_a_saving_whose_item_is_deleted_comes_off_the_whole_order():
     merged = merge_savings(bought[:1], savings, after)
     assert [i.item for i in merged] == ["Lemonade", "Member Savings"]
     assert not merged[-1].for_item_above
+
+
+def test_a_saving_under_a_deposit_line_belongs_to_the_item_above_it():
+    """Safeway prints CRV between the soda and its Member Savings: leaving out the soda takes its saving too."""
+    items = [line("Lemonade", "3.99"), line("CRV SFTDK SNGL TAX", "0.10"), line("Member Savings", "-1.98", True),
+             line("Soda", "3.99")]
+    r = Receipt(receipt_id="R1", event_id="E", place="Safeway", date=date(2026, 11, 13), items=items, total=Decimal("6.10"))
+    assert r.owners[2].item == "Lemonade"
+    out = r.model_copy(update={"items": [items[0].model_copy(update={"returned": True}), *items[1:]]})
+    assert out.returned_amount == Decimal("2.01")

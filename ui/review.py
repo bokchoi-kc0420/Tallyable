@@ -169,14 +169,12 @@ def merge_savings(bought: list[LineItem], savings: list[LineItem], after: list[i
     return items + [s.model_copy(update={"for_item_above": False}) for s in loose]
 
 
-def savings_box(rid: str, savings: list[LineItem], after: list[int], bought: list[LineItem]) -> pd.DataFrame | None:
+def savings_box(rid: str, savings: list[LineItem], on: list[str]) -> pd.DataFrame | None:
     """Member savings, coupons and promos in their own green box under the items (Kevin's pick B),
-    each saying which line it comes off. None when the receipt has none."""
+    each saying which item it comes off. None when the receipt has none."""
     if not savings:
         return None
     total = sum((s.amount for s in savings), Decimal("0"))
-    on = [f"{bought[a - 1].item}" if s.for_item_above and 1 <= a <= len(bought) else "Whole order"
-          for s, a in zip(savings, after, strict=True)]
     with st.container(key=f"savings-box-{rid}"):
         st.html(f'<p class="tly-savings-head"><span>Savings</span><b>{usd(total)}</b></p>')
         return st.data_editor(frame(savings).assign(on=on), key=f"savings-{rid}", width="stretch", hide_index=True,
@@ -206,6 +204,7 @@ def edit_form(rid: str, flags: list) -> None:
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
     payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
     bought, savings, after = split_savings(r.items)
+    comes_off = [o.item if o is not i else "Whole order" for i, o in zip(r.items, r.owners, strict=True) if i.price < 0]
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
                "item": st.column_config.TextColumn("Item", width=188),
@@ -226,7 +225,7 @@ def edit_form(rid: str, flags: list) -> None:
     # Tax marks and discount links ride along hidden, so an edit never drops them.
     edited = st.data_editor(frame(bought), num_rows="dynamic", key=f"items-{rid}", width="stretch",
                             column_config=columns, column_order=list(columns))
-    saved = savings_box(rid, savings, after, bought)
+    saved = savings_box(rid, savings, comes_off)
     why = r.left_out_why
     if any(i.returned for i in r.items):
         why = st.segmented_control("Left out because", ["personal", "returned"], default=r.left_out_why,

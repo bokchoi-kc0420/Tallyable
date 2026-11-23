@@ -73,7 +73,7 @@ def box(key: str) -> None:
         st.html('<p class="tly-sheets-step" data-n="1"><b>Share your sheet with Tally</b>'
                 "Hit Share in Google Sheets, paste this into Add people, and pick Editor.</p>")
         st.code(email, language=None, width="content")  # Copy sits right by the email
-        st.html(f'<div class="tly-sheets-tip"><img src="{mascot_uri("tally-magnify.png")}" alt=""><p><strong>Keep it '
+        st.html(f'<div class="tly-sheets-tip"><img src="{mascot_uri("tally-lock.png")}" alt=""><p><strong>Keep it '
                 "Restricted!</strong> Leave General access on Restricted so only Tally and the people you add can see "
                 "your books.</p></div>")
         st.html('<p class="tly-sheets-step" data-n="2"><b>Paste the links here</b></p>')
