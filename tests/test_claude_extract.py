@@ -84,3 +84,10 @@ def test_more_screenshots_go_in_the_same_call():
     *images, ask = client.calls[0]["messages"][0]["content"]
     assert [i["source"]["media_type"] for i in images] == ["image/png", "image/jpeg"]
     assert "ONE receipt" in ask["text"]
+
+
+def test_keeps_the_plain_name_and_the_printed_one():  # Costco prints "KS WATER 40PK"; the books get a name people know
+    items = [ExtractedItem(printed="KS WATER 40PK", item="Kirkland bottled water, 40 pack", category="Drink", unit=1,
+                           price="4.99")]
+    r = ClaudeExtractor(client=FakeClient(reading(items=items, total="4.99", tax="0"))).extract(b"x", "R01.jpg", "EVT", "R01")
+    assert (r.items[0].item, r.items[0].printed) == ("Kirkland bottled water, 40 pack", "KS WATER 40PK")

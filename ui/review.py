@@ -129,7 +129,7 @@ def look_card(rid: str, flags: list) -> None:
             st.markdown(f"<ul class='tly-notes'>{lines}</ul>", unsafe_allow_html=True)
 
 
-COLUMNS = ["unit", "item", "price", "category", "returned", "taxed", "for_item_above"]
+COLUMNS = ["unit", "item", "printed", "price", "category", "returned", "taxed", "for_item_above"]
 
 
 def frame(items: list[LineItem]) -> pd.DataFrame:
@@ -139,7 +139,8 @@ def frame(items: list[LineItem]) -> pd.DataFrame:
 
 def lines(edited: pd.DataFrame) -> list[LineItem]:
     """The table's rows back as line items; a row with no item name yet is skipped."""
-    return [LineItem(category=row.category, item=str(row.item), unit=int(row.unit),
+    return [LineItem(category=row.category, item=str(row.item), printed=row.printed if isinstance(row.printed, str) else None,
+                     unit=int(row.unit),
                      price=Decimal(f"{row.price:.2f}"), returned=bool(row.returned),
                      taxed=None if pd.isna(row.taxed) else bool(row.taxed),
                      for_item_above=bool(row.for_item_above) if pd.notna(row.for_item_above) else False)
@@ -207,7 +208,8 @@ def edit_form(rid: str, flags: list) -> None:
     comes_off = [o.item if o is not i else "Whole order" for i, o in zip(r.items, r.owners, strict=True) if i.price < 0]
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
     columns = {"unit": st.column_config.NumberColumn("Qty", width=56),
-               "item": st.column_config.TextColumn("Item", width=188),
+               "item": st.column_config.TextColumn("Item", width=200),
+               "printed": st.column_config.TextColumn("On receipt", width=136, help="Exactly as the receipt prints it"),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
                "returned": st.column_config.CheckboxColumn("Leave out", width=92,
@@ -223,8 +225,14 @@ def edit_form(rid: str, flags: list) -> None:
         st.markdown(f'<span class="tly-left-out">↺ {len(out)} left out '
                     f'<em>({r.left_out_why})</em><b>&minus;{usd(r.returned_amount)}</b></span>', unsafe_allow_html=True)
     # Tax marks and discount links ride along hidden, so an edit never drops them.
-    edited = st.data_editor(frame(bought), num_rows="dynamic", key=f"items-{rid}", width="stretch",
-                            column_config=columns, column_order=list(columns))
+    with st.container(key=f"items-card-{rid}"):  # Kevin's pick: white card, green outline, a total bar on top
+        st.html(f'<p class="tly-items-head"><span>Items</span><b>{plural(len(bought), "line")} · '
+                f'{usd(sum((i.amount for i in bought), Decimal("0")))}</b></p>')
+        # The receipt's own wording is shaded: it's there to check against the photo, not to edit.
+        table = frame(bought).assign(printed=[i.printed or i.item for i in bought]).style.set_properties(
+            subset=["printed"], **{"color": "#6B6A60", "background-color": "#F2ECD3"})
+        edited = st.data_editor(table, num_rows="dynamic", key=f"items-{rid}", width="stretch",
+                                column_config=columns, column_order=list(columns), disabled=["printed"])
     saved = savings_box(rid, savings, comes_off)
     why = r.left_out_why
     if any(i.returned for i in r.items):

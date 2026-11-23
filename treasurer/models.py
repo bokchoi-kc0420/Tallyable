@@ -36,7 +36,8 @@ class Status(str, Enum):
 
 class LineItem(BaseModel):
     category: Category
-    item: str = Field(min_length=1)
+    item: str = Field(min_length=1)  # a plain name ("Kirkland bottled water, 40 pack")
+    printed: str | None = None  # as printed ("KS WATER 40PK"), when the reader gave one
     unit: int = Field(gt=0, description="Quantity bought")
     # Negative for a discount, coupon or promo line (common on online-order screenshots),
     # so the lines still add up to the printed total and the math check stays honest.
@@ -103,7 +104,7 @@ class Receipt(BaseModel):
                 continue
             owners.append(i)
             last = i
-            item = item if FEE.search(i.item) else i
+            item = item if FEE.search(f"{i.item} {i.printed or ''}") else i
         return owners
 
     @property

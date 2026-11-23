@@ -60,7 +60,11 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 - Set `taxed` on each line only if the receipt marks which lines are taxed (e.g. T or TX vs S, N
   or F after the price). Leave it empty when the receipt has no such marks.
 - Dates as YYYY-MM-DD. Money as plain decimals with two places, no currency symbol.
-- Receipts may be partly in Korean. Copy item names as printed; add an English gloss
+- Each line has two names. `printed` is the item exactly as printed, abbreviations and all.
+  `item` is a plain name a treasurer would understand: spell out store abbreviations and sizes
+  ("KS WATER 40PK" -> "Kirkland bottled water, 40 pack"; "CA CRV" -> "Bottle deposit"). Only
+  write what you are sure of: if you can't tell what the line is, copy `printed` into `item`.
+- Receipts may be partly in Korean. Keep `printed` as printed; `item` may add an English gloss
   in parentheses only if you are sure of it.
 - Category is the one field you judge rather than copy. Decide by what the item IS, not by
   words in its name:
@@ -74,7 +78,8 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
 
 
 class ExtractedItem(BaseModel):
-    item: str
+    printed: str = Field("", description="The line's name exactly as printed")
+    item: str = Field(description="A plain name for it, or the printed name if unsure")
     category: Literal["Food", "Drink", "Other"]
     unit: int
     price: str = Field(description="Unit price before tax, e.g. '4.99'; negative for a discount, e.g. '-4.00'")
@@ -167,7 +172,7 @@ class ClaudeExtractor:
         try:
             d = date.fromisoformat(x.date)
             # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
-            items = [LineItem(category=i.category, item=i.item, unit=i.unit,
+            items = [LineItem(category=i.category, item=i.item, printed=i.printed or None, unit=i.unit,
                               price=_money(i.price, "price", filename), returned=i.returned,
                               taxed=i.taxed, for_item_above=i.for_item_above) for i in x.items if i.unit > 0]
             return Receipt(

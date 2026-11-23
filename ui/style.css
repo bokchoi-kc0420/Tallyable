@@ -476,3 +476,8 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   padding: 16px; gap: 8px; }
 .tly-savings-head { display: flex; justify-content: space-between; margin: 0; font-family: var(--tly-head); font-weight: 600;
   font-size: var(--tly-t-lg); color: var(--tly-forest); }
+/* Review's items table: a white card with a green outline and a total bar on top (Kevin's pick) */
+[class*="st-key-items-card-"] { background: var(--tly-white); border: 2px solid var(--tly-forest); border-radius: var(--tly-r);
+  padding: 8px; gap: 8px; box-shadow: var(--tly-shadow); }
+.tly-items-head { display: flex; justify-content: space-between; margin: 0 8px; font-family: var(--tly-head); font-weight: 600;
+  color: var(--tly-forest); }
