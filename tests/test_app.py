@@ -547,6 +547,7 @@ def test_delete_event_removes_it_for_good():
     at.button(key="delete-yes").click().run()
     assert not at.exception
     assert at.session_state["receipts"] == {}
+    assert at.session_state["view"] == "club"  # back to club home, not a blank event
     assert not any("Fall Mentor Mixer" in m.value for m in at.sidebar.markdown)
 
 
@@ -554,6 +555,8 @@ def test_club_members_fill_each_new_event_and_settings_hold_the_year():
     at = new_app("Kevin, Mitch Lee").run()  # an older event: the club list starts from it
     at.button(key="club-home").click().run()
     at.text_input(key="club-new").set_value("Sam Cho").run()
+    at.text_input(key="club-new").set_value("sam cho").run()  # twice: said so, not added again
+    assert any("Sam Cho is already in!" in c.value for c in at.caption)
     next(n for n in at.number_input if n.label == "Started the year with ($)").set_value(420.0).run()  # Club settings
     at.sidebar.button(key="new-event").click().run()
     at.button(key="confirm-new-yes").click().run()

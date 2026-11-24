@@ -88,6 +88,7 @@ def confirm_delete() -> None:
         close_confirm()
         session_store.clear(past() / f"{ss.event['event_id']}.json")
         start_new_event()
+        ss.view = "club"  # back to club home, not a blank event that looks like the one just deleted
         st.rerun()
 
 

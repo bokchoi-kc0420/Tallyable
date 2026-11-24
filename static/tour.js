@@ -50,7 +50,7 @@
 
     function pick() {
       const st = state();
-      if (!cfg || st.off || !document.querySelector(".tly-demo-pill") || document.querySelector('[role="dialog"]:not(#tly-tour .bub):not(:has(.st-key-sheet-peek))')) return [-1, null];
+      if (!cfg || st.off || !document.querySelector(".tly-demo-pill") || document.querySelector('[role="dialog"]:not(#tly-tour .bub):not(:has(.st-key-sheet-peek))') || bigPhoto()) return [-1, null];
       for (let i = 0; i < cfg.stops.length; i++) {
         const s = cfg.stops[i];
         if ((st.done || []).includes(i)) continue;
@@ -65,6 +65,8 @@
       return [-1, null, ""];
     }
 
+    // a photo opened full screen: Streamlit pins its frame over the page (no dialog role), so the ring sat on top of it
+    const bigPhoto = () => [...document.querySelectorAll('[data-testid="stFullScreenFrame"]')].some((f) => getComputedStyle(f).position === "fixed");
     const typed = (s) => (document.querySelector(s.spot)?.textContent || "").includes(s.typed);  // e.g. the total shows it
 
     function check() {

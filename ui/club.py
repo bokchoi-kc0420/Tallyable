@@ -121,9 +121,12 @@ def add_member(key: str) -> str | None:
     name = ss.get(key, "").replace(",", " ").strip()
     ss[key] = ""
     members = load()["members"]
-    if name and name not in members:
+    known = next((m for m in members if m.casefold() == name.casefold()), None)  # "jamie lee" is Jamie Lee
+    if known:
+        ss.dup_member = known  # shown under the box; adding a name twice used to do nothing, silently
+    elif name:
         save(members=[*members, name])
-    return name or None
+    return known or name or None
 
 
 def initials(name: str) -> str:
