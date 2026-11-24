@@ -22,6 +22,7 @@ ROOT = Path(__file__).parent.parent
 DATA = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
 PRIVACY = "app/static/privacy.html"
+LANDING = "https://bokchoi-kc0420.github.io/Tallyable/"  # the landing site (site/), where new users first land
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
 # Drawn (Material) icons, never emoji: they match the rest of the UI and take the theme colors.
