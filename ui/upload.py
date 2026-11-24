@@ -347,8 +347,10 @@ def show(event: EventInfo) -> None:
     can_upload = invited() or is_demo()  # the hosted link: strangers can't spend the API credit
     ex, reader = make_extractor(demo=is_demo() or not invited())
     if not can_upload:
-        st.warning("Reading real receipts is invite-only for now - ask Kevin to add your Google email. "
-                   "You can still add purchases by hand at the bottom, or try the demo!")
+        from ui.home import switch_mode  # home imports this module
+        with guide("You're not on the tester list yet!", "Ask Kevin to add your Google email and I'll read your "
+                   "receipts. Until then, add purchases by hand at the bottom - or try the demo!", key="invite"):
+            st.button("Try the demo", icon=":material/play_circle:", on_click=switch_mode, args=(True,))
     elif reader == "claude" and hosted():
         pass  # the hosted link always reads with Claude: nothing a treasurer needs to know
     elif reader == "claude":  # locally: start-with-claude.bat opened the real reader
