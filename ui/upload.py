@@ -18,7 +18,7 @@ from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
-from ui.common import ART, FAKE, dec, guide, hosted, is_demo, loading, md, next_step, payers, plural, ss, step_bar
+from ui.common import ART, FAKE, dec, guide, hosted, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
 DEMO_PACE = float(os.getenv("TALLYABLE_DEMO_PACE", "0.4"))  # seconds per demo receipt, so the reading shows (tests: 0)
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
@@ -344,8 +344,14 @@ def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo)
 def show(event: EventInfo) -> None:
     st.header("Upload receipts")
     step_bar("1. Upload")
-    ex, reader = make_extractor(demo=is_demo())
-    if reader == "claude" and hosted():
+    can_upload = invited() or is_demo()  # the hosted link: strangers can't spend the API credit
+    ex, reader = make_extractor(demo=is_demo() or not invited())
+    if not can_upload:
+        from ui.home import switch_mode  # home imports this module
+        with guide("You're not on the tester list yet!", "Ask Kevin to add your Google email and I'll read your "
+                   "receipts. Until then, add purchases by hand at the bottom - or try the demo!", key="invite"):
+            st.button("Try the demo", icon=":material/play_circle:", on_click=switch_mode, args=(True,))
+    elif reader == "claude" and hosted():
         pass  # the hosted link always reads with Claude: nothing a treasurer needs to know
     elif reader == "claude":  # locally: start-with-claude.bat opened the real reader
         st.success(f"Reading receipts with Claude ({ex.model}).")
@@ -357,11 +363,12 @@ def show(event: EventInfo) -> None:
     else:
         guide("Demo mode:", "I can only read the 14 sample receipts (I hid a few mistakes in them for you to find). "
               "Your own receipts need the full version.", key="demo", tip=True)
-    if not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
+    if can_upload and not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "tally-camera.png"), width=190, alt="")
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
-    files = st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
+    files = (st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
+             if can_upload else None)
     if is_demo() and st.button("Use the fake event's 14 receipts instead"):  # fake receipts never reach real books
         files = None
         ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
