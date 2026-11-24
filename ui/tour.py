@@ -33,7 +33,8 @@ STOPS = [
      "hint": "Looks right? Approve them all."},
     {"spot": "[class*='st-key-flag-']", "stay": True, "dock": "top", "pose": "magnify",
      "until": ".st-key-to-summary",
-     "explain": "This one's off by 8 cents. The tax box is highlighted. Match it to the photo, then Approve.",
+     "explain": "This one's off by 8 cents. The tax box is highlighted. Match it to the photo, then Approve."
+                "The ones over $50 get a quick look too.",
      "hint": "Fix the red box and Approve shows up."},
     {"spot": ".st-key-to-summary", "pose": "tickets", "hint": "All checked. On to Summary!"},
     {"spot": ".st-key-income-box", "hand": ".st-key-push-sheets, .st-key-push-excel", "until": ".st-key-books-in",
