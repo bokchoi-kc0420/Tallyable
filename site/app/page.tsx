@@ -1,7 +1,7 @@
 import { CloseoutPreview } from "@/components/CloseoutPreview";
 import { Faq } from "@/components/Faq";
 import { Hero } from "@/components/Hero";
-import { APP_URL, REPO_URL } from "@/components/links";
+import { APP_URL, PRIVACY_URL, REPO_URL } from "@/components/links";
 import { Reveal } from "@/components/Reveal";
 import { Sparkle } from "@/components/Sparkle";
 
@@ -133,7 +133,7 @@ export default function Home() {
               <p className="mt-2 text-white/80">Bring the receipts. Tallyable does the adding up.</p>
             </div>
             <a href={APP_URL} className="btn bg-sun text-ink shadow-[0_4px_0_#B88A1F] hover:-translate-y-0.5 hover:bg-[#FFCB52]">
-              Get Started <span className="arrow" aria-hidden>→</span>
+              Try the demo <span className="arrow" aria-hidden>→</span>
             </a>
           </div>
         </Reveal>
@@ -143,7 +143,10 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-sm text-ink-soft sm:flex-row sm:px-6">
           <img src="art/logo.png" alt="Tallyable" className="h-10 w-auto" />
           <p>Built by a college club treasurer. Demo data is fake.</p>
-          <a href={REPO_URL} className="font-medium text-forest underline-offset-4 hover:underline">Source on GitHub</a>
+          <div className="flex gap-6">
+            <a href={PRIVACY_URL} className="font-medium text-forest underline-offset-4 hover:underline">Privacy</a>
+            <a href={REPO_URL} className="font-medium text-forest underline-offset-4 hover:underline">Source on GitHub</a>
+          </div>
         </div>
       </footer>
     </main>

@@ -79,7 +79,7 @@ export function Hero() {
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <a href={APP_URL} className="btn btn-primary">
-            Get Started <span className="arrow" aria-hidden>→</span>
+            Try the demo <span className="arrow" aria-hidden>→</span>
           </a>
           <a href="#payoff" className="btn btn-ghost">See what you get</a>
         </div>
