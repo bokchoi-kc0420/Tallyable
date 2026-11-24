@@ -25,6 +25,7 @@ FAKE = ROOT / "fake_event"
 # One planted math mistake is enough to show how a flag works.
 DEMO_RECEIPTS = [p for p in sorted((FAKE / "receipts").glob("*.jpg")) if p.stem not in ("R06", "R12")]
 PRIVACY = "app/static/privacy.html"
+LANDING = "https://bokchoi-kc0420.github.io/Tallyable/"  # the landing site (site/), where new users first land
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]
 # Drawn (Material) icons, never emoji: they match the rest of the UI and take the theme colors.

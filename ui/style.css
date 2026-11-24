@@ -305,12 +305,11 @@
 .tly-intotal { text-align: right; margin: 0; font-size: var(--tly-t-md); color: var(--tly-ink-2); }
 .tly-intotal b { font-family: var(--tly-head); font-size: var(--tly-t-lg); color: var(--tly-forest); margin-left: 8px; }
 
-/* Bigger logo in the sidebar; it links back to the landing page */
+/* Bigger logo in the sidebar; clicking it opens the landing site (.st-key-logo-home) */
 [data-testid="stSidebarHeader"] { height: auto; padding-top: 16px; }
 [data-testid="stSidebarHeader"] img[data-testid="stSidebarLogo"], [data-testid="stSidebarLogo"] {
   height: 3.4rem !important; max-width: 15rem; width: auto; }
 [data-testid="stHeaderLogo"] { height: 3.4rem !important; max-width: 15rem; width: auto; margin-top: 16px; }
-[data-testid="stSidebarHeader"] a:hover img { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
 
 /* The event's ticket in the New event pop-up: ticket-sized, not stretched across the dialog. */
 /* Both lines in one font (Outfit), close together. */
@@ -466,8 +465,9 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 @keyframes tly-load-fade { to { opacity: .6; } }
 @keyframes tly-load-in { from, 50% { opacity: .6; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { [data-testid="stApp"] :is([data-testid="stMain"], [data-testid="stSidebar"]) { animation: none !important; } }
-.st-key-logo-home { display: none; }
-.stLogo { cursor: pointer; }
+.st-key-logo-home { position: absolute; top: 16px; left: 24px; width: 168px; height: 62px; z-index: 2; }
+.st-key-logo-home a { display: block; width: 168px; height: 62px; }
+[data-testid="stSidebarContent"]:has(.st-key-logo-home:hover) .stLogo { transform: rotate(-2deg) scale(1.03); transition: transform .2s; }
 /* Connect Google Sheets: two numbered steps, with the email, tip and links tucked under them (Kevin's pick) */
 [class*="st-key-sheets-"] { padding-left: 48px; gap: 8px; }
 .tly-sheets-step { position: relative; margin: 8px 0 0; font-size: var(--tly-t-md); color: var(--tly-ink-2); }
