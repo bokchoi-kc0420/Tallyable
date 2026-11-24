@@ -29,7 +29,8 @@ def set_members(names: list[str]) -> None:
 def add_member() -> None:
     """Button and Enter callback: the typed name joins the club list and this event."""
     name = club.add_member("new-member")
-    if name and name not in payers():
+    if name and name not in payers():  # in the club but left out of this event: back in, no "already in"
+        ss.pop("dup_member", None)
         set_members([*payers()[1:], name])
 
 
@@ -42,14 +43,17 @@ def members_box() -> None:
     """Who might have paid, picked from the club list. Receipts are tagged with these names."""
     with st.container(border=True, key="members-box"):
         st.markdown("**Who's in on this tally?**")
-        st.caption("Tap a name to leave them out. Anyone new gets added to your club list too.")
+        names = payers()[1:]
+        members = club.load()["members"]
+        options = [*members, *[n for n in names if n not in members]]
+        if options:  # nobody to leave out yet on a brand-new club
+            st.caption("Tap a name to leave them out. Anyone new gets added to your club list too.")
         c = st.columns([3, 1], vertical_alignment="bottom")
         c[0].text_input("Name", key="new-member", placeholder="e.g. Jamie Lee", label_visibility="collapsed",
                         on_change=add_member)
         c[1].button("Add", icon=":material/add:", key="add-member", on_click=add_member, width="stretch")
-        names = payers()[1:]
-        members = club.load()["members"]
-        options = [*members, *[n for n in names if n not in members]]
+        if ss.get("dup_member"):
+            st.caption(f":red[{html.escape(ss.pop('dup_member'))} is already in!]")
         if not options:
             return
         ss.roster = names  # the widget shows this event's members, even right after an Add

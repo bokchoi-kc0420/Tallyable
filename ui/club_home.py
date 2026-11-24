@@ -125,6 +125,8 @@ def crew(me: dict) -> None:
                         on_change=club.add_member, args=("club-new",))
         c[1].button("Add", icon=":material/add:", key="club-add", width="stretch", on_click=club.add_member,
                     args=("club-new",))
+        if ss.get("dup_member"):
+            st.caption(f":red[{html.escape(ss.pop('dup_member'))} is already in!]")
         with st.container(horizontal=True, key="club-chips"):
             for n, name in enumerate(names):
                 st.button(name, icon=":material/close:", icon_position="right", key=f"club-rm-{n}",
