@@ -13,7 +13,7 @@ from treasurer import session_store
 from treasurer.models import Receipt
 from ui.common import out, past, ss
 
-DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "sheets": {}}
+DEFAULT = {"name": "My club", "members": [], "start_balance": None, "target": 10, "approve_cap": 50, "sheets": {}}
 AVATARS = ["#1C5C36", "#B0413E", "#6B4E8A", "#2F4B7C", "#C8673C", "#1F7A73"]
 
 

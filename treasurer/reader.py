@@ -12,7 +12,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .extract import Extractor, StubExtractor
+from .extract import STUB_MISREADS, Extractor, StubExtractor
 
 ROOT = Path(__file__).resolve().parent.parent
 ANSWER_KEY = ROOT / "fake_event" / "answer_key.csv"
@@ -26,4 +26,5 @@ def make_extractor(demo: bool = False) -> tuple[Extractor, str]:
     if not demo and os.getenv("TALLYABLE_EXTRACTOR", "").lower() != "stub" and os.getenv("ANTHROPIC_API_KEY"):
         from .claude_extract import MODEL, ClaudeExtractor
         return ClaudeExtractor(model=os.getenv("TALLYABLE_MODEL") or MODEL), "claude"
-    return StubExtractor(ANSWER_KEY), "stub"
+    # The demo plants one math mistake (R02's tax), not four: one clear thing to catch and fix (Kevin, 2026-11-24).
+    return StubExtractor(ANSWER_KEY, {k: STUB_MISREADS[k] for k in ("R02", "R08")} if demo else None), "stub"

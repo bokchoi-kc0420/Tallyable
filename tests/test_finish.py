@@ -29,7 +29,7 @@ def test_done_card_counts_left_out_and_goes_stale_after_an_edit():
     at = pushed_app()
     card = " ".join(m.value for m in at.markdown)
     assert "Your book is ready!" in card  # no Google Sheet in tests: the no-sheet wording
-    assert "1 receipt (13 left out) and $100.00 income" in card
+    assert "1 receipt (11 left out) and $100.00 income" in card
     assert at.button(key="to-closeout").proto.type == "primary"  # Close out is the next step now
     at.text_input(key="income-0").set_value("120.00").run()
     assert any("You changed something since" in m.value for m in at.markdown)
@@ -48,7 +48,7 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     assert "is closed out!" in page and "Set your starting balance" in page  # never set: no made-up balance
     assert page.count('class="band"') == 19 and "tly-confetti" in page  # the ticket rip (a stub in 19 bands), then confetti
     assert "tly-rip" not in " ".join(h.value for h in at.run().get("html"))  # once, not on every visit to the page
-    assert any("1 person still owed" in m.value for m in at.markdown)  # honest about Member A
+    assert any("Member A still owed" in m.value for m in at.markdown)  # honest about Member A
     assert any(b.label == "Open" for b in at.sidebar.button)  # its stub sits in Past events
     assert any('class="tly-stub"' in m.value for m in at.sidebar.markdown)  # finished = torn-off stub
     hidden = ".st-key-event-group { display: none; }"
@@ -151,7 +151,7 @@ def test_remove_takes_a_photo_off_upload_before_its_read():
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     at.button(key="drop-R02.jpg").click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
-    assert at.button(key="read").label == "Read 13 receipts"
+    assert at.button(key="read").label == "Read 11 receipts"
     at.button(key="read").click().run()
     assert "R02" not in at.session_state["receipts"]
     assert not [b for b in at.button if (b.key or "").startswith("drop-")]  # read ones: Leave out on Review

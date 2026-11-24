@@ -30,7 +30,7 @@ def test_demo_and_real_never_share_data():
     assert not at.exception
     assert any("Demo mode" in h.value for h in at.sidebar.html)
     assert at.header[0].value == "Upload receipts" and at.session_state["event"]["name"] == "Boba Social"
-    assert len(at.session_state["demo"]) == 14  # the sample receipts are already loaded
+    assert len(at.session_state["demo"]) == 12  # the sample receipts are already loaded
     assert "Sunrise Hiking Club" in (base / "demo" / "clubs.json").read_text()
     assert "Sunrise" not in (base / "real" / "clubs.json").read_text()
 

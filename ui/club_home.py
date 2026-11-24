@@ -91,7 +91,7 @@ def save_from(field: str, key: str) -> None:
     """Edit callback: save one club setting (a blank name keeps the old one)."""
     value = ss[key].strip() if isinstance(ss[key], str) else ss[key]
     if value != "":
-        club.save(**{field: int(value) if field == "target" else value})
+        club.save(**{field: int(value) if field in ("target", "approve_cap") else value})
 
 
 def settings(me: dict) -> None:
@@ -109,6 +109,10 @@ def settings(me: dict) -> None:
                           help="What the club had before this year's first event. The General Ledger starts from it.")
         c[1].number_input("Profit goal (%)", min_value=0, max_value=100, value=int(me["target"]), key=f"club-target-{k}",
                           on_change=save_from, args=("target", f"club-target-{k}"), help="The Summary shows if an event hit it.")
+        st.number_input("Approve all up to ($)", min_value=0, step=10, value=int(me["approve_cap"]), key=f"club-cap-{k}",
+                        on_change=save_from, args=("approve_cap", f"club-cap-{k}"),
+                        help="Receipts with no problems up to this amount can be approved in one click. "
+                             "Bigger ones get checked one by one.")
         label = "Google Sheets connected" if connect.linked() else "Connect Google Sheets"
         if st.button(label, icon=":material/table_chart:", key="open-connect", width="stretch"):
             connect.dialog()
@@ -119,7 +123,7 @@ def settings(me: dict) -> None:
 def crew(me: dict) -> None:
     names = me["members"]
     with st.container(border=True, key="home-crew"):
-        st.html(f'<p class="tly-card-title">The crew</p>'
+        st.html(f'<p class="tly-card-title">Members</p>'
                 f'<img class="tly-card-tally" src="{mascot_uri("tally-high-five.png")}" alt="">')
         c = st.columns([2.4, 1, 2], vertical_alignment="bottom")
         c[0].text_input("Name", key="club-new", placeholder="Add someone, e.g. Jamie Lee", label_visibility="collapsed",

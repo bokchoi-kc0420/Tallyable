@@ -21,6 +21,9 @@ from treasurer.sheets import GoogleSheetsSink
 ROOT = Path(__file__).parent.parent
 DATA = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
+# The demo's receipts: the fake event without R06 and R12, whose printed totals are wrong on the photo itself.
+# One planted math mistake is enough to show how a flag works.
+DEMO_RECEIPTS = [p for p in sorted((FAKE / "receipts").glob("*.jpg")) if p.stem not in ("R06", "R12")]
 PRIVACY = "app/static/privacy.html"
 LANDING = "https://bokchoi-kc0420.github.io/Tallyable/"  # the landing site (site/), where new users first land
 ART = ROOT / "assets"
@@ -273,7 +276,7 @@ def step_bar(current: str) -> None:
         late_trail(i)
 
 
-LATE = [("Drop it", "Drop it below - I'll walk you back to the finish!"),
+LATE = [("Drop it", "Add it below, then I'll take you back to the finish."),
         ("Check it", "Give it a look, then approve it."),
         ("Push again", "Push again so the books get it."),
         ("Pay back + finish", "Pay them back, then hit Finish event.")]
@@ -317,9 +320,9 @@ def money_panel(receipts: list[Receipt], income: dict[str, Decimal]) -> None:
         return
     net = t["net"]
     if net >= 0:
-        pill = f'<span class="tly-net good"><b>{usd(net)}</b> left over</span>'
+        pill = f'<span class="tly-net good"><b>{usd(net)}</b> profit</span>'
     else:
-        pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> more out than in</span>'
+        pill = f'<span class="tly-net bad"><b>{usd(-net)}</b> short (you spent more than came in)</span>'
     cats: dict[str, Decimal] = {}
     for r in (r for r in receipts if r.counts):
         own: dict[str, Decimal] = {}

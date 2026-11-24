@@ -50,9 +50,9 @@ def test_draft_approve_and_fix():
     next(b for b in at.button if b.label == "Approve").click().run()
     assert at.session_state["receipts"]["R01"].status.value == "approved"
 
-    at.sidebar.radio(key="review-pick").set_value("R06").run()
+    at.sidebar.radio(key="review-pick").set_value("R02").run()
     assert any("off by" in m.value for m in at.markdown)
-    at.text_input(key="total-R06").set_value("110.26").run()
+    at.text_input(key="tax-R02").set_value("7.18").run()
     assert not any("off by" in m.value for m in at.markdown)
 
 
@@ -224,7 +224,7 @@ def test_needs_attention_filter_lists_only_flagged_receipts():
     at = drafted_app()
     at.sidebar.selectbox(key="review-filter").set_value("Needs attention").run()
     shown = {o.split(" ")[1] for o in at.sidebar.radio(key="review-pick").options}
-    assert {"R02", "R06", "R13"} <= shown   # math errors (stub misreads and planted)
+    assert "R02" in shown  # the demo's one math mistake
     assert "R01" not in shown
 
 
@@ -250,8 +250,8 @@ def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
 def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert any("14 receipts in" in i.value for i in at.markdown)
-    assert any("14 still need a payer" in i.value for i in at.markdown)
+    assert any("12 receipts in" in i.value for i in at.markdown)
+    assert any("Who paid? 0 of 12 tagged" in i.value for i in at.markdown)
     next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"
@@ -286,7 +286,7 @@ def test_photos_already_read_are_not_read_again():
     upload_and_draft(at)
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     assert not [b for b in at.button if b.key == "read"]  # nothing new: Go to Review is the next step
-    assert len(at.session_state["receipts"]) == 14
+    assert len(at.session_state["receipts"]) == 12
     from treasurer.reader import make_extractor
     from ui.upload import read_one
     photo, data = at.session_state["images"]["R01"]
@@ -306,15 +306,15 @@ def test_screenshots_joined_on_upload_are_read_as_one():
     at.checkbox(key="pick-R01.jpg").check()
     at.checkbox(key="pick-R02.jpg").check().run()
     at.button(key="join").click().run()
-    assert at.button(key="read").label == "Read 13 receipts"
+    assert at.button(key="read").label == "Read 11 receipts"
     at.button(key="split-R01.jpg").click().run()
-    assert at.button(key="read").label == "Read 14 receipts"  # Split undoes it
+    assert at.button(key="read").label == "Read 12 receipts"  # Split undoes it
     at.button(key="join-start").click().run()
     at.checkbox(key="pick-R01.jpg").check()
     at.checkbox(key="pick-R02.jpg").check().run()
     at.button(key="join").click().run()
     at.button(key="read").click().run()
-    assert len(at.session_state["receipts"]) == 13 and "R02" not in at.session_state["receipts"]
+    assert len(at.session_state["receipts"]) == 11 and "R02" not in at.session_state["receipts"]
     assert any("2 screenshots" in n for n in at.session_state["notes"]["R01"])
     assert not [b for b in at.button if b.key == "read"]  # the joined screenshot isn't left over to read alone
 
@@ -330,7 +330,7 @@ def test_a_finished_event_can_be_reopened_later():
     assert any("Fall Mentor Mixer" in m.value for m in at.sidebar.markdown)
     at.sidebar.button(key="open-past-0").click().run()
     assert not at.exception
-    assert len(at.session_state["receipts"]) == 14
+    assert len(at.session_state["receipts"]) == 12
     assert at.session_state["receipts"]["R01"].status.value == "approved"
     assert at.sidebar.radio(key="step").value == "4. Close out"
 
@@ -422,6 +422,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     rs = at.session_state["receipts"]
     approved = [x for x, r in rs.items() if r.status is Status.APPROVED]
     assert approved and len(approved) < len(rs)  # flagged ones wait for a person
+    assert all(rs[x].posted_amount <= 50 for x in approved)  # over the club's $50 cap: checked one by one
     at.sidebar.radio(key="review-pick").set_value(approved[0]).run()
     assert next(b for b in at.button if b.label == "Approve").disabled
     assert any("Approved" in m.value and "Reopen" in m.value for m in at.markdown)
@@ -537,7 +538,7 @@ def test_connect_catches_a_viewer_only_share(monkeypatch):
 def test_read_waits_for_every_payer():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
-    assert at.button(key="read").label == "Read 14 receipts" and at.button(key="read").disabled
+    assert at.button(key="read").label == "Read 12 receipts" and at.button(key="read").disabled
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert not at.button(key="read").disabled
 

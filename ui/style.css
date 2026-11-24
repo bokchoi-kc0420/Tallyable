@@ -190,6 +190,12 @@
 
 /* No link icon next to headers: it only jumps to the same page */
 [data-testid="stHeaderActionElements"] { display: none !important; }
+/* Streamlit Cloud's top bar (Share, star, GitHub) stays see-through, so it never covers the page while
+   scrolling: only its icons float top right, in a small pill. Clicks pass through everywhere else. */
+[data-testid="stHeader"] { background: transparent !important; pointer-events: none; }
+[data-testid="stHeader"] :is(button, a, [data-testid="stToolbar"]) { pointer-events: auto; }
+[data-testid="stToolbar"]:has(button, a) { background: var(--tly-paper); border: 1px solid var(--tly-line); border-radius: 999px;
+  padding: 0 8px; right: 16px; top: 8px; }
 
 /* Fredoka for labels, buttons, tabs and names; Outfit stays for sentences and typed values */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: var(--tly-head) !important;
@@ -431,6 +437,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-nav-count { margin: 0; font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-md); color: var(--tly-ink); }
 .st-key-review-nav [data-testid="stMarkdownContainer"] { margin: 0; }
 .st-key-review-nav [data-testid="stMarkdown"] { align-self: center; }
+.st-key-decide-book, .st-key-decide-out { gap: 4px; max-width: 240px; }
 /* A photo's Fullscreen button sits on the photo, not above it where it covered the next-receipt arrow */
 [data-testid="stFullScreenFrame"]:has(img) [data-testid="stElementToolbar"] { top: 8px !important; right: 8px; }
 /* The demo's peek at the book (ui/sheet_peek.py): a tab drawn like a spreadsheet. */

@@ -18,7 +18,7 @@ from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
-from ui.common import ART, FAKE, dec, guide, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
+from ui.common import ART, DEMO_RECEIPTS, dec, guide, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
 DEMO_PACE = float(os.getenv("TALLYABLE_DEMO_PACE", "0.4"))  # seconds per demo receipt, so the reading shows (tests: 0)
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
@@ -233,7 +233,7 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     todo = unread(sources)
     joinable = [name for name, _ in todo if not name.lower().endswith(".pdf")]  # a PDF already holds every page
     with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
-        st.caption("Peek at the photos so you know which is which!")
+        st.caption("Peek at the photos so you know which is which.")
         if len(joinable) > 1 and not ss.get("joining"):
             st.button("One receipt, several screenshots? Join them", type="tertiary", key="join-start",
                       on_click=ss.update, kwargs={"joining": True})
@@ -267,7 +267,7 @@ def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool)
                             unsafe_allow_html=True)
                 if unread:  # once read it's one receipt in the books: Leave out on Review is the way back
                     st.button("Split", type="tertiary", key=f"split-{name}", on_click=split, args=(name,))
-        st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],),
+        st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],), format_func=lambda x: x or "Who paid?",
                      label_visibility="collapsed" if len(parts) > 1 else "visible")
 
 
@@ -327,9 +327,9 @@ def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo)
         elif todo:
             untagged = sum(1 for parts in todo if not ss.get(f"payer-{parts[0][0]}"))
             with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
-                title, sub = ((f"{untagged} still need{'s' if untagged == 1 else ''} a payer",
-                               "Tap who paid on each photo, or set them all at once.") if untagged else
-                              ("Everyone's tagged!", "Tally will pull the numbers off each photo. You just give them a look."))
+                title, sub = ((f"Who paid? {len(todo) - untagged} of {len(todo)} tagged",
+                               "Pick a name on each photo, or set everyone at once up top.") if untagged else
+                              ("Everyone's tagged!", "I'll read each photo. Then you check my work."))
                 st.markdown(f'<p class="tly-done-title">{title}</p><p class="tly-done-sub">{sub}</p>',
                             unsafe_allow_html=True)
                 if st.button(f"Read {plural(len(todo), 'receipt')}", type="primary", disabled=untagged > 0, key="read",
@@ -361,17 +361,17 @@ def show(event: EventInfo) -> None:
         st.warning("Tally can't read real receipts yet: add your ANTHROPIC_API_KEY to .env. "
                    "Until then, add each purchase by hand at the bottom.")
     else:
-        guide("Demo mode:", "I can only read the 14 sample receipts (I hid a few mistakes in them for you to find). "
-              "Your own receipts need the full version.", key="demo", tip=True)
+        guide("Demo mode:", f"I can only read these {len(DEMO_RECEIPTS)} sample receipts. A few have mistakes for you to catch!",
+              key="demo", tip=True)
     if can_upload and not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "tally-camera.png"), width=190, alt="")
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
     files = (st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
              if can_upload else None)
-    if is_demo() and st.button("Use the fake event's 14 receipts instead"):  # fake receipts never reach real books
+    if is_demo() and st.button(f"Use the fake event's {len(DEMO_RECEIPTS)} receipts instead"):  # fake receipts never reach real books
         files = None
-        ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
+        ss.demo = list(DEMO_RECEIPTS)
     picked = renamed([(f.name, f.getvalue()) for f in files or []])
     ss.removed = ss.get("removed", set()) & {name for name, _ in picked}  # picked again later: it's back
     sources = ([x for x in picked if x[0] not in ss.removed] if picked else

@@ -33,6 +33,16 @@ def check_math(r: Receipt) -> list[Flag]:
                  f"(off by ${money(abs(diff))})")]
 
 
+def suspect_box(r: Receipt) -> str | None:
+    """With the math off, the box most likely misread: the tax when the tax that would fix it is a normal
+    sales tax (0-12% of the items), otherwise the total. Review outlines it so nobody has to guess."""
+    if not check_math(r):
+        return None
+    items = r.computed_total - r.tax - r.tip
+    fixed_tax = r.total - items - r.tip
+    return "tax" if items > 0 and 0 <= fixed_tax <= items * Decimal("0.12") else "total"
+
+
 def check_missing_payer(r: Receipt) -> list[Flag]:
     if r.payer and r.payer.strip():
         return []
