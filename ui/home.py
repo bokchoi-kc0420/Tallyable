@@ -165,7 +165,7 @@ def switch_mode(demo: bool) -> None:
     ss.event = dict(DEFAULT_EVENT)
     start_new_event()  # the intro's Boba Social, set up and on Upload with its receipts, where the tour starts
     ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", now().date()),
-                "sources": "Dues"}  # the tour has them type the $700 that came in from dues
+                "sources": "Venmo"}  # the tour has them type the $700 that came in (clubs take it by Venmo, Zelle, cash)
     ss.demo = list(DEMO_RECEIPTS)
     ss.tour = secrets.token_hex(4)  # a fresh demo gets a fresh tour
     out().mkdir(parents=True, exist_ok=True)
@@ -180,7 +180,7 @@ def demo_band() -> None:
                   on_click=welcome.watch_demo)
         return
     with st.container(key="demo-band", horizontal=True, vertical_alignment="center"):
-        st.markdown("**You're in the demo** - a sample club with fake receipts. Play around, nothing here is real!")
+        st.markdown("**You're in the demo.** The club and receipts are fake, so feel free to play around!")
         label = "Back to my club" if (base() / "real" / "clubs.json").exists() else "Set up my club"
         st.button("Watch the intro again", icon=":material/play_circle:", key="intro-again", type="tertiary",
                   on_click=lambda: ss.update(view="intro"))

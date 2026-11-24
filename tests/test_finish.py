@@ -48,7 +48,7 @@ def test_finish_shows_open_items_moves_to_past_events_and_reopens():
     assert "is closed out!" in page and "Set your starting balance" in page  # never set: no made-up balance
     assert page.count('class="band"') == 19 and "tly-confetti" in page  # the ticket rip (a stub in 19 bands), then confetti
     assert "tly-rip" not in " ".join(h.value for h in at.run().get("html"))  # once, not on every visit to the page
-    assert any("1 person still owed" in m.value for m in at.markdown)  # honest about Member A
+    assert any("Member A still owed" in m.value for m in at.markdown)  # honest about Member A
     assert any(b.label == "Open" for b in at.sidebar.button)  # its stub sits in Past events
     assert any('class="tly-stub"' in m.value for m in at.sidebar.markdown)  # finished = torn-off stub
     hidden = ".st-key-event-group { display: none; }"

@@ -119,7 +119,7 @@ def settings(me: dict) -> None:
 def crew(me: dict) -> None:
     names = me["members"]
     with st.container(border=True, key="home-crew"):
-        st.html(f'<p class="tly-card-title">The crew</p>'
+        st.html(f'<p class="tly-card-title">Members</p>'
                 f'<img class="tly-card-tally" src="{mascot_uri("tally-high-five.png")}" alt="">')
         c = st.columns([2.4, 1, 2], vertical_alignment="bottom")
         c[0].text_input("Name", key="club-new", placeholder="Add someone, e.g. Jamie Lee", label_visibility="collapsed",

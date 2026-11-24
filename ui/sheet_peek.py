@@ -105,7 +105,7 @@ def peek(on: bool) -> None:
 @st.dialog("Here's what goes in your sheet", width="large", on_dismiss=lambda: peek(False))
 def book(views: dict, download, save) -> None:
     with st.container(key="sheet-peek"):
-        st.markdown("Sheets is for real clubs - this is what would go in yours. Grab the Excel if you want a copy!")
+        st.markdown("This is what would go in your club's sheet. Want a copy? Download the Excel.")
         with st.container(horizontal=True):
             ok = st.button("Looks good!", type="primary", icon=":material/check:", key="peek-ok")
             if download() or ok:

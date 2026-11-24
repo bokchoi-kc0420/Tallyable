@@ -233,7 +233,7 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     todo = unread(sources)
     joinable = [name for name, _ in todo if not name.lower().endswith(".pdf")]  # a PDF already holds every page
     with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
-        st.caption("Peek at the photos so you know which is which!")
+        st.caption("Peek at the photos so you know which is which.")
         if len(joinable) > 1 and not ss.get("joining"):
             st.button("One receipt, several screenshots? Join them", type="tertiary", key="join-start",
                       on_click=ss.update, kwargs={"joining": True})
@@ -267,7 +267,7 @@ def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool)
                             unsafe_allow_html=True)
                 if unread:  # once read it's one receipt in the books: Leave out on Review is the way back
                     st.button("Split", type="tertiary", key=f"split-{name}", on_click=split, args=(name,))
-        st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],),
+        st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],), format_func=lambda x: x or "Who paid?",
                      label_visibility="collapsed" if len(parts) > 1 else "visible")
 
 
@@ -327,9 +327,9 @@ def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo)
         elif todo:
             untagged = sum(1 for parts in todo if not ss.get(f"payer-{parts[0][0]}"))
             with st.container(border=True, key="read-bar", horizontal=True, vertical_alignment="center"):
-                title, sub = ((f"{untagged} still need{'s' if untagged == 1 else ''} a payer",
-                               "Tap who paid on each photo, or set them all at once.") if untagged else
-                              ("Everyone's tagged!", "Tally will pull the numbers off each photo. You just give them a look."))
+                title, sub = ((f"Who paid? {len(todo) - untagged} of {len(todo)} tagged",
+                               "Pick a name on each photo, or set everyone at once up top.") if untagged else
+                              ("Everyone's tagged!", "I'll read each photo. Then you check my work."))
                 st.markdown(f'<p class="tly-done-title">{title}</p><p class="tly-done-sub">{sub}</p>',
                             unsafe_allow_html=True)
                 if st.button(f"Read {plural(len(todo), 'receipt')}", type="primary", disabled=untagged > 0, key="read",
@@ -361,8 +361,8 @@ def show(event: EventInfo) -> None:
         st.warning("Tally can't read real receipts yet: add your ANTHROPIC_API_KEY to .env. "
                    "Until then, add each purchase by hand at the bottom.")
     else:
-        guide("Demo mode:", f"I can only read the {len(DEMO_RECEIPTS)} sample receipts (I hid a few mistakes in them "
-              "for you to find). Your own receipts need the full version.", key="demo", tip=True)
+        guide("Demo mode:", f"I can only read these {len(DEMO_RECEIPTS)} sample receipts. A few have mistakes for you to catch!",
+              key="demo", tip=True)
     if can_upload and not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "tally-camera.png"), width=190, alt="")

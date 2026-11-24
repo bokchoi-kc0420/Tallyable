@@ -211,7 +211,7 @@ def books_row(sink, receipts: list[Receipt], event: EventInfo, income: dict[str,
     if not done and not waiting:  # pushing is optional: a club can go straight on
         with st.container(border=True, key="next-card"):
             c = st.columns([4, 1.3], vertical_alignment="center")
-            c[0].markdown("**Books sorted?** Next up - pay back whoever fronted the money!")
+            c[0].markdown("Next, pay back whoever fronted the money.")
             c[1].button("Next: Close out", icon=":material/arrow_forward:", icon_position="right", width="stretch",
                         on_click=go, args=("4. Close out",), key="skip-to-closeout")
 
@@ -225,7 +225,7 @@ def show(event: EventInfo) -> None:
               key="summary-empty", to="1. Upload")
         return
     st.subheader("Income")
-    st.caption("Add what came in. I already counted what went out from your receipts.")
+    st.caption("Add the money that came in. The receipts are already logged as your expenses.")
     income = income_box()
     metrics(receipts, income)
     with st.container(border=True):
@@ -244,7 +244,7 @@ def show(event: EventInfo) -> None:
     if err:
         st.error(err)
     if sink.label != "Google Sheets" and not is_demo():
-        with st.expander("Connect Google Sheets (optional - otherwise your books come out as an Excel file)",
+        with st.expander("Connect Google Sheets (optional, or get an Excel file)",
                          icon=":material/link:", expanded=not err):
             connect.box("summary")
     views = local_views(receipts, event, income, saved_reimbursements(sink)) if any(r.counts for r in receipts) else {}

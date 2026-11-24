@@ -32,7 +32,7 @@ def open_items(lines: list) -> list[tuple[str, str]]:
     items = []
     owing = [x for x in lines if x.owed > 0 and x.payer != "(no payer)"]
     if owing:
-        who = "1 person" if len(owing) == 1 else f"{len(owing)} people"
+        who = owing[0].payer if len(owing) == 1 else f"{len(owing)} people"
         items.append((f"{who} still owed {usd(sum((x.owed for x in owing), Decimal('0')))}", "4. Close out"))
     rs = list(ss.receipts.values())
     items += [(f"{r.receipt_id} has no payer", "2. Review") for r in rs if r.counts and not (r.payer or "").strip()]
@@ -93,8 +93,8 @@ def finish_button(lines: list) -> None:
     """Bottom of Close out, pinned to the bottom of the screen (like Upload's), so it's found without scrolling."""
     items = open_items(lines)
     more = f" (+{len(items) - 1} more)" if len(items) > 1 else ""
-    note = (f"{items[0][0]}{more} - you can finish anyway, it stays listed on the event." if items else
-            "Everything's wrapped up!")
+    note = (f"{items[0][0]}{more}. You can finish anyway and sort it out later." if items else
+            "Everyone's paid and the books are in!")
     owing = any(x.owed > 0 and x.payer != "(no payer)" for x in lines)  # Mark paid is the green button until then
     with st.container(key="finish-next"), st.container(border=True, key="finish-row"):
         # Message on the left, button on the right: the same order as the other "what's next" boxes.

@@ -180,7 +180,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
                           help="Rules from whoever funds your event: student government, a department, a sponsor. "
                                "The examples are real rules from one student government, to show how it works.")
     if funder == "No funder":
-        st.caption("No funder? No problem! Paying people back is all that's left.")
+        st.caption("No funder? Then paying people back is all that's left.")
         return
     pack = my_funder() if funder == "My funder's rules" else EXAMPLES[funder]
     c = st.columns(3)
@@ -206,8 +206,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
         st.caption(note)
 
     st.divider()
-    st.markdown("**Last step:** download the funder report and attach it to your reimbursement request. "
-                "Then hit **Finish event** at the bottom!")
+    st.markdown("**Last step:** attach the funder report to your request, then **Finish event**.")
     st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
                        file_name=f"{info.event_id}_funder_report.csv",
                        data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
@@ -249,7 +248,7 @@ def show(event: EventInfo) -> None:
     left_out = [r for r in ss.receipts.values() if r.status is Status.REJECTED]
     if left_out:
         with st.expander(f"Left out of the books ({len(left_out)})"):
-            st.caption("These don't count anywhere! Not in expenses, who's owed, or the funder report.")
+            st.caption("These don't count in the books.")
             html_table([{"Receipt": r.receipt_id, "Place": r.place, "Payer": r.payer or "(none)",
                          "Total": usd(r.total), "Why": r.review_note or ""} for r in left_out], numeric=("Total",))
     if owing:
@@ -264,7 +263,7 @@ def show(event: EventInfo) -> None:
 def photos(event: EventInfo, done: list[Receipt], lines) -> None:
     """Every receipt photo, labeled, in one PDF: for the funder, or to check prices against."""
     st.subheader("Receipt photos")
-    st.caption("Every receipt photo in one PDF, all labeled. Handy for funders or your records!")
+    st.caption("Every receipt photo in one labeled PDF, for your funder or your records.")
     owed = {x.payer: x.owed for x in lines}
     paid = {r.receipt_id: ("Not yet" if owed.get(r.payer or "(no payer)", 0) > 0 else "Yes") if r.payer else ""
             for r in done}

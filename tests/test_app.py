@@ -251,7 +251,7 @@ def test_upload_says_what_to_do_and_sets_every_payer_at_once():
     at = new_app().run()
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     assert any("12 receipts in" in i.value for i in at.markdown)
-    assert any("12 still need a payer" in i.value for i in at.markdown)
+    assert any("Who paid? 0 of 12 tagged" in i.value for i in at.markdown)
     next(sb for sb in at.selectbox if sb.label == "Set every payer to").set_value("Member C")
     next(b for b in at.button if b.label == "Apply to all").click().run()
     assert at.selectbox(key="payer-R07.jpg").value == "Member C"

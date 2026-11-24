@@ -88,9 +88,8 @@ def approve_clean(flags: dict) -> None:
     n = len(clean)
     with st.container(border=True, key="clean-card"):
         c = st.columns([3.2, 1.4], vertical_alignment="center")
-        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} add{"s" if n == 1 else ""} up!</p>'
-                      '<p class="tly-done-sub">Peek at the photos to make sure I read them right - '
-                      "and leave out anything that wasn't the club's!</p>",
+        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} {"has" if n == 1 else "have"} no problems</p>'
+                      '<p class="tly-done-sub">Their totals match the photos. Approve them all, or open one to check.</p>',
                       unsafe_allow_html=True)
         # The demo's fake receipts go straight through, so the tour isn't covered by the check.
         go = approve_all if is_demo() else lambda c: ss.update(check_all=c)
@@ -213,7 +212,8 @@ def edit_form(rid: str, flags: list) -> None:
     place = c1.text_input("Place", r.place, key=f"place-{rid}")
     d = c2.date_input("Date", r.date, key=f"date-{rid}")
     options = payers() if (r.payer or "") in payers() else [*payers(), r.payer]
-    payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}")
+    payer = c3.selectbox("Payer", options, index=options.index(r.payer or ""), key=f"payer-{rid}",
+                         format_func=lambda x: x or "Who paid?")
     bought, savings, after = split_savings(r.items)
     comes_off = [o.item if o is not i else "Whole order" for i, o in zip(r.items, r.owners, strict=True) if i.price < 0]
     # Qty, item, price side by side like a printed receipt, with set widths so a long name can't push Price off screen.
@@ -222,11 +222,11 @@ def edit_form(rid: str, flags: list) -> None:
                "printed": st.column_config.TextColumn("On receipt", width=104, help="Exactly as the receipt prints it"),
                "price": st.column_config.NumberColumn("Price", format="%.2f", width=72),
                "category": st.column_config.SelectboxColumn("Category", options=["Food", "Drink", "Other"], width=88),
-               "returned": st.column_config.CheckboxColumn("Leave out", width=92,
-                                                           help="Not the club's: a personal buy, or taken back")}
+               "returned": st.column_config.CheckboxColumn("Not club's", width=92,
+                                                           help="A personal buy, or returned")}
     if r.status is Status.DRAFTED and not all(i.returned for i in r.items) and len(r.items) > 2:
         # A grocery run where only a line or two was for the club: leave everything out, then untick the club's.
-        if st.button("Mostly personal? Leave out all", key=f"all-out-{rid}", type="tertiary"):
+        if st.button("Not a club expense? Leave out this receipt", key=f"all-out-{rid}", type="tertiary"):
             ss.receipts[rid] = r.model_copy(update={"items": [i.model_copy(update={"returned": True}) for i in r.items]})
             ss.pop(f"items-{rid}", None)
             st.rerun()
