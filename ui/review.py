@@ -292,12 +292,19 @@ def edit_form(rid: str, flags: list) -> None:
     # No payer is the one flag that can't be booked past: nobody would get paid back.
     no_payer = any(f.code == "missing_payer" for f in flags)
     # Booking past a red flag is the way out, not the way forward: fixing the box is, so it isn't the green button.
+    # A small line under each way out says when to use it (Kevin's pick B), so nobody guesses which one to press.
+    b1 = b1.container(key="decide-book")
+    b2 = b2.container(key="decide-out")
     approve = b1.button(f"Book {usd(r.posted_amount)} anyway" if blocked else "Approve", type="secondary" if blocked else "primary",
                         key=f"approve-{rid}", disabled=decided or no_payer,
                         help="Pick who paid first." if no_payer and not decided else None)
+    if blocked:
+        b1.caption("Can't fix the box? The receipt's total goes in the books.")
     leave_out = b2.container(key="leave-out").button("Leave out", disabled=decided or not note.strip(),
                           help="Not a club expense (a duplicate, a personal buy, another event). "
                                "Write why in the note first.")
+    if not decided:
+        b2.caption("Not a club expense? Write why in the note first.")
     if approve or leave_out:
         set_status(rid, Status.APPROVED if approve else Status.REJECTED, review_note=note.strip() or None)
         ss.next_pick = next_drafted(rid)
