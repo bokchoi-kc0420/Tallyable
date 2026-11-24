@@ -21,6 +21,9 @@ from treasurer.sheets import GoogleSheetsSink
 ROOT = Path(__file__).parent.parent
 DATA = Path(os.getenv("TALLYABLE_OUTPUT_DIR") or ROOT / "output")
 FAKE = ROOT / "fake_event"
+# The demo's receipts: the fake event without R06 and R12, whose printed totals are wrong on the photo itself.
+# One planted math mistake is enough to show how a flag works.
+DEMO_RECEIPTS = [p for p in sorted((FAKE / "receipts").glob("*.jpg")) if p.stem not in ("R06", "R12")]
 PRIVACY = "app/static/privacy.html"
 ART = ROOT / "assets"
 STEPS = ["1. Upload", "2. Review", "3. Summary", "4. Close out"]

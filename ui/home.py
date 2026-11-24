@@ -12,7 +12,7 @@ import streamlit as st
 from treasurer import session_store
 from treasurer.ledger_view import school_year
 from ui import club, welcome
-from ui.common import FAKE, STEPS, base, is_demo, mascot_uri, mode_file, now, out, past, ss, usd
+from ui.common import DEMO_RECEIPTS, STEPS, base, is_demo, mascot_uri, mode_file, now, out, past, ss, usd
 from ui.sidebar import DEFAULT_EVENT, event_id_for, open_past, save_session, start_new_event
 
 
@@ -164,8 +164,9 @@ def switch_mode(demo: bool) -> None:
     ss.club_picked = True
     ss.event = dict(DEFAULT_EVENT)
     start_new_event()  # the intro's Boba Social, set up and on Upload with its receipts, where the tour starts
-    ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", now().date())}
-    ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
+    ss.event = {**ss.event, "name": "Boba Social", "set_up": True, "event_id": event_id_for("Boba Social", now().date()),
+                "sources": "Dues"}  # the tour has them type the $700 that came in from dues
+    ss.demo = list(DEMO_RECEIPTS)
     ss.tour = secrets.token_hex(4)  # a fresh demo gets a fresh tour
     out().mkdir(parents=True, exist_ok=True)
     (out() / "tour.txt").write_text(ss.tour)  # a refresh picks the tour back up where it was (app.py)

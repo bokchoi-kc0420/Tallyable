@@ -87,6 +87,7 @@
         ui.querySelector(".skip").textContent = s.end ? "Try another demo event" : "Skip tour";
         ui.querySelector(".go").style.display = p === "explain" ? "" : "none";  // a nudge ends on its own button
         ui.classList.toggle("nudge", p !== "explain");
+        ui.classList.toggle("free", !!s.stay);  // fixing boxes all over the page: no blur
         ui.style.display = "";
         ui.classList.remove("pop"); void ui.offsetWidth; ui.classList.add("pop");
         if (p === "explain" && !s.end) t.scrollIntoView({ block: "center", behavior: "smooth" });  // a nudge leaves the scroll alone

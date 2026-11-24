@@ -8,7 +8,7 @@ from decimal import Decimal
 import pandas as pd
 import streamlit as st
 
-from treasurer.checks import Severity, can_approve, run_checks
+from treasurer.checks import Severity, can_approve, run_checks, suspect_box
 from treasurer.images import pdf_pages
 from treasurer.models import LineItem, Status
 from ui import club
@@ -252,6 +252,10 @@ def edit_form(rid: str, flags: list) -> None:
     tax = c1.text_input("Tax", str(r.tax), key=f"tax-{rid}")
     tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
     total = c3.text_input("Total", str(r.total), key=f"total-{rid}")
+    if box := suspect_box(r):  # the math is off: outline the box that's most likely wrong, so it isn't a guess
+        (c1 if box == "tax" else c3).caption(":red[Check this one]")
+        st.html(f'<style>.st-key-{box}-{rid} [data-testid="stTextInputRootElement"] '
+                "{ border: 2px solid var(--tly-berry); }</style>")
 
     try:
         items = merge_savings(lines(edited), lines(saved) if saved is not None else [], after)

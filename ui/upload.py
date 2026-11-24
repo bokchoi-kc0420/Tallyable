@@ -18,7 +18,7 @@ from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
-from ui.common import ART, FAKE, dec, guide, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
+from ui.common import ART, DEMO_RECEIPTS, dec, guide, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
 DEMO_PACE = float(os.getenv("TALLYABLE_DEMO_PACE", "0.4"))  # seconds per demo receipt, so the reading shows (tests: 0)
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
@@ -361,17 +361,17 @@ def show(event: EventInfo) -> None:
         st.warning("Tally can't read real receipts yet: add your ANTHROPIC_API_KEY to .env. "
                    "Until then, add each purchase by hand at the bottom.")
     else:
-        guide("Demo mode:", "I can only read the 14 sample receipts (I hid a few mistakes in them for you to find). "
-              "Your own receipts need the full version.", key="demo", tip=True)
+        guide("Demo mode:", f"I can only read the {len(DEMO_RECEIPTS)} sample receipts (I hid a few mistakes in them "
+              "for you to find). Your own receipts need the full version.", key="demo", tip=True)
     if can_upload and not ss.receipts and not ss.get("demo") and not ss.get("uploads"):
         with st.container(key="mascot-empty"):
             st.image(str(ART / "tally-camera.png"), width=190, alt="")
         st.markdown('<p class="tly-hint">Drop receipts, screenshots or PDFs here</p>', unsafe_allow_html=True)
     files = (st.file_uploader("Receipt photos or PDFs", type=UPLOAD_TYPES, accept_multiple_files=True, key="uploads")
              if can_upload else None)
-    if is_demo() and st.button("Use the fake event's 14 receipts instead"):  # fake receipts never reach real books
+    if is_demo() and st.button(f"Use the fake event's {len(DEMO_RECEIPTS)} receipts instead"):  # fake receipts never reach real books
         files = None
-        ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
+        ss.demo = list(DEMO_RECEIPTS)
     picked = renamed([(f.name, f.getvalue()) for f in files or []])
     ss.removed = ss.get("removed", set()) & {name for name, _ in picked}  # picked again later: it's back
     sources = ([x for x in picked if x[0] not in ss.removed] if picked else

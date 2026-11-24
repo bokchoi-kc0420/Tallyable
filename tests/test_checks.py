@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from treasurer.checks import Severity, can_approve, check_duplicates, check_math, check_tax_rate, run_checks
+from treasurer.checks import Severity, can_approve, check_duplicates, check_math, check_tax_rate, run_checks, suspect_box
 from treasurer.loader import load_answer_key, planted_errors
 from treasurer.models import LineItem, Receipt
 
@@ -171,3 +171,9 @@ def test_a_receipt_already_counted_in_another_event_is_flagged():
     assert "R03 in Fall Potluck" in flags["R01"][0].message and flags["R01"][0].severity is Severity.BLOCK
     assert flags["R02"][0].code == "possible_duplicate"
     assert flags["R04"] == []
+
+
+def test_math_error_points_at_the_box_likely_misread():
+    assert suspect_box(make()) is None  # math is right: nothing to point at
+    assert suspect_box(make(tax="0.38")) == "tax"  # 0.83 read as 0.38: a normal tax fixes it
+    assert suspect_box(make(total="19.83")) == "total"  # no sane tax gets 10 to 19.83

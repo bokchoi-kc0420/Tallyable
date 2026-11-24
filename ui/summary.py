@@ -99,7 +99,8 @@ def income_box() -> dict[str, Decimal]:
                              label_visibility="collapsed", accept_new_options=True, on_change=rename_source, args=(n, k))
             start = ss.income.get(k, "")
             income[k] = dec(row[2].text_input(k, "" if dec(start) == 0 else start, key=f"income-{n}",
-                                              placeholder="0.00", label_visibility="collapsed"))
+                                              placeholder="700.00" if is_demo() and n == 0 else "0.00",  # the tour's $700
+                                              label_visibility="collapsed"))
             row[3].button("", icon=":material/remove:", key=f"rm-{k}", help=f"Remove {k}",
                           on_click=remove_source, args=(k,), disabled=len(names) == 1)
         foot = st.columns([3.45, 2.5], vertical_alignment="center")

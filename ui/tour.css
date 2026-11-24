@@ -27,7 +27,10 @@
 @keyframes tly-tour-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { #tly-tour.pop .bub, #tly-tour.nudge .ring { animation: none; } }
 /* Nudge: the page is theirs (no blur); the green ring pulses round the button that does the step. */
-#tly-tour.nudge .veil { display: none; }
+/* Nudge: a lighter blur with a sharp hole round the button, so the eye lands on it (Kevin, 2026-11-24). Clicks go
+   through the blur (the page is theirs now); none while the button is scrolled away, or on stops that need the whole page. */
+#tly-tour.nudge .veil { pointer-events: none; background: rgba(31,42,34,.16); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+#tly-tour.nudge.free .veil, #tly-tour.nudge.away .veil { display: none; }
 #tly-tour.nudge .ring { animation: tly-tour-pulse 1.2s ease-in-out infinite; }
 @keyframes tly-tour-pulse { 50% { outline-offset: 8px; } }
 /* The last stop: a card in the middle with his question and the two ways on (Tally peeks over its top edge). */

@@ -15,7 +15,7 @@ import streamlit as st
 
 from treasurer import backup, session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
-from ui.common import ART, DATA, FAKE, PRIVACY, ROOT, base, hosted, is_demo, out, signed_in_email, ss
+from ui.common import ART, DATA, DEMO_RECEIPTS, PRIVACY, ROOT, base, hosted, is_demo, out, signed_in_email, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
@@ -50,7 +50,7 @@ if "event" not in ss and (saved := session_store.load(out() / "session.json")): 
 if is_demo() and "tour" not in ss and (out() / "tour.txt").exists():  # a refresh mid-demo: same tour, same receipts
     ss.tour = (out() / "tour.txt").read_text()
     if not ss.get("receipts"):
-        ss.demo = sorted((FAKE / "receipts").glob("*.jpg"))
+        ss.demo = list(DEMO_RECEIPTS)
 if "opened" not in ss and "view" not in ss and not is_demo():  # every launch opens on club home, not where
     home.go_home()                                             # the last visit stopped (after the password page too)
 ss.opened = True
@@ -107,7 +107,11 @@ with st.sidebar.container(key="account"):  # the hosted link: whose books these 
     st.html(f'<p class="tly-account"><a href="{PRIVACY}" target="_blank">Privacy</a></p>')
 screen = (ss.get("view"), page, ss.event.get("finished"))
 # Last on the page, so its empty block adds no gap above the header.
-if ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: a new step should open at its top.
+if ss.get("last_screen", screen) != screen and page == "4. Close out" and not screen[2] and screen[0] != "club":
+    # Close out opens on Who's owed: the cheer at the top pushed it under the fold, so it looked empty (Kevin).
+    st.html("<script>setTimeout(() => document.querySelector('.st-key-whos-owed')?.scrollIntoView({block: 'start'}), 300)"
+            "</script>", unsafe_allow_javascript=True)
+elif ss.get("last_screen", screen) != screen:  # Streamlit keeps the scroll spot: a new step should open at its top.
     st.html("<script>document.querySelector('[data-testid=\"stMain\"]')?.scrollTo(0, 0)</script>",
             unsafe_allow_javascript=True)
 elif target := ss.pop("scroll_to", None):  # a section just finished: bring up what comes next

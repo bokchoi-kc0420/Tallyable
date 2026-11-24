@@ -29,7 +29,7 @@ def test_done_card_counts_left_out_and_goes_stale_after_an_edit():
     at = pushed_app()
     card = " ".join(m.value for m in at.markdown)
     assert "Your book is ready!" in card  # no Google Sheet in tests: the no-sheet wording
-    assert "1 receipt (13 left out) and $100.00 income" in card
+    assert "1 receipt (11 left out) and $100.00 income" in card
     assert at.button(key="to-closeout").proto.type == "primary"  # Close out is the next step now
     at.text_input(key="income-0").set_value("120.00").run()
     assert any("You changed something since" in m.value for m in at.markdown)
@@ -151,7 +151,7 @@ def test_remove_takes_a_photo_off_upload_before_its_read():
     next(b for b in at.button if b.label.startswith("Use the fake event")).click().run()
     at.button(key="drop-R02.jpg").click().run()
     next(b for b in at.button if b.label == "Apply to all").click().run()
-    assert at.button(key="read").label == "Read 13 receipts"
+    assert at.button(key="read").label == "Read 11 receipts"
     at.button(key="read").click().run()
     assert "R02" not in at.session_state["receipts"]
     assert not [b for b in at.button if (b.key or "").startswith("drop-")]  # read ones: Leave out on Review

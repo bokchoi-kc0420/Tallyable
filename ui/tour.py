@@ -47,7 +47,7 @@ STOPS = [
     {"spot": ".st-key-whos-owed", "hand": "[class*='st-key-paid-'] button", "pose": "high-five",
      "explain": "Here's who's owed what. Change how you paid them back if you want.",
      "hint": "Paid them back? Hit Mark paid!"},
-    {"spot": ".st-key-finish-event", "pose": "ledger", "hint": "Last one! Hit Finish event to close it out."},
+    {"spot": ".st-key-finish-event", "pose": "ledger", "hint": "Last step! Let's close out this event by clicking Finish event."},
     {"spot": ".st-key-next-event", "end": True, "pose": "party", "title": "Boba Social's done!",
      "explain": "Want to close out a real event for your club?"},
 ]
