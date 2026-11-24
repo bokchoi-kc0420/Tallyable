@@ -12,6 +12,7 @@ blur drops them under 50, so 150 is a cautious line.
 """
 from __future__ import annotations
 
+import functools
 import io
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -103,3 +104,20 @@ def stack(parts: list[bytes]) -> bytes:
     buf = io.BytesIO()
     out.save(buf, "JPEG", quality=90)
     return buf.getvalue()
+
+
+@functools.lru_cache(maxsize=32)  # Review draws the open receipt on every rerun
+def pdf_pages(data: bytes, width: int = 1000) -> tuple[bytes, ...]:
+    """Each page of a PDF receipt as a JPEG, so it can be looked at like a photo. Empty if it won't open."""
+    import pypdfium2 as pdfium
+    try:
+        pdf = pdfium.PdfDocument(data)
+    except pdfium.PdfiumError:
+        return ()
+    pages = []
+    for page in pdf:
+        im = page.render(scale=width / page.get_width()).to_pil().convert("RGB")
+        out = io.BytesIO()
+        im.save(out, "JPEG", quality=85)
+        pages.append(out.getvalue())
+    return tuple(pages)

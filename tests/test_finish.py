@@ -18,7 +18,7 @@ def pushed_app():
         at.session_state["receipts"][rid] = at.session_state["receipts"][rid].model_copy(
             update={"status": Status.APPROVED if rid == "R01" else Status.REJECTED})
     at.sidebar.radio[0].set_value("3. Summary").run()
-    at.text_input(key="income-Cash").set_value("100.00").run()
+    at.text_input(key="income-0").set_value("100.00").run()
     at.button(key="push-sheets").click().run()  # the demo has no club sheet: it opens a peek at the book
     at.download_button(key="push-excel").click().run()  # saving the Excel file is the push
     assert not at.exception
@@ -31,7 +31,7 @@ def test_done_card_counts_left_out_and_goes_stale_after_an_edit():
     assert "Your book is ready!" in card  # no Google Sheet in tests: the no-sheet wording
     assert "1 receipt (13 left out) and $100.00 income" in card
     assert at.button(key="to-closeout").proto.type == "primary"  # Close out is the next step now
-    at.text_input(key="income-Cash").set_value("120.00").run()
+    at.text_input(key="income-0").set_value("120.00").run()
     assert any("You changed something since" in m.value for m in at.markdown)
     again = at.download_button(key="push-again")  # no sheet: Save again hands over a fresh Excel file too
     assert again.proto.label == "Save again"

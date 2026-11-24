@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PIL import Image, ImageFilter
 
-from treasurer.images import MAX_SIDE, UnsupportedFile, prepare
+from treasurer.images import MAX_SIDE, UnsupportedFile, pdf_pages, prepare
 
 R01 = (Path(__file__).parent.parent / "fake_event" / "receipts" / "R01.jpg").read_bytes()
 
@@ -78,3 +78,11 @@ def test_same_file_name_twice_keeps_both():  # IMG_0001.jpg from two phones used
     from ui.upload import renamed
     assert [n for n, _ in renamed([("IMG_0001.jpg", b"a"), ("IMG_0001.jpg", b"b"), ("IMG_0001.jpg", b"c")])] == \
         ["IMG_0001.jpg", "IMG_0001 (2).jpg", "IMG_0001 (3).jpg"]
+
+
+def test_pdf_receipt_shows_as_a_picture():
+    pdf = io.BytesIO()
+    Image.new("RGB", (400, 600), "white").save(pdf, "PDF")
+    pages = pdf_pages(pdf.getvalue())
+    assert len(pages) == 1 and Image.open(io.BytesIO(pages[0])).width == 1000
+    assert pdf_pages(b"not a pdf") == ()

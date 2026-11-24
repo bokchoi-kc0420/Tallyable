@@ -151,9 +151,9 @@ def switch_mode(demo: bool) -> None:
     starts fresh every time: a sample club with the fake event's receipts already loaded on Upload."""
     if "event" in ss:
         save_session()
-    authed = ss.get("authed")
+    keep = {k: ss[k] for k in ("authed", "backed_up") if k in ss}  # backed_up: app.py's backup runs at the end of this run
     ss.clear()
-    ss.authed, ss.demo_mode = authed, demo
+    ss.update(keep, demo_mode=demo)
     base().mkdir(parents=True, exist_ok=True)
     mode_file().write_text("demo" if demo else "real")
     if not demo:

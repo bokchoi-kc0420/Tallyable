@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from treasurer.checks import Severity, can_approve, run_checks
+from treasurer.images import pdf_pages
 from treasurer.models import LineItem, Status
 from ui import club
 from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, is_demo, md, next_step, payers, plural, reviewed, ss, step_bar, usd
@@ -107,8 +108,9 @@ def photo(rid: str) -> None:
     if image[1] != "application/pdf":
         st.image(image[0], width="stretch", alt=f"Receipt photo for {rid}")
         return
-    st.info("PDF receipt.")
-    st.download_button("Open the PDF", image[0], file_name=f"{rid}.pdf", mime="application/pdf")
+    for n, page in enumerate(pdf_pages(image[0]), start=1):
+        st.image(page, width="stretch", alt=f"Receipt {rid}, page {n}")
+    st.download_button("Open the PDF", image[0], file_name=f"{rid}.pdf", mime="application/pdf", type="tertiary")
 
 
 def look_card(rid: str, flags: list) -> None:

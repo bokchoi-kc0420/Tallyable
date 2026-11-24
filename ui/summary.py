@@ -52,24 +52,28 @@ def set_sources(names: list[str]) -> None:
     ss.event = {**ss.event, "sources": ", ".join(names)}
 
 
-def rename_source(old: str) -> None:
+def fresh_rows() -> None:
+    """A source was renamed or removed: every row's widgets redraw from the saved names and amounts.
+    Keys are row numbers, not names: a key that changes with the name drew a second dropdown until the run finished."""
+    for k in [k for k in ss if str(k).startswith(("src-", "income-")) and str(k)[-1].isdigit()]:
+        del ss[k]
+
+
+def rename_source(n: int, old: str) -> None:
     """Dropdown callback: swap a source for another one (or a new name typed in), keeping its amount."""
-    new = str(ss.get(f"src-{old}") or "").strip().replace(",", " ")
+    new = str(ss.get(f"src-{n}") or "").strip().replace(",", " ")
     names = sources()
-    if not new or new == old or new in names:
-        ss[f"src-{old}"] = old
-        return
-    names[names.index(old)] = new
-    set_sources(names)
-    ss.income = {(new if k == old else k): v for k, v in ss.income.items()}
-    if f"income-{old}" in ss:
-        ss[f"income-{new}"] = ss[f"income-{old}"]
+    if new and new != old and new not in names:
+        names[n] = new
+        set_sources(names)
+        ss.income = {(new if k == old else k): v for k, v in ss.income.items()}
+    fresh_rows()
 
 
 def remove_source(name: str) -> None:
     set_sources([x for x in sources() if x != name])
     ss.income.pop(name, None)
-    ss.pop(f"income-{name}", None)
+    fresh_rows()
 
 
 def add_source() -> None:
@@ -91,10 +95,10 @@ def income_box() -> dict[str, Decimal]:
             icon = next((v for word, v in SOURCE_ICONS.items() if word in k.lower()), "savings")
             with row[0].container(key=f"srcicon-{n % 4}-{n}"):
                 st.markdown(f":material/{icon}:")
-            row[1].selectbox("Source", [k, *[c for c in INCOME_CHOICES if c not in names]], key=f"src-{k}",
-                             label_visibility="collapsed", accept_new_options=True, on_change=rename_source, args=(k,))
+            row[1].selectbox("Source", [k, *[c for c in INCOME_CHOICES if c not in names]], key=f"src-{n}",
+                             label_visibility="collapsed", accept_new_options=True, on_change=rename_source, args=(n, k))
             start = ss.income.get(k, "")
-            income[k] = dec(row[2].text_input(k, "" if dec(start) == 0 else start, key=f"income-{k}",
+            income[k] = dec(row[2].text_input(k, "" if dec(start) == 0 else start, key=f"income-{n}",
                                               placeholder="0.00", label_visibility="collapsed"))
             row[3].button("", icon=":material/remove:", key=f"rm-{k}", help=f"Remove {k}",
                           on_click=remove_source, args=(k,), disabled=len(names) == 1)
@@ -103,8 +107,8 @@ def income_box() -> dict[str, Decimal]:
         foot[1].markdown(f'<p class="tly-intotal">Total in <b>{usd(sum(income.values(), Decimal("0")))}</b></p>',
                          unsafe_allow_html=True)
     ss.income = {k: str(v) for k, v in income.items()}
-    for k in names:
-        typed = str(ss.get(f"income-{k}", "")).strip()
+    for n, k in enumerate(names):
+        typed = str(ss.get(f"income-{n}", "")).strip()
         if typed and dec(typed, "-1") != dec(typed, "1"):  # unreadable: dec fell back to its default
             st.warning(md(f"{k}: '{typed}' isn't an amount, so it counts as $0. Type a number like 120.00."))
         elif income[k] < 0:

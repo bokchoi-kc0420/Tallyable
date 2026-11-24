@@ -1,6 +1,7 @@
 pydantic>=2.6
 pillow>=10.0
 pillow-heif>=1.0  # iPhone photos (HEIC)
+pypdfium2>=4.0  # PDF receipts shown as pictures
 pytest>=8.0
 streamlit[auth]>=1.50  # [auth]: Google sign-in on the hosted link
 pandas>=2.0

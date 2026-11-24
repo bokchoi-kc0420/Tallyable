@@ -13,12 +13,12 @@ from pathlib import Path
 import streamlit as st
 
 from treasurer.extract import ExtractionError
-from treasurer.images import UPLOAD_TYPES, Prepared, UnsupportedFile, prepare, stack
+from treasurer.images import UPLOAD_TYPES, Prepared, UnsupportedFile, pdf_pages, prepare, stack
 from treasurer.models import LineItem, Receipt, Status
 from treasurer.reader import make_extractor
 from treasurer.sheets import EventInfo
 from ui import start
-from ui.common import ART, FAKE, dec, guide, hosted, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
+from ui.common import ART, FAKE, dec, guide, invited, is_demo, loading, md, next_step, payers, plural, ss, step_bar
 
 DEMO_PACE = float(os.getenv("TALLYABLE_DEMO_PACE", "0.4"))  # seconds per demo receipt, so the reading shows (tests: 0)
 READERS = 4  # receipts read at once: each one mostly waits on Claude, so 4 at a time take about as long as 1
@@ -84,6 +84,8 @@ def thumbnail(data: bytes, name: str) -> bytes | None:
     """A small JPEG of an upload for the Who paid grid; None for PDFs or files that won't open."""
     try:
         f = prepare(data, name)
+        if f.media_type == "application/pdf":
+            return next(iter(pdf_pages(data, 800)), None)  # its first page
         if not f.media_type.startswith("image/"):
             return None
         from PIL import Image
@@ -351,10 +353,8 @@ def show(event: EventInfo) -> None:
         with guide("You're not on the tester list yet!", "Ask Kevin to add your Google email and I'll read your "
                    "receipts. Until then, add purchases by hand at the bottom - or try the demo!", key="invite"):
             st.button("Try the demo", icon=":material/play_circle:", on_click=switch_mode, args=(True,))
-    elif reader == "claude" and hosted():
-        pass  # the hosted link always reads with Claude: nothing a treasurer needs to know
-    elif reader == "claude":  # locally: start-with-claude.bat opened the real reader
-        st.success(f"Reading receipts with Claude ({ex.model}).")
+    elif reader == "claude":
+        pass  # the real reader: which model reads is nothing a treasurer needs to know
     elif not is_demo() and os.getenv("TALLYABLE_EXTRACTOR", "").lower() == "stub":  # start.bat, not the key
         st.warning("You opened the free version - close it and open start-with-claude.bat to read real receipts.")
     elif not is_demo():

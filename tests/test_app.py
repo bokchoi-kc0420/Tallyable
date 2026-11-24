@@ -63,7 +63,7 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     next(b for b in at.button if b.label == "Approve").click().run()  # R01
 
     at.sidebar.radio[0].set_value("3. Summary").run()
-    at.text_input(key="income-Cash").set_value("100.00").run()
+    at.text_input(key="income-0").set_value("100.00").run()
     assert at.button(key="push-sheets").disabled  # other receipts still drafted
     for rid, r in list(at.session_state["receipts"].items()):
         if rid != "R01":
@@ -358,9 +358,9 @@ def test_summary_warns_about_junk_and_negative_income():
     at.sidebar.radio[0].set_value("3. Summary").run()
     at.button(key="add-source").click().run()  # Zelle
     at.button(key="add-source").click().run()  # Venmo
-    at.text_input(key="income-Zelle").set_value("abc").run()
-    at.text_input(key="income-Cash").set_value("-20").run()
-    at.text_input(key="income-Venmo").set_value("$1,200.50").run()
+    at.text_input(key="income-1").set_value("abc").run()
+    at.text_input(key="income-0").set_value("-20").run()
+    at.text_input(key="income-2").set_value("$1,200.50").run()
     warnings = " ".join(w.value for w in at.warning)
     assert "isn't an amount" in warnings and "Cash is negative" in warnings
     assert next(m for m in at.metric if m.label == "Income").value == "$1,180.50"
@@ -382,12 +382,13 @@ def test_income_sources_can_be_added_renamed_and_removed():
     assert at.session_state["event"]["sources"] == "Cash"  # a new event starts with Cash only
     at.button(key="add-source").click().run()
     at.button(key="add-source").click().run()
-    at.text_input(key="income-Venmo").set_value("40").run()
-    at.selectbox(key="src-Venmo").set_value("Ticket sales").run()
-    assert at.text_input(key="income-Ticket sales").value == "40"
+    at.text_input(key="income-2").set_value("40").run()
+    at.selectbox(key="src-2").set_value("Ticket sales").run()
+    assert at.text_input(key="income-2").value == "40"
     assert "Venmo" not in at.session_state["event"]["sources"]
     at.button(key="rm-Cash").click().run()
     assert "Cash" not in at.session_state["event"]["sources"]
+    assert at.text_input(key="income-1").value == "40"  # rows moved up a place, amounts went with them
     assert not at.exception
 
 
