@@ -258,9 +258,11 @@ def edit_form(rid: str, flags: list) -> None:
     tip = c2.text_input("Tip", str(r.tip), key=f"tip-{rid}")
     total = c3.text_input("Total", str(r.total), key=f"total-{rid}")
     if box := suspect_box(r):  # the math is off: outline the box that's most likely wrong, so it isn't a guess
-        (c1 if box == "tax" else c3).caption(":red[Check this one]")
-        st.html(f'<style>.st-key-{box}-{rid} [data-testid="stTextInputRootElement"] '
-                "{ border: 2px solid var(--tly-berry); }</style>")
+        el = f'.st-key-{box}-{rid} [data-testid="stTextInputRootElement"]'
+        st.html(f"<style>{el} {{ border: 2px solid var(--tly-berry); position: relative; overflow: visible; }}"
+                f'{el}::after {{ content: "!"; position: absolute; right: -9px; top: -9px; width: 22px; height: 22px; '
+                "border-radius: 50%; background: var(--tly-berry); color: var(--tly-white); box-shadow: 0 0 0 2px var(--tly-white); "
+                "display: flex; align-items: center; justify-content: center; font: 700 14px Fredoka, sans-serif; }</style>")
 
     try:
         items = merge_savings(lines(edited), lines(saved) if saved is not None else [], after)
