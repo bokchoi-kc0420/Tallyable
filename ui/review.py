@@ -82,14 +82,19 @@ def check_all(rids: list[str]) -> None:
 
 def approve_clean(flags: dict) -> None:
     """One click for every receipt with nothing to fix, so a big event goes fast. Flagged ones stay one by one."""
-    clean = [x for x, rec in ss.receipts.items() if rec.status is Status.DRAFTED and not needs_look(x, flags)]
+    cap = Decimal(str(club.load()["approve_cap"]))  # a misread on a big receipt costs real money, so those go one by one
+    clean = [x for x, rec in ss.receipts.items()
+             if rec.status is Status.DRAFTED and not needs_look(x, flags) and rec.posted_amount <= cap]
     if not clean:
         return
     n = len(clean)
+    big = sum(1 for rec in ss.receipts.values() if rec.status is Status.DRAFTED and rec.posted_amount > cap)
+    cap_txt = f"${int(cap)}"
+    after = f" {plural(big, 'receipt')} over {cap_txt} get checked one by one." if big else ""
     with st.container(border=True, key="clean-card"):
         c = st.columns([3.2, 1.4], vertical_alignment="center")
-        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} {"has" if n == 1 else "have"} no problems</p>'
-                      '<p class="tly-done-sub">Their totals match the photos. Approve them all, or open one to check.</p>',
+        c[0].markdown(f'<p class="tly-done-title">{plural(n, "receipt")} under {cap_txt} {"has" if n < 2 else "have"} no problems</p>'
+                      f'<p class="tly-done-sub">Their totals match the photos.{after}</p>',
                       unsafe_allow_html=True)
         # The demo's fake receipts go straight through, so the tour isn't covered by the check.
         go = approve_all if is_demo() else lambda c: ss.update(check_all=c)

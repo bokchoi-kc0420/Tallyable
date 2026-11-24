@@ -422,6 +422,7 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     rs = at.session_state["receipts"]
     approved = [x for x, r in rs.items() if r.status is Status.APPROVED]
     assert approved and len(approved) < len(rs)  # flagged ones wait for a person
+    assert all(rs[x].posted_amount <= 50 for x in approved)  # over the club's $50 cap: checked one by one
     at.sidebar.radio(key="review-pick").set_value(approved[0]).run()
     assert next(b for b in at.button if b.label == "Approve").disabled
     assert any("Approved" in m.value and "Reopen" in m.value for m in at.markdown)
