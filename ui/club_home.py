@@ -99,8 +99,9 @@ def settings(me: dict) -> None:
     with st.popover("Club settings", icon=":material/settings:", key="club-set", on_change="rerun"), st.container(key="club-settings"):
         st.html(f'<div class="tly-set-head">{badge(me["name"], "mid")}<div><b>Club settings</b>'
                 f'<small>{html.escape(me["name"])}</small></div></div>')
-        # Keys carry the saved value, so a change made elsewhere (or another club) redraws them fresh.
-        k = f"{club.current()}-{me['name']}-{me['start_balance']}-{me['target']}"
+        # One key per club. Keys that carried the saved value made a new box on every change, and Streamlit
+        # showed the old one next to it until the run finished (two Profit goal boxes merging into one).
+        k = club.current()
         st.text_input("Club name", me["name"], key=f"club-name-{k}", on_change=save_from, args=("name", f"club-name-{k}"))
         c = st.columns(2)
         c[0].number_input("Started the year with ($)", value=me["start_balance"], step=10.0, format="%.2f",

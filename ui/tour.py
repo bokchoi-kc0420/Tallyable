@@ -22,7 +22,7 @@ from ui.common import get_sink, is_demo, ss
 STOPS = [
     {"spot": ".st-key-event-group", "info": True, "pose": "hello",
      "explain": "This ticket is your Boba Social. 4 steps and it's closed - I'll show you around, then it's your turn!"},
-    {"spot": ".st-key-tag-all", "hand": ".st-key-apply-all", "pose": "clipboard",
+    {"spot": ".st-key-tag-all", "hand": ".st-key-apply-all", "pose": "clipboard", "stay": True,
      "until": ".st-key-read button:not([disabled])",
      "explain": "First up: who paid? Set everyone at once up here, or pick a name under each photo. Try it!",
      "hint": "Pick who paid, then hit Apply to all."},

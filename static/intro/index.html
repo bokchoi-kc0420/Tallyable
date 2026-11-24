@@ -83,7 +83,7 @@ canvas{position:absolute;inset:0;z-index:10}
  <div class="nav"><img src="art/logo.png"><span class="btn" style="font-size:16px;padding:8px 20px">Try the demo</span></div>
  <div class="head" id="h0"><div class="h">Event over!</div></div><div class="head off" id="h0q"><div class="h">Event over...?</div></div>
  <div class="head off" id="h1"><div class="h">Countless receipts in.</div></div>
- <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math,<br>and puts it in your club's Google Sheet.</p><a class="btn" id="handoff" href="/?demo=go" target="_top">Try it with these receipts &rarr;</a></div>
+ <div class="head off" id="h2"><div class="h">One ticket out.</div><p class="p" style="margin:12px 0 0">Tally reads every receipt, checks the math,<br>and puts it in your club's Google Sheet.</p><a class="btn" id="handoff" href="/?demo=go" target="_top" onclick="if(parent!==window){event.preventDefault();parent.location.href=parent.location.pathname+'?demo=go'}">Try it with these receipts &rarr;</a></div>
  <img id="plate" src="scene/plate.png"><img id="dopen" src="scene/door-open.png">
  <div class="floor" id="floor"></div>
  <div class="wall" id="wall"></div><div id="wins"></div>
