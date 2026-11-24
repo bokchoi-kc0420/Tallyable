@@ -107,10 +107,13 @@
       const r = el.getBoundingClientRect(), W = innerWidth, H = innerHeight, pad = 8;
       const t = phase !== "explain" && hand && hand.isConnected ? hand.getBoundingClientRect() : r;
       ui.classList.toggle("away", phase !== "explain" && (t.bottom < 0 || t.top > H));
-      const x0 = Math.max(4, r.left - pad), y0 = Math.max(4, r.top - pad), x1 = Math.min(W - 4, r.right + pad), y1 = Math.min(H - 4, r.bottom + pad);
+      // Nothing draws over the app's top bar (Streamlit Cloud's Share bar): a spot scrolled under it is cut off there.
+      const top = Math.max(4, document.querySelector('[data-testid="stHeader"]')?.getBoundingClientRect().bottom || 0);
+      const x0 = Math.max(4, r.left - pad), y0 = Math.max(top, r.top - pad), x1 = Math.min(W - 4, r.right + pad), y1 = Math.min(H - 4, r.bottom + pad);
       const rr = 16, hole = `M${x0 + rr},${y0} H${x1 - rr} Q${x1},${y0} ${x1},${y0 + rr} V${y1 - rr} Q${x1},${y1} ${x1 - rr},${y1} H${x0 + rr} Q${x0},${y1} ${x0},${y1 - rr} V${y0 + rr} Q${x0},${y0} ${x0 + rr},${y0} Z`;
       ui.querySelector(".veil").style.clipPath = `path(evenodd, "M0,0 H${W} V${H} H0 Z ${hole}")`;
-      Object.assign(ui.querySelector(".ring").style, { left: t.left - pad + "px", top: t.top - pad + "px", width: t.width + 2 * pad + "px", height: t.height + 2 * pad + "px" });
+      Object.assign(ui.querySelector(".ring").style, { left: t.left - pad + "px", top: t.top - pad + "px", width: t.width + 2 * pad + "px", height: t.height + 2 * pad + "px",
+        clipPath: `inset(${Math.max(0, top - (t.top - pad))}px -8px -8px -8px)` });
 
       const b = ui.querySelector(".bub"), bw = b.offsetWidth, bh = b.offsetHeight;
       const clear = ([x, y]) => x > t.right + pad + 16 || x + bw < t.left - pad - 16 || y > t.bottom + pad + 16 || y + bh < t.top - pad - 16;
