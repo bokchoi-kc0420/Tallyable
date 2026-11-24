@@ -66,8 +66,10 @@ def signed_in_email() -> str | None:
 def invited() -> bool:
     """The hosted link reads real receipts with Claude only for testers in INVITED (comma-separated
     Google emails in Secrets), so a stranger can't spend the API credit. Locally everyone is."""
-    emails = {e.strip().lower() for e in os.getenv("INVITED", "").split(",")}
-    return not hosted() or signed_in_email() in emails
+    if not hosted():
+        return True
+    emails = {e.strip().lower() for e in str(st.secrets.get("INVITED", "")).split(",")}  # live: a Save applies at once
+    return signed_in_email() in emails
 
 
 def base() -> Path:
