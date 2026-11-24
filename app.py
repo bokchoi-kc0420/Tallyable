@@ -74,12 +74,15 @@ if "event" in ss:
     club.seed(ss.event)  # events from before clubs existed start "My club"
 if is_demo() and not club.clubs():  # a new install: the sample club is ready to play with
     home.switch_mode(True)
+if ss.get("view") == "welcome":
+    welcome.receipt()
+    st.stop()
 if home.needs_picking():
     home.picker()
     st.stop()
-# Clicking the logo opens club home: this see-through button sits on top of it (style.css), since a logo link
-# opens a new tab. After the picker, so the welcome page gets no sidebar.
-st.sidebar.button("Club home", key="logo-home", on_click=home.go_home)
+# Clicking the logo opens the welcome page: this see-through button sits on top of it (style.css), since a logo
+# link opens a new tab. After the picker, so the welcome page gets no sidebar.
+st.sidebar.button("Welcome page", key="logo-home", on_click=lambda: ss.update(view="welcome", club_form=False))
 home.menu()
 page, event = sidebar.show()
 if ss.get("view") == "club":

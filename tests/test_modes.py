@@ -22,6 +22,12 @@ def test_demo_and_real_never_share_data():
     assert not [b for b in at.button if b.label.startswith("Use the fake event")]  # no fake receipts in real mode
     assert any("free version" in w.value for w in at.warning)  # start.bat's stand-in, not a missing key
 
+    at.button(key="logo-home").click().run()  # the logo: back to the welcome page, where your club is one click away
+    assert at.button(key="welcome-setup").label == "Open my club"
+    at.button(key="welcome-setup").click().run()
+    assert at.session_state["view"] == "club" and "Chess Club" in (base / "real" / "clubs.json").read_text()
+    assert (base / "real" / "clubs.json").read_text().count('"name"') == 1  # no second club made
+
     at.button(key="club-home").click().run()
     at.button(key="to-demo").click().run()  # the first time, the intro plays
     assert at.session_state["view"] == "intro" and not any("Demo mode" in h.value for h in at.sidebar.html)
