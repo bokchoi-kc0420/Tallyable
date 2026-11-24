@@ -15,7 +15,7 @@ import streamlit as st
 
 from treasurer import backup, session_store
 from ui import close_out, club, club_home, finish, home, review, sidebar, start, summary, tour, upload, welcome
-from ui.common import ART, DATA, FAKE, PRIVACY, ROOT, base, hosted, is_demo, out, signed_in_email, ss
+from ui.common import ART, DATA, FAKE, LANDING, PRIVACY, ROOT, base, hosted, is_demo, out, signed_in_email, ss
 
 st.set_page_config(page_title="Tallyable", page_icon=str(ART / "mascot.png"), layout="wide")
 first_load = "loaded" not in ss  # the page settles after a first run: the loading bar and blur play out (style.css)
@@ -74,15 +74,13 @@ if "event" in ss:
     club.seed(ss.event)  # events from before clubs existed start "My club"
 if is_demo() and not club.clubs():  # a new install: the sample club is ready to play with
     home.switch_mode(True)
-if ss.get("view") == "welcome":
-    welcome.receipt()
-    st.stop()
 if home.needs_picking():
     home.picker()
     st.stop()
-# Clicking the logo opens the welcome page: this see-through button sits on top of it (style.css), since a logo
-# link opens a new tab. After the picker, so the welcome page gets no sidebar.
-st.sidebar.button("Welcome page", key="logo-home", on_click=lambda: ss.update(view="welcome", club_form=False))
+# Clicking the logo opens the landing site in this tab: a see-through link on top of it (style.css), since
+# st.logo's own link opens a new tab. After the picker, so the welcome page gets no sidebar.
+with st.sidebar.container(key="logo-home"):
+    st.markdown(f'<a href="{LANDING}" target="_top" aria-label="Tallyable website"></a>', unsafe_allow_html=True)
 home.menu()
 page, event = sidebar.show()
 if ss.get("view") == "club":

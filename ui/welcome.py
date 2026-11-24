@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.common import PRIVACY, base, is_demo, mascot_uri, ss
+from ui.common import PRIVACY, base, mascot_uri, ss
 
 LINES = [("Receipts in", "done"), ("Read by Tally", "done"), ("Math checked", "done"), ("Who's owed", "done"),
          ("Pushed to your Sheet", "done")]
@@ -18,15 +18,6 @@ def watch_demo() -> None:
         switch_mode(True)
         return
     ss.view = "intro"
-
-
-def open_club(mine: bool) -> None:
-    """The welcome page's top button: your club's home, or the new-club form when there is none yet."""
-    from ui.home import go_home, switch_mode
-    if is_demo():
-        switch_mode(False)
-    go_home()
-    ss.club_form = not mine
 
 
 def start_demo_from_link() -> bool:
@@ -72,9 +63,8 @@ def receipt() -> None:
                     '<p class="big">Close out events without the receipt pile.</p>'
                     f'<div class="hr"></div>{lines}<div class="hr"></div>'
                     '<div class="tot"><span>Your time</span><span>~3 min</span></div><div class="hr"></div>')
-            mine = (base() / "real" / "clubs.json").exists()  # the logo brings people with a club here too
-            st.button("Open my club" if mine else "Set up my club", icon=":material/arrow_forward:", icon_position="right",
-                      type="primary", key="welcome-setup", width="stretch", on_click=open_club, args=(mine,))
+            st.button("Set up my club", icon=":material/arrow_forward:", icon_position="right", type="primary",
+                      key="welcome-setup", width="stretch", on_click=lambda: ss.update(club_form=True))
             st.button("Just looking? Watch the demo", icon=":material/play_circle:", key="welcome-demo",
                       width="stretch", on_click=watch_demo)
             st.html('<div class="bc"></div>')
