@@ -77,13 +77,9 @@ if is_demo() and not club.clubs():  # a new install: the sample club is ready to
 if home.needs_picking():
     home.picker()
     st.stop()
-# Clicking the logo opens club home: it presses this hidden button (style.css), since a logo link opens a new tab.
-# After the picker, so the welcome page gets no sidebar.
-with st.sidebar.container(key="logo-home"):
-    st.button("Club home", key="logo-home-go", on_click=home.go_home)
-    st.html("""<script>if (!window.tlyLogo) { window.tlyLogo = true; document.addEventListener("click", e => {
-      if (e.target.closest('.stLogo')) document.querySelector(".st-key-logo-home button")?.click(); }); }
-    </script>""", unsafe_allow_javascript=True)
+# Clicking the logo opens club home: this see-through button sits on top of it (style.css), since a logo link
+# opens a new tab. After the picker, so the welcome page gets no sidebar.
+st.sidebar.button("Club home", key="logo-home", on_click=home.go_home)
 home.menu()
 page, event = sidebar.show()
 if ss.get("view") == "club":
