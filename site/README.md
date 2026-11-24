@@ -9,14 +9,13 @@ npm run dev      # http://localhost:3000
 npm run build    # static site in site/out
 ```
 
-"Get Started" points at `NEXT_PUBLIC_APP_URL` (default `http://localhost:8501`, the local Streamlit app).
+Buttons point at the live app, https://tallyable.streamlit.app (`components/links.ts`).
 
-## Putting it online (free, when you're ready)
+## Online
 
-1. Sign in at vercel.com with GitHub and import this repo.
-2. Set **Root Directory** to `site`. Framework preset: Next.js.
-3. Add env var `NEXT_PUBLIC_APP_URL` = your Streamlit app's URL (see `docs/deploy_streamlit_cloud.md`).
-4. Deploy. Every push to main redeploys.
+Live at https://bokchoi-kc0420.github.io/Tallyable/. `.github/workflows/pages.yml` rebuilds and
+publishes it on every merge to main that touches `site/`. Image and font paths are relative
+(`art/...`, not `/art/...`) so they work under the `/Tallyable/` sub-path.
 
 Art in `public/art/` is cropped from the Figma AI drafts. `logo.png` is the final logo, unedited.
 

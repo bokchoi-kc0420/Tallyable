@@ -9,7 +9,7 @@ export function CloseoutPreview({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`rounded-3xl border-2 border-forest bg-paper ${compact ? "p-4" : "p-5 sm:p-7"} text-left`}>
       <div className="flex items-center gap-3">
-        <img src="/art/mascot-cheer.png" alt="" className={`${compact ? "w-16" : "w-20 sm:w-24"} rounded-2xl bg-cheer`} />
+        <img src="art/mascot-cheer.png" alt="" className={`${compact ? "w-16" : "w-20 sm:w-24"} rounded-2xl bg-cheer`} />
         <div>
           <p className="font-round text-lg font-semibold text-forest sm:text-xl">All 14 receipts approved!</p>
           <p className="text-sm text-ink-soft">Fall Mixer · 14 receipts · 0 flags left</p>

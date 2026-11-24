@@ -6,18 +6,18 @@ import { Reveal } from "@/components/Reveal";
 import { Sparkle } from "@/components/Sparkle";
 
 const STEPS = [
-  { img: "/art/snap.png", title: "Snap it", body: "Drop in receipt photos, order screenshots or PDFs. Tag who paid." },
-  { img: "/art/check.png", title: "We check it", body: "AI drafts each line. Code checks the math and flags anything off. You approve." },
-  { img: "/art/settle.png", title: "Settle up", body: "See who's owed, mark paybacks, and download the funder report." },
+  { img: "art/snap.png", title: "Snap it", body: "Drop in receipt photos, order screenshots or PDFs. Tag who paid." },
+  { img: "art/check.png", title: "We check it", body: "AI drafts each line. Code checks the math and flags anything off. You approve." },
+  { img: "art/settle.png", title: "Settle up", body: "See who's owed, mark paybacks, and download the funder report." },
 ];
 
 const FEATURES = [
-  { img: "/art/owed.png", title: "Who's owed", body: "Everyone who fronted money, what they're owed, and a Mark paid button." },
-  { img: "/art/report.png", title: "Funder report", body: "Checks your funder's rules, the most you can request, and when it's due." },
-  { img: "/art/events.png", title: "Every event kept", body: "Past events stay saved. Reopen one anytime from the sidebar." },
-  { img: "/art/proof.png", title: "Any proof works", body: "Paper receipts, food-court tickets, delivery screenshots, PDF invoices." },
-  { img: "/art/rules.png", title: "Your club's rules", body: "Funder rules are optional. Name your own income sources." },
-  { img: "/art/moneyin.png", title: "Money in too", body: "Log Venmo, Zelle, cash and grants so the balance sheet adds up." },
+  { img: "art/owed.png", title: "Who's owed", body: "Everyone who fronted money, what they're owed, and a Mark paid button." },
+  { img: "art/report.png", title: "Funder report", body: "Checks your funder's rules, the most you can request, and when it's due." },
+  { img: "art/events.png", title: "Every event kept", body: "Past events stay saved. Reopen one anytime from the sidebar." },
+  { img: "art/proof.png", title: "Any proof works", body: "Paper receipts, food-court tickets, delivery screenshots, PDF invoices." },
+  { img: "art/rules.png", title: "Your club's rules", body: "Funder rules are optional. Name your own income sources." },
+  { img: "art/moneyin.png", title: "Money in too", body: "Log Venmo, Zelle, cash and grants so the balance sheet adds up." },
 ];
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -36,7 +36,7 @@ export default function Home() {
       <header className="sticky top-0 z-40 border-b border-line/70 bg-cream/85 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <a href="#top" className="shrink-0 transition hover:-rotate-2 hover:scale-105" aria-label="Tallyable home">
-            <img src="/art/logo.png" alt="Tallyable" className="h-12 w-auto sm:h-16" />
+            <img src="art/logo.png" alt="Tallyable" className="h-12 w-auto sm:h-16" />
           </a>
           <div className="hidden items-center gap-6 font-medium md:flex">
             {[["#how", "How it works"], ["#features", "Features"], ["#faq", "FAQ"]].map(([href, label]) => (
@@ -127,7 +127,7 @@ export default function Home() {
       <section className="px-4 pb-16 sm:px-6">
         <Reveal>
           <div className="relative mx-auto flex max-w-5xl flex-col items-center gap-5 overflow-hidden rounded-[2rem] bg-forest px-6 py-12 text-center text-white sm:flex-row sm:text-left">
-            <img src="/art/mascot-empty.png" alt="" className="w-52 shrink-0 transition hover:rotate-6 hover:scale-110" />
+            <img src="art/mascot-empty.png" alt="" className="w-52 shrink-0 transition hover:rotate-6 hover:scale-110" />
             <div className="flex-1">
               <h2 className="font-display text-3xl font-bold sm:text-4xl">Close out your next event tonight.</h2>
               <p className="mt-2 text-white/80">Bring the receipts. Tallyable does the adding up.</p>
@@ -141,7 +141,7 @@ export default function Home() {
 
       <footer className="border-t border-line py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-sm text-ink-soft sm:flex-row sm:px-6">
-          <img src="/art/logo.png" alt="Tallyable" className="h-10 w-auto" />
+          <img src="art/logo.png" alt="Tallyable" className="h-10 w-auto" />
           <p>Built by a college club treasurer. Demo data is fake.</p>
           <a href={REPO_URL} className="font-medium text-forest underline-offset-4 hover:underline">Source on GitHub</a>
         </div>

@@ -90,11 +90,11 @@ export function Hero() {
         <Sparkle className="right-[10%] top-[4%]" delay={0.8} size={18} />
         <Sparkle className="bottom-[16%] right-[4%]" delay={1.4} size={26} />
         <Sparkle className="bottom-[6%] left-[30%]" delay={0.4} size={16} />
-        <Sticker src="/art/boba.png" alt="Boba sticker" className="left-[6%] top-[2%] w-[22%]" delay={0.3} tilt={-8} />
-        <Sticker src="/art/pizza.png" alt="Pizza sticker" className="right-[6%] top-[0%] w-[28%]" delay={0.9} />
-        <Sticker src="/art/mascot.png" alt="Tallyable's receipt mascot giving a thumbs up" className="left-[12%] top-[14%] w-[68%]" float={10} delay={0} tilt={-4} />
-        <Sticker src="/art/coins-a.png" alt="" className="bottom-[2%] left-[2%] w-[20%]" delay={1.2} />
-        <Sticker src="/art/coins-b.png" alt="" className="bottom-[6%] right-[22%] w-[15%]" delay={0.6} tilt={-10} />
+        <Sticker src="art/boba.png" alt="Boba sticker" className="left-[6%] top-[2%] w-[22%]" delay={0.3} tilt={-8} />
+        <Sticker src="art/pizza.png" alt="Pizza sticker" className="right-[6%] top-[0%] w-[28%]" delay={0.9} />
+        <Sticker src="art/mascot.png" alt="Tallyable's receipt mascot giving a thumbs up" className="left-[12%] top-[14%] w-[68%]" float={10} delay={0} tilt={-4} />
+        <Sticker src="art/coins-a.png" alt="" className="bottom-[2%] left-[2%] w-[20%]" delay={1.2} />
+        <Sticker src="art/coins-b.png" alt="" className="bottom-[6%] right-[22%] w-[15%]" delay={0.6} tilt={-10} />
         <motion.button
           ref={phone}
           type="button"
@@ -105,7 +105,7 @@ export function Hero() {
           transition={bob(4.6)}
           whileHover={{ scale: 1.12, rotate: 8 }}
         >
-          <img src="/art/phone.png" alt="" draggable={false} className="w-full select-none" />
+          <img src="art/phone.png" alt="" draggable={false} className="w-full select-none" />
           {/* A speech bubble right above the phone, pointing at it, so it reads as "this phone opens". */}
           <span className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-sun px-3 py-1 font-round text-sm font-semibold text-ink shadow transition group-hover:scale-110">
             Peek inside the app
