@@ -13,7 +13,7 @@ const QA = [
   },
   {
     q: "Where does my data live?",
-    a: "In your own Google Sheet. No Sheet? Grab the whole book as one Excel file.",
+    a: "Your rows go to your own Google Sheet, or one Excel file. The app also keeps your club's events so you can reopen them. The privacy page has the details.",
   },
   {
     q: "What happens when I hand off to the next treasurer?",
@@ -21,7 +21,7 @@ const QA = [
   },
   {
     q: "What does it cost?",
-    a: "The app is free and open source (MIT license). Reading receipts with AI runs on your own API key, at under a cent per receipt in our tests. There's also a free mode where you type rows in yourself.",
+    a: "Free. It's invite-only while I test it with a few clubs, but anyone can try the demo. Want in? Email kevchoi@ucdavis.edu.",
   },
 ];
 
