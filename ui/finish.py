@@ -197,14 +197,15 @@ def show(event: EventInfo) -> None:
             st.download_button("Download receipt photos", key="dl-photos-finish", mime="application/pdf", on_click="ignore",
                                type="tertiary", icon=":material/download:",
                                file_name=f"{event.event_id}_receipt_photos.pdf", data=lambda: receipts_pdf(done, images, state))
+            # In the card, beside the downloads: below it, a laptop screen had to scroll to find it.
+            # Reopening takes a closed event out of the club balance, so one stray click can't do it.
+            if not locked:
+                st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
+                          on_click=lambda: ss.update(confirm_reopen=True), help=REOPEN_HELP)
     if locked:
         st.caption(f"Locked: this event is from the {school_year(event.date).replace('-', '–')} school year, "
                    "so it can't be reopened or take new receipts.")
-    else:
-        # Reopening takes a closed event out of the club balance, so one stray click can't do it.
-        st.button("Reopen this event", key="reopen-event", type="tertiary", icon=":material/undo:",
-                  on_click=lambda: ss.update(confirm_reopen=True), help=REOPEN_HELP)
-        if ss.get("confirm_reopen"):
-            confirm_reopen(event.name, t["net"])
+    elif ss.get("confirm_reopen"):
+        confirm_reopen(event.name, t["net"])
     if ss.pop("rip", False):  # last, once the whole page is built: its script looks for the Past events row
         st.html(rip(event.date, event.name, len(ss.receipts), ss.event.get("color")) + confetti(), unsafe_allow_javascript=True)
