@@ -190,12 +190,11 @@
 
 /* No link icon next to headers: it only jumps to the same page */
 [data-testid="stHeaderActionElements"] { display: none !important; }
-/* Streamlit Cloud's top bar (Share, star, GitHub) stays see-through, so it never covers the page while
-   scrolling: only its icons float top right, in a small pill. Clicks pass through everywhere else. */
+/* No top bar: Streamlit Cloud's Share, star and GitHub icons are gone (Kevin's call), and the bar itself is
+   see-through, so nothing covers the page while scrolling. Manage app (bottom right) is Cloud's own and stays. */
 [data-testid="stHeader"] { background: transparent !important; pointer-events: none; }
-[data-testid="stHeader"] :is(button, a, [data-testid="stToolbar"]) { pointer-events: auto; }
-[data-testid="stToolbar"]:has(button, a) { background: var(--tly-paper); border: 1px solid var(--tly-line); border-radius: 999px;
-  padding: 0 8px; right: 16px; top: 8px; }
+[data-testid="stHeader"] :is(button, a) { pointer-events: auto; }
+[data-testid="stToolbar"] { display: none !important; }
 
 /* Fredoka for labels, buttons, tabs and names; Outfit stays for sentences and typed values */
 [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { font-family: var(--tly-head) !important;
