@@ -133,7 +133,7 @@ def read_one(ex, parts: list[tuple[str, bytes]], event_id: str, rid: str, seen: 
         more = [(x.data, x.filename) for x in fs[1:]]
         return f, ex.extract(fs[0].data, fs[0].filename, event_id, rid, more, undated), None, None
     except ExtractionError as e:
-        return f, None, f"{e} You can type it in by hand below.", None
+        return f, None, f"{e} Type it in by hand below, or take it out.", None
 
 
 def bundles(todo: list[tuple[str, bytes]]) -> list[list[tuple[str, bytes]]]:
@@ -212,25 +212,29 @@ def tagged_with() -> None:
     c[1].button("Edit", icon=":material/edit:", key="edit-members", width="stretch", on_click=start.reopen)
 
 
+def tag_all(todo: list[tuple[str, bytes]]) -> None:
+    """Set every unread photo's payer at once."""
+    c = st.container(key="tag-all").columns([3, 1, 2], vertical_alignment="bottom")
+    everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
+    # Green while anyone still needs a payer: Read stays gray until then, so this is the one button to hit.
+    # Photos come in one person at a time (Soojin's text, then Minjun's), so a name only fills the photos
+    # nobody's tagged yet: drop Kevin's, hit Kevin, drop Minjun's, hit Minjun. Once all have one, it sets them all.
+    blank = [name for name, _ in todo if not ss.get(f"payer-{name}")]
+    some = bool(blank) and len(blank) < len(todo)
+    if c[1].button("Apply to rest" if some else "Apply to all", key="apply-all", type="primary" if blank else "secondary"):
+        for name in blank or [name for name, _ in todo]:
+            ss[f"payer-{name}"] = everyone
+        retag(blank or [name for name, _ in todo])
+        st.rerun()
+
+
 def who_paid(sources: list[tuple[str, bytes]]) -> None:
     """Step 2 of the page: set everyone at once, then fix the odd one on its photo.
     An order that came as several screenshots is joined here into one card, before it's read."""
     st.subheader("Who paid")
-    c = st.container(key="tag-all").columns([3, 1, 2], vertical_alignment="bottom")
-    everyone = c[0].selectbox("Set every payer to", payers()[1:])  # no key: resets to the first name when members change
-    # Green while anyone still needs a payer: Read stays gray until then, so this is the one button to hit.
-    untagged = any(not ss.get(f"payer-{name}") for name, _ in unread(sources))
-    # Photos come in one person at a time (Soojin's text, then Minjun's), so a name only fills the photos
-    # nobody's tagged yet: drop Kevin's, hit Kevin, drop Minjun's, hit Minjun. Once all have one, it sets them all.
-    blank = [name for name, _ in sources if not ss.get(f"payer-{name}")]
-    some = bool(blank) and len(blank) < len(sources)
-    if c[1].button("Apply to rest" if some else "Apply to all", key="apply-all",
-                   type="primary" if untagged else "secondary"):
-        for name in blank or [name for name, _ in sources]:
-            ss[f"payer-{name}"] = everyone
-        retag(blank or [name for name, _ in sources])
-        st.rerun()
-    todo = unread(sources)
+    todo = unread(sources)  # read ones keep the payer they have on Review
+    if todo:
+        tag_all(todo)
     joinable = [name for name, _ in todo if not name.lower().endswith(".pdf")]  # a PDF already holds every page
     with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
         st.caption("Peek at the photos so you know which is which.")
@@ -240,19 +244,26 @@ def who_paid(sources: list[tuple[str, bytes]]) -> None:
     groups = {parts[0][0]: parts for parts in bundles(sources)}  # read ones too: a joined card stays one card
     joined = {name for parts in groups.values() for name, _ in parts[1:]}
     unread_names = {name for name, _ in todo}
+    read = {r.image_file: r for r in ss.receipts.values()}
     with st.container(key="photo-grid"):
         for n, (name, _) in enumerate(sources):
             if name not in joined:
-                photo_card(n, groups[name], pick=ss.get("joining") and name in joinable, unread=name in unread_names)
+                photo_card(n, groups[name], pick=ss.get("joining") and name in joinable, unread=name in unread_names,
+                           read=read.get(name))
 
 
-def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool) -> None:
-    """One receipt on Upload: its photo (or its screenshots side by side) and who paid."""
+def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool, read: Receipt | None) -> None:
+    """One receipt on Upload: its photo (or its screenshots side by side) and who paid.
+    A read one stays on the page, greyed with a Read tag, so you can see what's in (friend's #3).
+    Its payer is locked here: Review is the one place to change it."""
     name = parts[0][0]
-    with st.container(border=True, key=f"who-wide-{n}" if len(parts) > 1 else f"who-{n}"):
+    key = "who-read" if read else "who-wide" if len(parts) > 1 else "who"
+    with st.container(border=True, key=f"{key}-{n}"):
+        if read:
+            st.html('<span class="tly-read-tag"><i class="ms">check</i>Read</span>')
         if pick:
             st.checkbox(f"Join {name}", key=f"pick-{name}", label_visibility="collapsed")
-        elif unread:  # once read, Leave out on Review is the way to take it back
+        elif not read:  # once read, Leave out on Review is the way to take it back
             st.button("", icon=":material/close:", key=f"drop-{name}", help=f"Remove {name}", on_click=remove,
                       args=([part for part, _ in parts],))
         for col, (part, data) in zip(st.columns(len(parts)), parts, strict=True):
@@ -267,6 +278,11 @@ def photo_card(n: int, parts: list[tuple[str, bytes]], pick: bool, unread: bool)
                             unsafe_allow_html=True)
                 if unread:  # once read it's one receipt in the books: Leave out on Review is the way back
                     st.button("Split", type="tertiary", key=f"split-{name}", on_click=split, args=(name,))
+        if read:
+            who = [read.payer or ""]
+            st.selectbox(name, who, disabled=True, format_func=lambda x: x or "Who paid?", key=f"payer-read-{name}",
+                         label_visibility="collapsed" if len(parts) > 1 else "visible", help="Change who paid on Review.")
+            return
         st.selectbox(name, payers(), key=f"payer-{name}", on_change=retag, args=([name],), format_func=lambda x: x or "Who paid?",
                      label_visibility="collapsed" if len(parts) > 1 else "visible")
 
@@ -287,6 +303,8 @@ def remove(names: list[str]) -> None:
     """Callback: take a photo off the page before it's read. The uploader can't be told to let go
     of a file, so the name is remembered instead, until the file leaves the uploader."""
     ss.removed = ss.get("removed", set()) | set(names)
+    for name in names:
+        ss.failed.pop(name, None)
     ss.demo = [p for p in ss.get("demo", []) if p.name not in names]
 
 
@@ -306,13 +324,13 @@ def unread(sources: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
     return [(name, data) for name, data in sources if name not in seen]
 
 
-def next_up(sources: list[tuple[str, bytes]], ex, reader: str, event: EventInfo) -> None:
+def next_up(sources: list[tuple[str, bytes]], fresh: list[tuple[str, bytes]], ex, reader: str, event: EventInfo) -> None:
     """The page's last step, pinned to the bottom of the screen: read the photos once everyone's
     tagged, then the way on to Review. Only one of the two shows, so there's one filled button."""
     todo = bundles(unread(sources))
     # Photos picked again after they were read: say so, or the page looks like nothing happened.
     read = {r.image_file for r in ss.receipts.values()}
-    again = ", ".join(name for name, _ in sources if name in read)
+    again = ", ".join(name for name, _ in fresh if name in read)
     with st.container(key="upload-next"):
         if ss.get("joining"):
             names = picked([part for parts in todo for part in parts[:1]])
@@ -376,6 +394,10 @@ def show(event: EventInfo) -> None:
     ss.removed = ss.get("removed", set()) & {name for name, _ in picked}  # picked again later: it's back
     sources = ([x for x in picked if x[0] not in ss.removed] if picked else
                [(p.name, p.read_bytes()) for p in ss.get("demo", [])])
+    # Read receipts stay on the page after you leave it (the uploader forgets its files), first, in the order read
+    fresh, names = sources, {name for name, _ in sources}
+    sources = [(r.image_file, ss.images[rid][0]) for rid, r in ss.receipts.items()
+               if r.image_file and r.image_file not in names and rid in ss.images] + fresh
 
     tagged_with()
     todo = bundles(unread(sources))
@@ -385,7 +407,7 @@ def show(event: EventInfo) -> None:
     if sources:
         who_paid(sources)
     for name, (data, reason) in list(ss.failed.items()):
-        st.error(md(f"{name}: {reason}"))
+        st.error(md(reason.replace(name, f"**{name}**", 1) if name in reason else f"**{name}**: {reason}"))
         with st.expander(f"Enter {name} by hand"):
             if data and data[1].startswith("image/"):
                 st.image(data[0], width=360, alt=f"Receipt photo {name}")
@@ -393,4 +415,4 @@ def show(event: EventInfo) -> None:
 
     with st.expander("Add a purchase with no photo (cash, lost receipt)"):
         manual_form("manual", event)
-    next_up(sources, ex, reader, event)  # last, so it's the bar along the bottom of the screen
+    next_up(sources, fresh, ex, reader, event)  # last, so it's the bar along the bottom of the screen

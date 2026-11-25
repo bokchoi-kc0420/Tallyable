@@ -197,3 +197,12 @@ def test_finish_catches_the_books_up_on_paybacks(monkeypatch):
     at.sidebar.radio[0].set_value("4. Close out").run()
     at.button(key="finish-event").click().run()
     assert calls == [1]  # paybacks only save their own row; Finish redraws the sheet's Receipts tab once
+
+
+def test_read_receipts_stay_on_upload_locked():
+    """Friend's #3: once read, a photo stays on Upload (greyed, payer locked) instead of vanishing."""
+    at = new_app().run()
+    upload_and_draft(at)
+    at.run()  # the demo's files are gone from the uploader by now
+    locked = [s for s in at.selectbox if str(s.key).startswith("payer-read-")]
+    assert len(locked) == len(at.session_state["receipts"]) and all(s.disabled for s in locked)

@@ -178,10 +178,14 @@ class ClaudeExtractor:
 
         self.usage.append({"receipt_id": receipt_id, "model": resp.model,
                            "input": resp.usage.input_tokens, "output": resp.usage.output_tokens})
-        if resp.stop_reason == "refusal" or resp.parsed_output is None:
+        if resp.stop_reason == "refusal":
+            raise ExtractionError(f"{filename} doesn't look like a receipt.")
+        if resp.parsed_output is None:
             raise ExtractionError(f"Claude did not return a receipt for {filename} ({resp.stop_reason})")
 
         x = resp.parsed_output
+        if not any(i.unit > 0 for i in x.items):  # a selfie, a menu, a blank page
+            raise ExtractionError(f"{filename} doesn't look like a receipt.")
         note = x.unreadable_note or None
         if not x.date.strip():  # online order screens often show no date: use the event's, and say so on Review
             x.date = (undated or date.today()).isoformat()

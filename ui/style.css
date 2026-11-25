@@ -540,3 +540,17 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 /* and the same thin black edge, so it pops on any background */
 [class*="st-key-line-"]:hover::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--tly-ink);
   border-radius: 4px; pointer-events: none; }
+/* Upload: a read receipt stays, greyed, with a big Read tag (friend's #3); its payer is changed on Review */
+[class*="st-key-who-read-"] img { filter: grayscale(1); opacity: .45; }
+[class*="st-key-who-read-"] [data-baseweb="select"] { opacity: .6; }
+.tly-read-tag { position: absolute; top: 16px; left: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 16px 4px 8px; border-radius: 999px; background: var(--tly-forest); color: var(--tly-white);
+  font: 600 var(--tly-t-lg) var(--tly-head); box-shadow: var(--tly-shadow); }
+.tly-read-tag .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-xl); line-height: 1; }
+/* Upload: the uploader's tiny + becomes a whole "Add more receipts" row (friend's #16, Kevin's pick B) */
+[data-testid="stFileUploaderDropzone"]:has([data-testid="stFileChip"]) { flex-wrap: wrap; }
+[data-testid="stFileUploader"] button[aria-label="Add files"] { flex-basis: 100%; width: 100%; height: auto; margin-top: 8px;
+  padding: 8px 16px; border: 2px dashed var(--tly-forest); border-radius: var(--tly-r-in); background: var(--tly-green-tint);
+  color: var(--tly-forest); font: 600 var(--tly-t-md) var(--tly-head); }
+[data-testid="stFileUploader"] button[aria-label="Add files"] > div { display: none; }
+[data-testid="stFileUploader"] button[aria-label="Add files"]::after { content: "+  Add more receipts"; white-space: pre; }
