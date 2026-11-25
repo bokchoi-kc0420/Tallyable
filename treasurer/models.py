@@ -47,8 +47,8 @@ class LineItem(BaseModel):
     taxed: bool | None = None
     # A discount printed under one item (Member Savings): it is part of that item, so it leaves with it.
     for_item_above: bool = False
-    # Where the line sits on the photo: its top and bottom as fractions of the photo's height (Review shades it).
-    spot: tuple[float, float] | None = None
+    # Where the line sits on the photo: top, bottom, left, right as fractions of the photo's size (Review outlines it).
+    spot: tuple[float, float, float, float] | None = None
 
     @property
     def amount(self) -> Decimal:

@@ -77,8 +77,9 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
   A container word in a name can mislead: judge the contents. "Salsa jar" is Food; an empty
   "mason jar" is Other. If you can't tell, pick the most likely and say so in `unreadable_note`.
 - Set `returned` only if the receipt marks the item returned or refunded.
-- `top` and `bottom` say where the line is printed on the image, as fractions of the image's
-  height from its top edge (0 = top edge, 1 = bottom edge), so the treasurer can find it on the photo.
+- `top`, `bottom`, `left` and `right` box where the line is printed on the image, as fractions of
+  the image's height (from the top edge) and width (from the left edge), from 0 to 1, so the treasurer
+  can find it on the photo. The box covers the line's name and its price.
 """
 
 
@@ -93,13 +94,16 @@ class ExtractedItem(BaseModel):
     for_item_above: bool = False
     top: float | None = Field(None, description="Top of the printed line, as a fraction of the image height")
     bottom: float | None = Field(None, description="Bottom of the printed line, as a fraction of the image height")
+    left: float | None = Field(None, description="Left edge of the printed line, as a fraction of the image width")
+    right: float | None = Field(None, description="Right edge of the printed line, as a fraction of the image width")
 
 
-def spot(i: ExtractedItem) -> tuple[float, float] | None:
-    """The line's place on the photo, or None when the reader gave none that makes sense."""
-    if i.top is None or i.bottom is None or not 0 <= i.top < i.bottom <= 1:
+def spot(i: ExtractedItem) -> tuple[float, float, float, float] | None:
+    """The line's box on the photo, or None when the reader gave none that makes sense."""
+    box = (i.top, i.bottom, i.left, i.right)
+    if None in box or not (0 <= i.top < i.bottom <= 1 and 0 <= i.left < i.right <= 1):
         return None
-    return i.top, i.bottom
+    return box
 
 
 class ExtractedReceipt(BaseModel):

@@ -13,7 +13,7 @@ from ui.common import dec, ss, usd
 
 CATEGORIES = ["Food", "Drink", "Other"]
 # Qty, Item, On receipt, Price, Category, Not club's, remove: one set of widths for the header and every row.
-WIDTHS = [0.45, 1.7, 1.4, 0.8, 1.4, 0.6, 0.35]
+WIDTHS = [0.55, 1.6, 1.4, 0.8, 1.4, 0.6, 0.35]
 SAVING_WIDTHS = [3.4, 2, 0.9, 0.4]  # Saving, Comes off, Price, remove
 
 
@@ -134,7 +134,8 @@ def photo_bands(r: Receipt) -> None:
     """Hovering a line shades its strip of the photo. One band per photo, moved by whichever row is hovered."""
     rid = r.receipt_id
     rules = [f".stMain:has(.st-key-line-{rid}-{n}:hover) .st-key-shot-{rid} [data-testid='stImage']::after "
-             f"{{ top: {i.spot[0] * 100:.2f}%; height: {(i.spot[1] - i.spot[0]) * 100:.2f}%; opacity: 1; }}"
+             f"{{ top: {i.spot[0] * 100:.2f}%; height: {(i.spot[1] - i.spot[0]) * 100:.2f}%; "
+             f"left: {i.spot[2] * 100:.2f}%; width: {(i.spot[3] - i.spot[2]) * 100:.2f}%; opacity: 1; }}"
              for n, i in enumerate(r.items) if i.spot]
     if rules:
         st.html(f"<style>{''.join(rules)}</style>")

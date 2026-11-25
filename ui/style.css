@@ -13,7 +13,7 @@
   --tly-forest: #1C5C36; --tly-forest-2: #3F8A5A; --tly-forest-3: #6FAE82; --tly-done: #DDEBD9; --tly-green-tint: #E6F0E2; --tly-green-line: #CFE3D2; --tly-sage: #8FB38A;
   --tly-sun: #F7BE3F; --tly-sun-deep: #E0A526; --tly-sun-soft: #FCE7A8; --tly-sun-tint: #FDF1CC; --tly-sun-ink: #8A6100;
   --tly-berry: #C44536; --tly-berry-deep: #A8322A; --tly-berry-soft: #F2A196; --tly-berry-tint: #F8DEDA;
-  --tly-hover: rgba(247,190,63,.22); --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
+  --tly-hover: rgba(247,190,63,.22); --tly-highlight: #FFE600; --tly-navy: #2F4B7C; --tly-clay: #C8673C; --tly-page: #FFFCF1;
   --tly-outline: #0C4226; --tly-limb: #488B53; --tly-printer: #0E3D22; --tly-printer-slot: #06200F; --tly-led: #7CE38B; /* Tally's own lines, the welcome printer */
 }
 /* Prototype 1 look on top of the theme in .streamlit/config.toml: sticker-style hover lifts
@@ -500,8 +500,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [class*="st-key-line-"] input { padding-inline: 8px; min-width: 0; }
 [class*="st-key-line-"] .react-aria-ComboBox button { padding: 0 4px 0 0; }
 :is([class*="st-key-qty-"], [class*="st-key-price-"], [class*="st-key-tax-"], [class*="st-key-tip-"], [class*="st-key-total-"]) input { text-align: right; }
-.tly-printed { margin: 0; padding: 8px; border-radius: var(--tly-r-in); background: var(--tly-paper); color: var(--tly-soft);
-  font-size: var(--tly-t-sm); overflow-wrap: anywhere; }
+.tly-printed { margin: 0; padding: 0 8px; color: var(--tly-soft); font-size: var(--tly-t-sm); overflow-wrap: anywhere; }
 [class*="st-key-rm-line-"] button { color: var(--tly-soft); padding: 0; }
 [class*="st-key-rm-line-"] button:hover:not(:disabled) { color: var(--tly-berry-deep); }
 /* Kevin's pick 10A: adding a line is the table's own last row */
@@ -522,9 +521,11 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-dash { border: none; border-top: 2px dashed var(--tly-line-strong); margin: 8px 0; }
 /* Hovering a line shades its strip of the photo; ui/lines.photo_bands moves the band per row */
 [class*="st-key-shot-"] [data-testid="stImage"] { position: relative; }
-[class*="st-key-shot-"] [data-testid="stImage"]::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 0;
-  background: rgba(247,190,63,.35); border-block: 2px solid var(--tly-sun-deep); opacity: 0; pointer-events: none;
-  transition: opacity .15s; }
+/* Bright yellow with a dark edge, so it shows on white paper and on a dark table alike (Kevin) */
+[class*="st-key-shot-"] [data-testid="stImage"]::after { content: ""; position: absolute; left: 0; width: 0; top: 0; height: 0;
+  background: rgba(255,230,0,.38); border: 3px solid var(--tly-highlight); border-radius: 4px;
+  box-shadow: none; outline: 1px solid var(--tly-ink); opacity: 0; pointer-events: none;
+  transition: opacity .15s, top .15s, left .15s, width .15s, height .15s; }
 /* Column lines down the whole table, header included, so each column reads as its own (Kevin) */
 :is([class*="st-key-grid-"], [class*="st-key-savings-box-"]) [data-testid="stHorizontalBlock"] { gap: 0; align-self: stretch; }
 :is([class*="st-key-grid-"], [class*="st-key-savings-box-"]) [data-testid="stColumn"] { padding: 0 8px; align-self: stretch;

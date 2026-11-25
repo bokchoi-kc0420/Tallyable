@@ -160,12 +160,13 @@ def receipt_lines(r: dict, c: dict) -> tuple[list[tuple[str, str]], list[tuple[i
     return lines, rows
 
 
-def spots(r: dict, c: dict) -> list[tuple[float, float]]:
-    """Where each item sits on the photo: its top and bottom as fractions of the photo's height.
-    Exact through the middle of the paper; the slight tilt moves the edges a few pixels."""
+def spots(r: dict, c: dict) -> list[tuple[float, float, float, float]]:
+    """Where each item sits on the photo: top, bottom, left, right as fractions of the photo's size.
+    Exact through the middle of the paper; the slight tilt moves the ends a few pixels."""
     lines, rows = receipt_lines(r, c)
     full = 60 + LH * len(lines) + 40 + 2 * PAD
-    return [(round((PAD + 40 + LH * a - 4) / full, 4), round((PAD + 40 + LH * (b + 1) - 4) / full, 4)) for a, b in rows]
+    side = (round((PAD + 12) / (W + 2 * PAD), 4), round((PAD + W - 12) / (W + 2 * PAD), 4))
+    return [(round((PAD + 40 + LH * a - 8) / full, 4), round((PAD + 40 + LH * (b + 1) - 2) / full, 4), *side) for a, b in rows]
 
 
 def draw_receipt(r: dict, c: dict, seed: int) -> Image.Image:
@@ -228,7 +229,7 @@ def main() -> None:
             if r.get("duplicate_of"):  # re-photographed: different angle and lighting
                 im = im.rotate(4, fillcolor=(90, 85, 80)).point(lambda v: min(255, int(v * 0.93)))
             im.save(OUT / image, quality=88)
-        for (cat, item, unit, price, taxable, returned), (top, bottom) in zip(r["items"], spots(r, c), strict=True):
+        for (cat, item, unit, price, taxable, returned), (top, bottom, left, right) in zip(r["items"], spots(r, c), strict=True):
             rows.append(dict(
                 receipt_id=r["id"], image_file=image, place=r["place"], date=r["date"], payer=r["payer"],
                 category=cat, item=item, unit=unit, price=price,
@@ -237,6 +238,7 @@ def main() -> None:
                 planted_error=r.get("planted", ""),
                 duplicate_of=r.get("duplicate_of", ""),
                 top="" if not image else top, bottom="" if not image else bottom,
+                left="" if not image else left, right="" if not image else right,
             ))
         # what a correct review should post for this receipt
         if r.get("duplicate_of"):
