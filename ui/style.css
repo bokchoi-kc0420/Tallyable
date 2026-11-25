@@ -533,3 +533,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 :is([class*="st-key-grid-"], [class*="st-key-savings-box-"]) [data-testid="stColumn"]:not(:last-child) { border-right: 1px solid var(--tly-line); }
 [class*="st-key-head-"] [data-testid="stColumn"]:not(:last-child) { border-right-color: rgba(255,255,255,.28); }
 [class*="st-key-line-"] .react-aria-ComboBox input { padding-inline: 8px 0; text-overflow: clip; }
+/* The hovered row gets the same yellow box as its line on the photo, so the two read as a pair (Kevin) */
+[class*="st-key-grid-"] [class*="st-key-line-"]:hover, [class*="st-key-savings-box-"] [class*="st-key-line-"]:hover,
+[class*="st-key-left-out-box-"] [class*="st-key-line-"]:hover { outline: 3px solid var(--tly-highlight); outline-offset: -3px;
+  border-radius: 4px; }
