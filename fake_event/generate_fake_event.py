@@ -131,20 +131,22 @@ MONO_B = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 HAND = "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"
 
 
-def draw_receipt(r: dict, c: dict, seed: int) -> Image.Image:
-    rng = random.Random(seed)
-    f = ImageFont.truetype(MONO, 22)
-    fb = ImageFont.truetype(MONO_B, 28)
-    fh = ImageFont.truetype(HAND, 34)
-    W, lh = 560, 32
-    lines: list[tuple[str, str]] = []  # (kind, text)
-    lines += [("title", r["place"].upper()), ("c", "123 Fake St, Davis CA"), ("c", f"Date: {r['date']}"), ("rule", "")]
+W, LH, PAD = 560, 32, 80  # paper width, line height, table border around the paper
+
+
+def receipt_lines(r: dict, c: dict) -> tuple[list[tuple[str, str]], list[tuple[int, int]]]:
+    """The printed lines (kind, text), and for each item the first and last line it takes up."""
+    lines: list[tuple[str, str]] = [("title", r["place"].upper()), ("c", "123 Fake St, Davis CA"),
+                                    ("c", f"Date: {r['date']}"), ("rule", "")]
+    rows = []
     for cat, item, unit, price, taxable, returned in r["items"]:
         amt = money(D(price) * unit)
         left = f"{unit} x {item}"[:26]
+        first = len(lines)
         lines.append(("row", f"{left:<27}{amt:>9}"))
         if unit > 1:
             lines.append(("sub", f"   @ {price} ea"))
+        rows.append((first, len(lines) - 1))
     for h in r.get("hidden", []):
         lines.append(("hidden", f"{h[2]} x {h[1]:<23}{money(D(h[3]) * h[2]):>9}"))
     lines += [("rule", ""), ("row", f"{'SUBTOTAL':<27}{c['subtotal']:>9}"), ("row", f"{'TAX':<27}{c['tax']:>9}")]
@@ -155,6 +157,25 @@ def draw_receipt(r: dict, c: dict, seed: int) -> Image.Image:
             lines.append(("row", f"{'TIP':<27}{c['tip']:>9}"))
         lines.append(("total", f"{'TOTAL':<22}{c['printed_total']:>9}"))
     lines += [("rule", ""), ("c", "THANK YOU"), ("c", "SAMPLE RECEIPT - TEST DATA")]
+    return lines, rows
+
+
+def spots(r: dict, c: dict) -> list[tuple[float, float, float, float]]:
+    """Where each item sits on the photo: top, bottom, left, right as fractions of the photo's size.
+    Exact through the middle of the paper; the slight tilt moves the ends a few pixels."""
+    lines, rows = receipt_lines(r, c)
+    full = 60 + LH * len(lines) + 40 + 2 * PAD
+    side = (round((PAD + 12) / (W + 2 * PAD), 4), round((PAD + W - 12) / (W + 2 * PAD), 4))
+    return [(round((PAD + 40 + LH * a - 8) / full, 4), round((PAD + 40 + LH * (b + 1) - 2) / full, 4), *side) for a, b in rows]
+
+
+def draw_receipt(r: dict, c: dict, seed: int) -> Image.Image:
+    rng = random.Random(seed)
+    f = ImageFont.truetype(MONO, 22)
+    fb = ImageFont.truetype(MONO_B, 28)
+    fh = ImageFont.truetype(HAND, 34)
+    lh = LH
+    lines, _ = receipt_lines(r, c)
 
     H = 60 + lh * len(lines) + 40
     img = Image.new("RGB", (W, H), (250, 248, 240))
@@ -190,8 +211,8 @@ def draw_receipt(r: dict, c: dict, seed: int) -> Image.Image:
         px[x, yy] = (v, v, v - 8)
     img = img.filter(ImageFilter.GaussianBlur(0.6))
     angle = rng.uniform(-2.5, 2.5)
-    bg = Image.new("RGB", (W + 160, H + 160), (90, 85, 80))  # "table" behind the paper
-    bg.paste(img, (80, 80))
+    bg = Image.new("RGB", (W + 2 * PAD, H + 2 * PAD), (90, 85, 80))  # "table" behind the paper
+    bg.paste(img, (PAD, PAD))
     return bg.rotate(angle, expand=False, fillcolor=(90, 85, 80))
 
 
@@ -208,7 +229,7 @@ def main() -> None:
             if r.get("duplicate_of"):  # re-photographed: different angle and lighting
                 im = im.rotate(4, fillcolor=(90, 85, 80)).point(lambda v: min(255, int(v * 0.93)))
             im.save(OUT / image, quality=88)
-        for cat, item, unit, price, taxable, returned in r["items"]:
+        for (cat, item, unit, price, taxable, returned), (top, bottom, left, right) in zip(r["items"], spots(r, c), strict=True):
             rows.append(dict(
                 receipt_id=r["id"], image_file=image, place=r["place"], date=r["date"], payer=r["payer"],
                 category=cat, item=item, unit=unit, price=price,
@@ -216,6 +237,8 @@ def main() -> None:
                 returned="TRUE" if returned else "FALSE",
                 planted_error=r.get("planted", ""),
                 duplicate_of=r.get("duplicate_of", ""),
+                top="" if not image else top, bottom="" if not image else bottom,
+                left="" if not image else left, right="" if not image else right,
             ))
         # what a correct review should post for this receipt
         if r.get("duplicate_of"):

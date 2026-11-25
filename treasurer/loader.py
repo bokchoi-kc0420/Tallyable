@@ -16,6 +16,9 @@ def image_hash(path: Path) -> str | None:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+SPOT = ("top", "bottom", "left", "right")  # where each line sits on its photo, for the Review hover box
+
+
 def load_answer_key(csv_path: Path, event_id: str = "EVT-FAKE-01") -> list[Receipt]:
     base = csv_path.parent
     groups: OrderedDict[str, list[dict]] = OrderedDict()
@@ -34,7 +37,8 @@ def load_answer_key(csv_path: Path, event_id: str = "EVT-FAKE-01") -> list[Recei
             date=first["date"],
             payer=first["payer"] or None,
             items=[LineItem(category=r["category"], item=r["item"], unit=int(r["unit"]),
-                            price=Decimal(r["price"]), returned=r["returned"] in ("TRUE", "PERSONAL")) for r in rows],
+                            price=Decimal(r["price"]), returned=r["returned"] in ("TRUE", "PERSONAL"),
+                            spot=tuple(float(r[k]) for k in SPOT) if r.get("top") else None) for r in rows],
             left_out_why="returned" if any(r["returned"] == "TRUE" for r in rows) else "personal",
             tax=Decimal(first["tax"]),
             tip=Decimal(first["tip"]),
