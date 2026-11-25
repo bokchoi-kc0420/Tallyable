@@ -77,6 +77,8 @@ Copy what is printed or handwritten. Do not calculate, correct, or reconcile any
   A container word in a name can mislead: judge the contents. "Salsa jar" is Food; an empty
   "mason jar" is Other. If you can't tell, pick the most likely and say so in `unreadable_note`.
 - Set `returned` only if the receipt marks the item returned or refunded.
+- `top` and `bottom` say where the line is printed on the image, as fractions of the image's
+  height from its top edge (0 = top edge, 1 = bottom edge), so the treasurer can find it on the photo.
 """
 
 
@@ -89,6 +91,15 @@ class ExtractedItem(BaseModel):
     returned: bool = False
     taxed: bool | None = None
     for_item_above: bool = False
+    top: float | None = Field(None, description="Top of the printed line, as a fraction of the image height")
+    bottom: float | None = Field(None, description="Bottom of the printed line, as a fraction of the image height")
+
+
+def spot(i: ExtractedItem) -> tuple[float, float] | None:
+    """The line's place on the photo, or None when the reader gave none that makes sense."""
+    if i.top is None or i.bottom is None or not 0 <= i.top < i.bottom <= 1:
+        return None
+    return i.top, i.bottom
 
 
 class ExtractedReceipt(BaseModel):
@@ -175,9 +186,12 @@ class ClaudeExtractor:
         try:
             d = date.fromisoformat(x.date)
             # Qty 0 means nothing was charged (a waived bag fee): skip it, don't count it as 1.
+            # Review shows only the first photo, and a PDF's pages separately, so a spot only fits one plain photo.
+            one_photo = not more and not filename.lower().endswith(".pdf")
             items = [LineItem(category=i.category, item=i.item, printed=i.printed or None, unit=i.unit,
                               price=_money(i.price, "price", filename), returned=i.returned,
-                              taxed=i.taxed, for_item_above=i.for_item_above) for i in x.items if i.unit > 0]
+                              taxed=i.taxed, for_item_above=i.for_item_above,
+                              spot=spot(i) if one_photo else None) for i in x.items if i.unit > 0]
             return Receipt(
                 receipt_id=receipt_id, event_id=event_id, place=x.place, date=d,
                 payer=None,  # payer comes from the upload tag, never from the AI

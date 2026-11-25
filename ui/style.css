@@ -481,3 +481,54 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   padding: 16px; gap: 8px; }
 .tly-savings-head { display: flex; justify-content: space-between; margin: 0; font-family: var(--tly-head); font-weight: 600;
   font-size: var(--tly-t-lg); color: var(--tly-forest); }
+/* Review's line items: our own grid (ui/lines.py), so nothing drags, sorts or opens a menu. Green header, white rows. */
+[class*="st-key-grid-"] { background: var(--tly-card); border: 1px solid var(--tly-line); border-radius: var(--tly-r);
+  overflow: hidden; gap: 0; }
+[class*="st-key-head-"] { background: var(--tly-forest); padding: 8px 8px; }
+[class*="st-key-head-s-"] { border-radius: var(--tly-r-in); }
+[class*="st-key-head-"] p { margin: 0; color: var(--tly-white); font: 600 var(--tly-t-sm) var(--tly-head); }
+[class*="st-key-grid-"] [class*="st-key-line-"] { padding: 0 8px; border-bottom: 1px solid var(--tly-line); }
+[class*="st-key-line-"] { transition: background-color .15s; border-radius: 0; }
+[class*="st-key-line-"]:hover { background: var(--tly-hover); }
+/* Boxes read as cells until you point at the row, then they show they can be typed in */
+[class*="st-key-line-"] :is([data-testid="stTextInputRootElement"], .react-aria-ComboBox > div) { border-color: transparent;
+  height: 32px; min-height: 32px; }
+[class*="st-key-line-"]:hover :is([data-testid="stTextInputRootElement"], .react-aria-ComboBox > div),
+[class*="st-key-line-"] :is([data-testid="stTextInputRootElement"], .react-aria-ComboBox > div):focus-within { border-color: var(--tly-line-strong); }
+[class*="st-key-line-"] :is(input, .react-aria-ComboBox button) { height: 30px; padding-block: 4px; }
+[class*="st-key-line-"] :is([data-testid="stTextInput"], [data-testid="stSelectbox"], .react-aria-TextField, .react-aria-ComboBox) { height: 32px; }
+[class*="st-key-line-"] input { padding-inline: 8px; min-width: 0; }
+[class*="st-key-line-"] .react-aria-ComboBox button { padding: 0 4px 0 0; }
+:is([class*="st-key-qty-"], [class*="st-key-price-"], [class*="st-key-tax-"], [class*="st-key-tip-"], [class*="st-key-total-"]) input { text-align: right; }
+.tly-printed { margin: 0; padding: 8px; border-radius: var(--tly-r-in); background: var(--tly-paper); color: var(--tly-soft);
+  font-size: var(--tly-t-sm); overflow-wrap: anywhere; }
+[class*="st-key-rm-line-"] button { color: var(--tly-soft); padding: 0; }
+[class*="st-key-rm-line-"] button:hover:not(:disabled) { color: var(--tly-berry-deep); }
+/* Kevin's pick 10A: adding a line is the table's own last row */
+[class*="st-key-add-line-"] button { border-top: 1px dashed var(--tly-line-strong); border-radius: 0; padding: 8px 16px;
+  color: var(--tly-forest); font: 600 var(--tly-t-md) var(--tly-head); }
+[class*="st-key-add-line-"] button:hover:not(:disabled) { background: var(--tly-green-tint); transform: none; box-shadow: none; }
+/* Left-out lines: greyed in their own dashed box under the items (Kevin's pick for #8) */
+[class*="st-key-left-out-box-"] { background: var(--tly-paper-soft); border: 2px dashed var(--tly-line-strong);
+  border-radius: var(--tly-r); padding: 16px; gap: 8px; }
+.tly-out-head { display: flex; justify-content: space-between; margin: 0; font: 600 var(--tly-t-md) var(--tly-head); color: var(--tly-soft); }
+.tly-out-line { margin: 0; color: var(--tly-soft); font-family: var(--tly-body); }
+[class*="st-key-left-out-box-"] [class*="st-key-line-"] { padding: 0 8px; border-radius: var(--tly-r-in); }
+/* Tax, Tip, a dashed line, then a big Total (Kevin's pick 7B) */
+.tly-sum-label { margin: 0; font: 600 var(--tly-t-md) var(--tly-head); }
+.tly-sum-label.big { font-size: var(--tly-t-xl); }
+[class*="st-key-total-"] [data-testid="stTextInputRootElement"] { border: 2px solid var(--tly-forest); }
+[class*="st-key-total-"] input { font: 700 var(--tly-t-xl) var(--tly-head); }
+.tly-dash { border: none; border-top: 2px dashed var(--tly-line-strong); margin: 8px 0; }
+/* Hovering a line shades its strip of the photo; ui/lines.photo_bands moves the band per row */
+[class*="st-key-shot-"] [data-testid="stImage"] { position: relative; }
+[class*="st-key-shot-"] [data-testid="stImage"]::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 0;
+  background: rgba(247,190,63,.35); border-block: 2px solid var(--tly-sun-deep); opacity: 0; pointer-events: none;
+  transition: opacity .15s; }
+/* Column lines down the whole table, header included, so each column reads as its own (Kevin) */
+:is([class*="st-key-grid-"], [class*="st-key-savings-box-"]) [data-testid="stHorizontalBlock"] { gap: 0; align-self: stretch; }
+:is([class*="st-key-grid-"], [class*="st-key-savings-box-"]) [data-testid="stColumn"] { padding: 0 8px; align-self: stretch;
+  justify-content: center; }
+:is([class*="st-key-grid-"], [class*="st-key-savings-box-"]) [data-testid="stColumn"]:not(:last-child) { border-right: 1px solid var(--tly-line); }
+[class*="st-key-head-"] [data-testid="stColumn"]:not(:last-child) { border-right-color: rgba(255,255,255,.28); }
+[class*="st-key-line-"] .react-aria-ComboBox input { padding-inline: 8px 0; text-overflow: clip; }
