@@ -101,7 +101,7 @@ def income_box() -> dict[str, Decimal]:
             income[k] = dec(row[2].text_input(k, "" if dec(start) == 0 else start, key=f"income-{n}",
                                               placeholder="700.00" if is_demo() and n == 0 else "0.00",  # the tour's $700
                                               label_visibility="collapsed"))
-            row[3].button("", icon=":material/remove:", key=f"rm-{k}", help=f"Remove {k}",
+            row[3].button("", icon=":material/delete:", key=f"rm-{k}", help=f"Remove {k}", type="tertiary",
                           on_click=remove_source, args=(k,), disabled=len(names) == 1)
         foot = st.columns([3.45, 2.5], vertical_alignment="center")
         foot[0].button("Add a source", icon=":material/add:", key="add-source", on_click=add_source)
