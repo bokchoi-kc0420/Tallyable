@@ -566,7 +566,8 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [class*="st-key-owe-"] [class*="st-key-amount-"] input { text-align: right; font-family: var(--tly-head); font-weight: 600; }  /* money lines up right */
 /* Summary: each income row's remove is a red trash can, like Review's rows (friend's #29), tucked toward the amount */
 .st-key-income-box [class*="st-key-rm-"] { margin-left: -8px; }
-.st-key-income-box [class*="st-key-rm-"] button { color: var(--tly-berry); padding: 8px; }
+.st-key-income-box [class*="st-key-rm-"] button { color: var(--tly-berry); height: 40px; min-height: 40px; padding: 0 8px; display: flex; align-items: center; }
+.st-key-income-box [class*="st-key-rm-"] button * { line-height: 1; margin: 0; }
 .st-key-income-box [class*="st-key-rm-"] button:hover:not(:disabled) { color: var(--tly-berry-deep); background: var(--tly-berry-tint); }
 .st-key-income-box [class*="st-key-rm-"] button:disabled { color: var(--tly-line-strong); }
 .st-key-income-box [class*="st-key-rm-"] [data-testid="stIconMaterial"] { font-size: var(--tly-t-xl); }

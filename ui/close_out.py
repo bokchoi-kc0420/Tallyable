@@ -81,13 +81,13 @@ def person_card(n: int, x, receipts: int, last: dict | None, event_id: str) -> t
         c[0].markdown(f'<div class="tly-owe-who"><span class="tly-owe-avatar" style="background:{color}">'
                       f'{html.escape(club.initials(x.payer) or "?")}</span><div>'
                       f'<p class="tly-owe-name"><b data-payer="{html.escape(x.payer)}">{html.escape(x.payer)}</b>{part}</p>'
-                      f'<p class="tly-owe-sub">{plural(receipts, "receipt")} · fronted {usd(x.fronted)}</p></div></div>',
+                      f'<p class="tly-owe-sub">{plural(receipts, "receipt")}, fronted {usd(x.fronted)}</p></div></div>',
                       unsafe_allow_html=True)
         if done:
             pop = x.payer in ss.get("just_paid", ())  # coins burst out once, right after Mark as paid
             coins = COINS.replace('class="tly-coins"', f'class="tly-coins" data-for="{html.escape(x.payer)}"') if pop else ""
-            how = (f" · {last['method']}, {date.fromisoformat(str(last['date'])):%b} {date.fromisoformat(str(last['date'])).day}"
-                   if last else "")
+            day = date.fromisoformat(str(last["date"])) if last else None
+            how = f"by {last['method']} on {day:%b} {day.day}" if last else ""
             c[1].html(f'<p class="tly-owe-done{" pop" if pop else ""}"><i class="ms">check_circle</i>Fully reimbursed'
                     f'<small>{html.escape(how)}</small>{coins}</p>')
             st.html(bar(x))
