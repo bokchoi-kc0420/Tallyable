@@ -486,7 +486,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   overflow: hidden; gap: 0; }
 [class*="st-key-head-"] { background: var(--tly-forest); padding: 8px 8px; }
 [class*="st-key-head-s-"] { border-radius: var(--tly-r-in); }
-[class*="st-key-head-"] p { margin: 0; color: var(--tly-white); font: 600 var(--tly-t-sm) var(--tly-head); }
+[class*="st-key-head-"] p { margin: 0; color: var(--tly-white); font: 600 var(--tly-t-sm) var(--tly-head); white-space: nowrap; }
 [class*="st-key-grid-"] [class*="st-key-line-"] { padding: 0 8px; border-bottom: 1px solid var(--tly-line); }
 [class*="st-key-line-"] { transition: background-color .15s; border-radius: 0; }
 [class*="st-key-line-"]:hover { background: var(--tly-hover); }

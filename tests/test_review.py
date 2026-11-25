@@ -32,7 +32,7 @@ def test_a_saving_under_a_deposit_line_belongs_to_the_item_above_it():
 
 
 def test_lines_leave_out_put_back_add_and_remove():
-    """The grid's own boxes: Not club's moves a line to Left out, Put back brings it back, add and trash work."""
+    """The grid's own boxes: Leave out moves a line to Left out, Put back brings it back, add and trash work."""
     from test_app import new_app, upload_and_draft
     at = new_app().run()
     upload_and_draft(at)

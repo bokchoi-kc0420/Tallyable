@@ -12,8 +12,8 @@ from treasurer.models import LineItem, Receipt
 from ui.common import dec, ss, usd
 
 CATEGORIES = ["Food", "Drink", "Other"]
-# Qty, Item, On receipt, Price, Category, Not club's, remove: one set of widths for the header and every row.
-WIDTHS = [0.55, 1.6, 1.4, 0.8, 1.4, 0.6, 0.35]
+# Qty, Item, On receipt, Price, Category, Leave out, remove: one set of widths for the header and every row.
+WIDTHS = [0.55, 1.4, 1.35, 0.8, 1.35, 0.95, 0.3]
 SAVING_WIDTHS = [3.4, 2, 0.9, 0.4]  # Saving, Comes off, Price, remove
 
 
@@ -82,7 +82,7 @@ def bought_row(rid: str, n: int, i: LineItem, can_drop: bool) -> LineItem | None
         price = c[3].text_input("Price", f"{i.price:.2f}", key=f"price-{k}", label_visibility="collapsed")
         cat = c[4].selectbox("Category", CATEGORIES, index=CATEGORIES.index(i.category), key=f"cat-{k}",
                              label_visibility="collapsed")
-        out = c[5].checkbox("Not club's", i.returned, key=f"out-{k}", label_visibility="collapsed",
+        out = c[5].checkbox("Leave out", i.returned, key=f"out-{k}", label_visibility="collapsed",
                             help="A personal buy, or returned: it moves to Left out")
         remove(c[6], rid, n, can_drop)
     return edited(i, unit=unit, item=item.strip(), price=dec(price), category=cat, returned=out)
@@ -151,7 +151,7 @@ def items_table(r: Receipt) -> tuple[list[LineItem | None], str]:
     savings = [n for n, i in enumerate(r.items) if i.price < 0]
     items: list[LineItem | None] = list(r.items)
     with st.container(key=f"grid-{rid}"):
-        head(["Qty", "Item", "On receipt", "Price", "Category", "Not club's", ""], WIDTHS, f"head-{rid}")
+        head(["Qty", "Item", "On receipt", "Price", "Category", "Leave out", ""], WIDTHS, f"head-{rid}")
         for n in bought:
             items[n] = bought_row(rid, n, r.items[n], can_drop)
         # Kevin's pick 10A: the last row of the table, right where the new line will show up
