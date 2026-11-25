@@ -69,7 +69,8 @@ ss.setdefault("income", {})
 if ss.get("view") == "intro":
     welcome.intro()
     st.stop()
-st.logo(str(ART / "logo.png"), size="large")
+# The logo opens the landing site. In a new tab: Streamlit Cloud's frame blocks same-tab links out of the app.
+st.logo(str(ART / "logo.png"), size="large", link=LANDING)
 if "event" in ss:
     club.seed(ss.event)  # events from before clubs existed start "My club"
 if is_demo() and not club.clubs():  # a new install: the sample club is ready to play with
@@ -77,10 +78,6 @@ if is_demo() and not club.clubs():  # a new install: the sample club is ready to
 if home.needs_picking():
     home.picker()
     st.stop()
-# Clicking the logo opens the landing site in this tab: a see-through link on top of it (style.css), since
-# st.logo's own link opens a new tab. After the picker, so the welcome page gets no sidebar.
-with st.sidebar.container(key="logo-home"):
-    st.markdown(f'<a href="{LANDING}" target="_top" aria-label="Tallyable website"></a>', unsafe_allow_html=True)
 home.menu()
 page, event = sidebar.show()
 if ss.get("view") == "club":
