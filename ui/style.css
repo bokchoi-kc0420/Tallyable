@@ -535,5 +535,8 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [class*="st-key-line-"] .react-aria-ComboBox input { padding-inline: 8px 0; text-overflow: clip; }
 /* The hovered row gets the same yellow box as its line on the photo, so the two read as a pair (Kevin) */
 [class*="st-key-grid-"] [class*="st-key-line-"]:hover, [class*="st-key-savings-box-"] [class*="st-key-line-"]:hover,
-[class*="st-key-left-out-box-"] [class*="st-key-line-"]:hover { outline: 3px solid var(--tly-highlight); outline-offset: -3px;
-  border-radius: 4px; }
+[class*="st-key-left-out-box-"] [class*="st-key-line-"]:hover { outline: 4px solid var(--tly-highlight); outline-offset: -4px;
+  border-radius: 4px; position: relative; }
+/* and the same thin black edge, so it pops on any background */
+[class*="st-key-line-"]:hover::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--tly-ink);
+  border-radius: 4px; pointer-events: none; }
