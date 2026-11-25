@@ -552,7 +552,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [data-testid="stMarkdownContainer"] p.tly-owe-left { margin: 0; text-align: right; }
 .tly-owe-left span { display: inline-block; padding: 8px 16px; border-radius: 999px; background: var(--tly-sun-tint); color: var(--tly-sun-ink);
   font: 600 var(--tly-t-md) var(--tly-head); }
-.tly-owe-done { position: relative; display: flex; align-items: center; gap: 8px; margin: 0; padding-top: 8px;
+.tly-owe-done { position: relative; display: flex; align-items: center; gap: 8px; margin: 0; padding: 16px 0 0 24px;
   font: 600 var(--tly-t-lg) var(--tly-head); color: var(--tly-forest); }
 .tly-owe-done.pop { animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
 .tly-owe-done small { font: 400 var(--tly-t-sm) var(--tly-body); color: var(--tly-ink-2); }
@@ -565,7 +565,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [class*="st-key-owe-"] [class*="st-key-paid-"] button { padding-inline: 8px; white-space: nowrap; }
 [class*="st-key-owe-"] [class*="st-key-amount-"] input { text-align: right; font-family: var(--tly-head); font-weight: 600; }  /* money lines up right */
 /* Summary: each income row's remove is a red trash can, like Review's rows (friend's #29), tucked toward the amount */
-.st-key-income-box [class*="st-key-rm-"] { margin-left: -16px; }
+.st-key-income-box [class*="st-key-rm-"] { margin-left: -8px; }
 .st-key-income-box [class*="st-key-rm-"] button { color: var(--tly-berry); padding: 8px; }
 .st-key-income-box [class*="st-key-rm-"] button:hover:not(:disabled) { color: var(--tly-berry-deep); background: var(--tly-berry-tint); }
 .st-key-income-box [class*="st-key-rm-"] button:disabled { color: var(--tly-line-strong); }
