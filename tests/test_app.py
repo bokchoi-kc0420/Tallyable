@@ -2,6 +2,7 @@
 import csv
 import os
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -34,10 +35,11 @@ def upload_and_draft(at, payer: str | None = None) -> None:
 
 
 def owed_table(at) -> list[dict]:
-    """Still owed per payer, read back from the Who's owed ledger."""
+    """Still owed per payer, read back from the Who's owed cards: the Paying now box, gone once paid."""
     import re
-    cells = [re.search(r'data-payer="(.*?)">(.*?)<', m.value) for m in at.markdown]
-    return [{"Payer": c[1], "Owed": c[2]} for c in cells if c]
+    names = [c[1] for m in at.markdown if (c := re.search(r'data-payer="(.*?)"', m.value))]
+    boxes = {t.key.split("-")[1]: t.key.rsplit("-", 1)[1] for t in at.text_input if str(t.key).startswith("amount-")}
+    return [{"Payer": n, "Owed": f"${boxes[n]}" if n in boxes else "$0.00"} for n in names]
 
 
 def test_draft_approve_and_fix():
@@ -104,21 +106,23 @@ def test_one_click_mark_paid_uses_chosen_method():
     assert not list(csv.DictReader((Path(os.environ["TALLYABLE_OUTPUT_DIR"], "demo", "reimbursements.csv")).read_text().splitlines()))
 
 
-def test_mark_paid_back_updates_owed():
+def test_pay_back_part_keeps_the_rest_owed():
+    """Friend's #21: type less than owed, and the person stays on with the rest still owed."""
     at = new_app().run()
     upload_and_draft(at, "Member B")
     r = at.session_state["receipts"]["R01"]
     at.session_state["receipts"]["R01"] = r.model_copy(update={"status": Status.APPROVED, "payer": "Member B"})
     at.sidebar.radio[0].set_value("4. Close out").run()
-    form_amount = next(t for t in at.text_input if t.label == "Amount")
-    form_amount.set_value("99.00")
-    next(b for b in at.button if b.label == "Mark paid back").click().run()
-    assert any("overpay" in e.value for e in at.error)       # more than owed is blocked
-    form_amount = next(t for t in at.text_input if t.label == "Amount")
-    form_amount.set_value("")
-    next(b for b in at.button if b.label == "Mark paid back").click().run()
+    owed = Decimal(owed_table(at)[0]["Owed"].lstrip("$"))
+    box = next(t for t in at.text_input if str(t.key).startswith("amount-"))
+    box.set_value(str(owed + 1)).run()
+    assert at.button(key="paid-Member B").disabled  # more than owed is blocked
+    box = next(t for t in at.text_input if str(t.key).startswith("amount-"))
+    box.set_value("5").run()
+    at.button(key="paid-Member B").click().run()
     assert not at.exception
-    assert owed_table(at)[0]["Owed"] == "$0.00"
+    assert Decimal(owed_table(at)[0]["Owed"].lstrip("$")) == owed - 5
+    assert any("Partly reimbursed" in m.value for m in at.markdown)
 
 
 def test_password_gate(monkeypatch):

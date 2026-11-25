@@ -61,21 +61,8 @@
 .tly-account { margin: 0; font: var(--tly-t-sm) var(--tly-body); color: var(--tly-soft); overflow-wrap: anywhere; }
 .tly-account a { color: inherit; font-weight: 600; }
 /* Who's owed: the payback ledger */
-.tly-led { margin: 0; font-size: var(--tly-t-md); font-variant-numeric: tabular-nums; }
-.tly-led.num { text-align: right; } .tly-led b { font-family: var(--tly-head); font-weight: 600; }
-.tly-led.head { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-sm); color: var(--tly-soft); }
-.tly-led.total { font-family: var(--tly-head); font-weight: 600; font-size: var(--tly-t-md); }
-.tly-led.soft { color: var(--tly-soft); font-size: var(--tly-t-sm); }
-.tly-led.paid { font-family: var(--tly-head); font-weight: 600; color: var(--tly-forest); text-align: center; }
 /* Every amount and count in one font, so the columns read the same; bold is only weight */
-.tly-led.num:not(.head), .tly-led.num b { font-family: var(--tly-body); font-size: var(--tly-t-md); } .tly-led.num b, .tly-led.total.num { font-weight: 700; }
-.st-key-whos-owed [data-testid="stMarkdownContainer"]:has(> .tly-led) { margin-bottom: 0; }
-.st-key-whos-owed { gap: 0; }  /* rows own their spacing, so text sits in the middle between the lines */
-.st-key-whos-owed [data-testid="stLayoutWrapper"] { border-top: 1px solid var(--tly-line); padding: 8px 0; }
-.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) { border-top: none; border-bottom: 2px solid var(--tly-ink); padding: 8px 0; }
 .st-key-whos-owed [data-testid="stCaption"], .st-key-whos-owed .stButton { margin-top: 8px; }
-.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.head) + [data-testid="stLayoutWrapper"] { border-top: none; }
-.st-key-whos-owed [data-testid="stLayoutWrapper"]:has(.total) { border-top: 2px solid var(--tly-ink); }
 /* Tickets (shape B, Kevin's pick): a classic admit-one outline. A notch top and bottom at the perforation and small round
    bites down the short ends, cut with one mask. Each piece sets where its cuts go: --mx the notches, --ml / --mr the bites
    on the left / right end (off the piece when it has none). The ticket is its color all over; the white .info sits on it,
@@ -419,8 +406,6 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .tly-edit-hint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0 16px;
   font-family: var(--tly-body); font-size: var(--tly-t-sm); color: var(--tly-soft); }
 .tly-edit-hint .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-lg); color: var(--tly-sun-ink); }
-.tly-led.paid { position: relative; }
-.tly-paid-pop { display: inline-block; animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
 .tly-coins i { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; translate: -50% -50%;
   border-radius: 50%; background: var(--tly-sun); border: 2px solid var(--tly-sun-deep); color: var(--tly-sun-ink);
   font: 700 var(--tly-t-xs)/20px var(--tly-head); font-style: normal; text-align: center; opacity: 0; pointer-events: none;
@@ -429,7 +414,7 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 @keyframes tly-coin { 0% { opacity: 1; transform: translate(0, 0) scale(.5); }
   60% { opacity: 1; transform: translate(var(--x), var(--y)) scale(1) rotate(200deg); }
   100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 24px)) scale(.9) rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .tly-coins { display: none; } .tly-paid-pop { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tly-coins { display: none; } .tly-owe-done.pop { animation: none; } }
 /* Labels line up with the text inside the boxes (inputs are white via secondaryBackgroundColor). */
 [data-testid="stMain"] [data-testid="stWidgetLabel"] { padding-left: 8px; margin-bottom: -4px; }
 [data-testid="stProgress"] [role="progressbar"] > div { background-color: var(--tly-paper); }
@@ -554,3 +539,27 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
   color: var(--tly-forest); font: 600 var(--tly-t-md) var(--tly-head); }
 [data-testid="stFileUploader"] button[aria-label="Add files"] > div { display: none; }
 [data-testid="stFileUploader"] button[aria-label="Add files"]::after { content: "+  Add more receipts"; white-space: pre; }
+/* Close out: one card per person who's owed (friend's #21, Kevin's pick D1). The colored left edge is set per card. */
+[class*="st-key-owe-"] { padding: 16px 16px 8px; gap: 8px; }
+[class*="st-key-owe-done-"] { background: var(--tly-green-tint); border-color: var(--tly-green-line); }
+.tly-owe-who { display: flex; align-items: center; gap: 16px; }
+.tly-owe-avatar { flex: none; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: var(--tly-white); font: 600 var(--tly-t-md) var(--tly-head); }
+[data-testid="stMarkdownContainer"] p.tly-owe-name { margin: 0; font: 600 var(--tly-t-lg) var(--tly-head); }
+[data-testid="stMarkdownContainer"] p.tly-owe-sub { margin: 0; font-size: var(--tly-t-sm); color: var(--tly-soft); }
+.tly-owe-part { margin-left: 8px; padding: 0 8px; border-radius: 999px; background: var(--tly-sun-tint); color: var(--tly-sun-ink);
+  font: 600 var(--tly-t-xs) var(--tly-head); vertical-align: middle; white-space: nowrap; }
+[data-testid="stMarkdownContainer"] p.tly-owe-left { margin: 0; text-align: right; }
+.tly-owe-left span { display: inline-block; padding: 8px 16px; border-radius: 999px; background: var(--tly-sun-tint); color: var(--tly-sun-ink);
+  font: 600 var(--tly-t-md) var(--tly-head); }
+.tly-owe-done { position: relative; display: flex; align-items: center; gap: 8px; margin: 0; padding-bottom: 8px;
+  font: 600 var(--tly-t-lg) var(--tly-head); color: var(--tly-forest); }
+.tly-owe-done.pop { animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
+.tly-owe-done small { font: 400 var(--tly-t-sm) var(--tly-body); color: var(--tly-ink-2); }
+.tly-owe-done .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-xl); }
+.tly-owe-bar { display: flex; margin-top: 8px; flex-wrap: wrap; justify-content: space-between; font-size: var(--tly-t-xs); color: var(--tly-ink-2); }
+.tly-owe-bar b { font-family: var(--tly-head); color: var(--tly-forest); }
+.tly-owe-bar .track { flex-basis: 100%; height: 8px; margin-top: 4px; border-radius: 999px; background: var(--tly-paper); overflow: hidden; }
+.tly-owe-bar .track div { height: 100%; border-radius: 999px; background: var(--tly-forest-2); }
+.st-key-owe-foot .tly-edit-hint { padding: 0; margin: 0; }
+[class*="st-key-owe-"] [class*="st-key-paid-"] button { padding-inline: 8px; white-space: nowrap; }

@@ -206,3 +206,17 @@ def test_read_receipts_stay_on_upload_locked():
     at.run()  # the demo's files are gone from the uploader by now
     locked = [s for s in at.selectbox if str(s.key).startswith("payer-read-")]
     assert len(locked) == len(at.session_state["receipts"]) and all(s.disabled for s in locked)
+
+
+def test_start_page_clears_and_selects_everyone():
+    """Friend's #23: Select everyone fills Who's in, then Clear all empties it."""
+    at = new_app().run()
+    at.session_state["event"] = {**at.session_state["event"], "set_up": False, "members": "Member A, Member B"}
+    at.session_state["receipts"] = {}
+    at.run()
+    assert at.button(key="roster-all").label == "Select everyone"  # two of the club's four are in
+    at.button(key="roster-all").click().run()
+    assert at.session_state["event"]["members"].count(",") == 3
+    assert at.button(key="roster-all").label == "Clear all"
+    at.button(key="roster-all").click().run()
+    assert at.session_state["event"]["members"] == ""
