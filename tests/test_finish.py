@@ -172,7 +172,8 @@ def test_a_must_fix_receipt_says_what_it_books_and_no_payer_cant_be_booked():
     at = new_app().run()
     upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
-    at.sidebar.radio(key="review-pick").set_value("R02").run()  # its math doesn't add up
+    at.session_state["review-pick"] = "R02"
+    at.run()  # its math doesn't add up
     approve = at.button(key="approve-R02")
     assert approve.label.startswith("Book $") and not approve.disabled
     at.selectbox(key="payer-R02").set_value("").run()

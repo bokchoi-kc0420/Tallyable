@@ -17,8 +17,6 @@ from treasurer.sheets import EventInfo
 from ui import club, finish
 from ui.common import ART, dec, get_sink, guide, html_table, md, money_panel, now, plural, saved_reimbursements, ss, step_bar, usd
 
-EXAMPLES = {"Example: event grant (up to $2,500)": co.CFC, "Example: yearly grant ($250)": co.ORG}
-
 
 def save_paybacks(sink, paybacks: list[Reimbursement]) -> bool:
     who = paybacks[0].payer if len(paybacks) == 1 else f"{len(paybacks)} people"
@@ -167,17 +165,16 @@ def my_funder() -> co.RulePack:
 
 
 def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None:
-    st.subheader("Funder rules")
     if ss.event.get("late"):
         st.info("A receipt added after closing out changes the totals. If you already sent your funder a report, "
                 "send the new numbers.")
-    funder = st.selectbox("Funder", ["No funder", "My funder's rules", *EXAMPLES], key="funder",
-                          help="Rules from whoever funds your event: student government, a department, a sponsor. "
-                               "The examples are real rules from one student government, to show how it works.")
-    if funder == "No funder":
-        st.caption("No funder? Then paying people back is all that's left.")
-        return
-    pack = my_funder() if funder == "My funder's rules" else EXAMPLES[funder]
+    # Tucked away until treasurer interviews say whether funders with rules are common (friend's #22).
+    with st.expander("Applying for a grant? Check it against the rules", key="funder-box"):
+        funder_check(info, done, reimbursed)
+
+
+def funder_check(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None:
+    pack = my_funder()
     c = st.columns(3)
     attendees = int(c[0].number_input("Attendees", min_value=1, value=ss.event["attendees"]))
     req_text = c[1].text_input("Requested ($, optional)", "")
@@ -187,14 +184,12 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
     flags = co.check_funder_rules(event, done, pack, requested, applied_on)
     most, steps = co.max_request(event, done, pack)
     st.metric("Most you can request", usd(most), border=True)
-    with st.expander("How that was worked out"):
-        for s in steps:
-            st.write(md(s))
+    st.caption(md("  \n".join(steps)))  # no expander: they can't nest
     due = co.report_due(event, pack)
     if due:
         st.caption(f"{pack.name}: report due {due.isoformat()}")
     if not flags:
-        st.success(f"No {pack.name} rules broken.")
+        st.success("Nothing here breaks these rules.")
     for f in flags:
         {Severity.BLOCK: st.error, Severity.WARN: st.warning, Severity.INFO: st.info}[f.severity](md(f.message))
     for note in pack.notes:
@@ -202,7 +197,7 @@ def funder_rules(info: EventInfo, done: list[Receipt], reimbursed: dict) -> None
 
     st.divider()
     st.markdown("**Last step:** attach the funder report to your request, then **Finish event**.")
-    st.download_button("Download funder report (CSV)", type="primary", icon=":material/download:",
+    st.download_button("Download funder report (CSV)", icon=":material/download:",
                        file_name=f"{info.event_id}_funder_report.csv",
                        data=co.funder_report_csv(event, done, pack, requested, applied_on, reimbursed),
                        mime="text/csv")

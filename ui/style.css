@@ -571,3 +571,19 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 .st-key-income-box [class*="st-key-rm-"] button:hover:not(:disabled) { color: var(--tly-berry-deep); background: var(--tly-berry-tint); }
 .st-key-income-box [class*="st-key-rm-"] button:disabled { color: var(--tly-line-strong); }
 .st-key-income-box [class*="st-key-rm-"] [data-testid="stIconMaterial"] { font-size: var(--tly-t-xl); }
+/* Review: "All N receipts" pop-up, one photo card per receipt (friend's #5, Kevin's pick D). The open one has a green edge. */
+[class*="st-key-all-card-"], [class*="st-key-all-on-"] { padding: 8px; gap: 8px; }
+[class*="st-key-all-on-"] { border: 2px solid var(--tly-forest); }
+[class*="st-key-all-card-"] img, [class*="st-key-all-on-"] img { height: 112px; object-fit: cover; object-position: top;
+  border-radius: var(--tly-r-in); }
+[class*="st-key-jump-"] button { justify-content: flex-start; text-align: left; padding: 0; min-height: 0;
+  font: 600 var(--tly-t-sm) var(--tly-head); color: var(--tly-ink); }
+[class*="st-key-jump-"] button:hover { color: var(--tly-forest); }
+p.tly-all-status { margin: 0; font: 500 var(--tly-t-sm) var(--tly-head); color: var(--tly-soft); }
+p.tly-all-status.flag { color: var(--tly-berry); }
+p.tly-all-status.ok { color: var(--tly-forest); }
+/* the whole card is the button: its name's click area stretches over the photo */
+[class*="st-key-all-card-"], [class*="st-key-all-on-"] { position: relative; }
+[class*="st-key-jump-"], [class*="st-key-jump-"] * { position: static !important; transform: none !important; }  /* a transform would shrink the click area to the name */
+[class*="st-key-jump-"] button::after { content: ""; position: absolute; inset: 0; z-index: 1; cursor: pointer; }
+[class*="st-key-all-card-"] [data-testid="stElementContainer"]:has(img), [class*="st-key-all-on-"] [data-testid="stElementContainer"]:has(img) { pointer-events: none; }

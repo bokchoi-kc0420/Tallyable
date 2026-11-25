@@ -52,7 +52,8 @@ def test_draft_approve_and_fix():
     next(b for b in at.button if b.label == "Approve").click().run()
     assert at.session_state["receipts"]["R01"].status.value == "approved"
 
-    at.sidebar.radio(key="review-pick").set_value("R02").run()
+    at.session_state["review-pick"] = "R02"
+    at.run()
     assert any("off by" in m.value for m in at.markdown)
     at.text_input(key="tax-R02").set_value("7.18").run()
     assert not any("off by" in m.value for m in at.markdown)
@@ -84,7 +85,6 @@ def test_push_logs_time_and_close_out_shows_owed_and_report():
     assert not at.exception
     owed = owed_table(at)
     assert [r["Payer"] for r in owed] == ["Member A"] and owed[0]["Owed"] == "$31.07"
-    at.selectbox(key="funder").set_value("Example: event grant (up to $2,500)").run()
     assert any(b.label.startswith("Download funder report") for b in at.get("download_button"))
 
 
@@ -215,21 +215,22 @@ def drafted_app(payer="Member A"):
 
 def test_approve_moves_to_next_receipt_and_reopen_undoes():
     at = drafted_app()
-    assert at.sidebar.radio(key="review-pick").value == "R01"
+    assert at.session_state["review-pick"] == "R01"
     next(b for b in at.button if b.label == "Approve").click().run()
-    assert at.sidebar.radio(key="review-pick").value == "R02"
+    assert at.session_state["review-pick"] == "R02"
     at.button(key="review-prev").click().run()  # the arrow goes back to the approved one
-    assert at.sidebar.radio(key="review-pick").value == "R01" and at.button(key="review-prev").disabled
+    assert at.session_state["review-pick"] == "R01" and at.button(key="review-prev").disabled
     next(b for b in at.button if b.label == "Reopen").click().run()
     assert at.session_state["receipts"]["R01"].status.value == "drafted"
 
 
-def test_needs_attention_filter_lists_only_flagged_receipts():
+def test_all_receipts_pop_up_shows_status_and_opens_one():
     at = drafted_app()
-    at.sidebar.selectbox(key="review-filter").set_value("Needs attention").run()
-    shown = {o.split(" ")[1] for o in at.sidebar.radio(key="review-pick").options}
-    assert "R02" in shown  # the demo's one math mistake
-    assert "R01" not in shown
+    at.button(key="all-open").click().run()
+    status = {m.value for m in at.get("html") if "tly-all-status" in m.value}
+    assert any("Has a flag" in v for v in status)  # R02, the demo's one math mistake
+    at.button(key="jump-R03").click().run()
+    assert at.session_state["review-pick"] == "R03" and not at.session_state["all_open"]
 
 
 def test_failed_push_shows_message_instead_of_crashing(monkeypatch):
@@ -271,10 +272,12 @@ def test_each_step_says_what_comes_next():
     next(b for b in at.button if b.label == "Go to Review →").click().run()
     assert at.sidebar.radio(key="step").value == "2. Review"
     assert not any(b.label == "Go to Summary →" for b in at.button)
-    at.sidebar.radio(key="review-pick").set_value("R01").run()
+    at.session_state["review-pick"] = "R01"
+    at.run()
     assert next(b for b in at.button if b.label == "Leave out").disabled  # needs a reason first
     for rid in list(at.session_state["receipts"]):  # leave everything out: quickest way to finish review
-        at.sidebar.radio(key="review-pick").set_value(rid).run()
+        at.session_state["review-pick"] = rid
+        at.run()
         at.text_input(key=f"note-{rid}").set_value("not ours").run()
         next(b for b in at.button if b.label == "Leave out").click().run()
     assert at.session_state["receipts"]["R01"].review_note == "not ours"
@@ -427,7 +430,8 @@ def test_approve_all_clean_leaves_flagged_ones_and_decided_ones_lock():
     approved = [x for x, r in rs.items() if r.status is Status.APPROVED]
     assert approved and len(approved) < len(rs)  # flagged ones wait for a person
     assert all(rs[x].posted_amount <= 50 for x in approved)  # over the club's $50 cap: checked one by one
-    at.sidebar.radio(key="review-pick").set_value(approved[0]).run()
+    at.session_state["review-pick"] = approved[0]
+    at.run()
     assert next(b for b in at.button if b.label == "Approve").disabled
     assert any("Approved" in m.value and "Reopen" in m.value for m in at.markdown)
     assert not at.exception
@@ -451,8 +455,6 @@ def test_my_funder_rules():
     at.sidebar.radio[0].set_value("2. Review").run()
     at.button(key="approve-clean").click().run()
     at.sidebar.radio[0].set_value("4. Close out").run()
-    assert at.selectbox(key="funder").value == "No funder"
-    at.selectbox(key="funder").set_value("My funder's rules").run()
     next(t for t in at.text_input if t.label == "Funder name").set_value("Student Government").run()
     assert not at.exception
     assert any("Student Government" in m.value for m in [*at.markdown, *at.success, *at.caption, *at.error, *at.warning, *at.info])
