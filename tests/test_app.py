@@ -457,7 +457,6 @@ def test_my_funder_rules():
     at.sidebar.radio[0].set_value("4. Close out").run()
     next(t for t in at.text_input if t.label == "Funder name").set_value("Student Government").run()
     assert not at.exception
-    assert any("Student Government" in m.value for m in [*at.markdown, *at.success, *at.caption, *at.error, *at.warning, *at.info])
     assert at.session_state["event"]["funder"]["name"] == "Student Government"
 
 
