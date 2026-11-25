@@ -75,7 +75,8 @@ def person_card(n: int, x, receipts: int, last: dict | None, event_id: str) -> t
     done = x.owed <= 0
     with st.container(border=True, key=f"owe-{'done-' if done else ''}{n}"):
         st.html(f"<style>.st-key-owe-{'done-' if done else ''}{n} {{ border-left: 8px solid {color}; }}</style>")
-        c = st.columns([CARD[0], sum(CARD[1:])] if done else CARD, gap="small", vertical_alignment="bottom")
+        # A paid card has no labeled boxes, so its line sits level with the name
+        c = st.columns([CARD[0], sum(CARD[1:])] if done else CARD, gap="small", vertical_alignment="center" if done else "bottom")
         part = '<span class="tly-owe-part">Partly reimbursed</span>' if x.reimbursed > 0 and not done else ""
         c[0].markdown(f'<div class="tly-owe-who"><span class="tly-owe-avatar" style="background:{color}">'
                       f'{html.escape(club.initials(x.payer) or "?")}</span><div>'

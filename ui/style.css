@@ -552,14 +552,15 @@ p.tly-start-sub, [data-testid="stMarkdownContainer"] p.tly-start-sub { color: va
 [data-testid="stMarkdownContainer"] p.tly-owe-left { margin: 0; text-align: right; }
 .tly-owe-left span { display: inline-block; padding: 8px 16px; border-radius: 999px; background: var(--tly-sun-tint); color: var(--tly-sun-ink);
   font: 600 var(--tly-t-md) var(--tly-head); }
-.tly-owe-done { position: relative; display: flex; align-items: center; gap: 8px; margin: 0; padding-bottom: 8px;
+.tly-owe-done { position: relative; display: flex; align-items: center; gap: 8px; margin: 0; padding-top: 8px;
   font: 600 var(--tly-t-lg) var(--tly-head); color: var(--tly-forest); }
 .tly-owe-done.pop { animation: tly-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
 .tly-owe-done small { font: 400 var(--tly-t-sm) var(--tly-body); color: var(--tly-ink-2); }
 .tly-owe-done .ms { font-family: "Material Symbols Rounded"; font-style: normal; font-size: var(--tly-t-xl); }
-.tly-owe-bar { display: flex; margin-top: 8px; flex-wrap: wrap; justify-content: space-between; font-size: var(--tly-t-xs); color: var(--tly-ink-2); }
+.tly-owe-bar { display: flex; margin-top: 16px; flex-wrap: wrap; justify-content: space-between; font-size: var(--tly-t-sm); color: var(--tly-ink-2); }
 .tly-owe-bar b { font-family: var(--tly-head); color: var(--tly-forest); }
 .tly-owe-bar .track { flex-basis: 100%; height: 8px; margin-top: 4px; border-radius: 999px; background: var(--tly-paper); overflow: hidden; }
 .tly-owe-bar .track div { height: 100%; border-radius: 999px; background: var(--tly-forest-2); }
 .st-key-owe-foot .tly-edit-hint { padding: 0; margin: 0; }
 [class*="st-key-owe-"] [class*="st-key-paid-"] button { padding-inline: 8px; white-space: nowrap; }
+[class*="st-key-owe-"] [class*="st-key-amount-"] input { text-align: right; font-family: var(--tly-head); font-weight: 600; }  /* money lines up right */
