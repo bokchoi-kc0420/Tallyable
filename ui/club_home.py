@@ -38,6 +38,8 @@ def go(step: str | None) -> None:
     if step is None:
         start_new_event()
         return
+    if not ss.receipts and not ss.event.get("members"):  # the club's first event was opened before the club had members
+        ss.event = {**ss.event, "members": ", ".join(club.load()["members"])}
     ss.step = step
     ss.view = "event"
 

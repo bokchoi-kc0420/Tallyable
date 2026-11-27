@@ -172,7 +172,8 @@ def test_a_must_fix_receipt_says_what_it_books_and_no_payer_cant_be_booked():
     at = new_app().run()
     upload_and_draft(at)
     at.sidebar.radio[0].set_value("2. Review").run()
-    at.sidebar.radio(key="review-pick").set_value("R02").run()  # its math doesn't add up
+    at.session_state["review-pick"] = "R02"
+    at.run()  # its math doesn't add up
     approve = at.button(key="approve-R02")
     assert approve.label.startswith("Book $") and not approve.disabled
     at.selectbox(key="payer-R02").set_value("").run()
@@ -197,3 +198,26 @@ def test_finish_catches_the_books_up_on_paybacks(monkeypatch):
     at.sidebar.radio[0].set_value("4. Close out").run()
     at.button(key="finish-event").click().run()
     assert calls == [1]  # paybacks only save their own row; Finish redraws the sheet's Receipts tab once
+
+
+def test_read_receipts_stay_on_upload_locked():
+    """Friend's #3: once read, a photo stays on Upload (greyed, payer locked) instead of vanishing."""
+    at = new_app().run()
+    upload_and_draft(at)
+    at.run()  # the demo's files are gone from the uploader by now
+    locked = [s for s in at.selectbox if str(s.key).startswith("payer-read-")]
+    assert len(locked) == len(at.session_state["receipts"]) and all(s.disabled for s in locked)
+
+
+def test_start_page_clears_and_selects_everyone():
+    """Friend's #23: Select everyone fills Who's in, then Clear all empties it."""
+    at = new_app().run()
+    at.session_state["event"] = {**at.session_state["event"], "set_up": False, "members": "Member A, Member B"}
+    at.session_state["receipts"] = {}
+    at.run()
+    assert at.button(key="roster-all").label == "Select everyone"  # two of the club's four are in
+    at.button(key="roster-all").click().run()
+    assert at.session_state["event"]["members"].count(",") == 3
+    assert at.button(key="roster-all").label == "Clear all"
+    at.button(key="roster-all").click().run()
+    assert at.session_state["event"]["members"] == ""

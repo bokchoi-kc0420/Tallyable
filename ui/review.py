@@ -11,7 +11,7 @@ from treasurer.checks import Severity, can_approve, run_checks, suspect_box
 from treasurer.images import pdf_pages
 from treasurer.models import Status
 from ui import club
-from ui.common import FLAG_ICON, ICON, STATUS_CHIP, dec, guide, is_demo, md, next_step, payers, plural, reviewed, ss, step_bar, usd
+from ui.common import STATUS_CHIP, dec, guide, is_demo, md, next_step, payers, plural, reviewed, ss, step_bar, usd
 from ui.lines import items_table, set_items
 
 FLAG_LOOK = {"math_error": (":material/calculate:", "The math doesn't add up"),
@@ -233,6 +233,30 @@ def edit_form(rid: str, flags: list) -> None:
         st.rerun()
 
 
+STATUS_WORD = {Status.DRAFTED: ("To check", "soft"), Status.APPROVED: ("Approved", "ok"),
+               Status.REJECTED: ("Left out", "soft"), Status.POSTED: ("In the books", "ok")}
+
+
+@st.dialog("All receipts", width="large", on_dismiss=lambda: ss.update(all_open=False))
+def all_receipts(ids: list[str], flags: dict) -> None:
+    """Every receipt as a photo card with where it stands (friend's #5, Kevin's pick D): tap one to open it.
+    Replaces the sidebar list, which got long and chaotic on a big event."""
+    st.caption("Tap one to open it.")
+    for row in range(0, len(ids), 5):
+        for col, rid in zip(st.columns(5), ids[row:row + 5], strict=False):
+            r = ss.receipts[rid]
+            word, tone = ("Has a flag", "flag") if r.status is Status.DRAFTED and needs_look(rid, flags) else STATUS_WORD[r.status]
+            with col.container(border=True, key=f"all-{'on' if rid == ss['review-pick'] else 'card'}-{rid}"):
+                image = ss.images.get(rid)
+                if image and image[1] != "application/pdf":
+                    st.image(image[0], width="stretch")
+                picked = st.button(f"{rid} {r.place}", key=f"jump-{rid}", type="tertiary")
+                st.html(f'<p class="tly-all-status {tone}">{word}</p>')
+            if picked:  # a full rerun, not just the pop-up's, so the page opens that receipt
+                ss["review-pick"], ss.all_open = rid, False
+                st.rerun()
+
+
 def show() -> None:
     st.header("Review")
     step_bar("2. Review")
@@ -251,26 +275,19 @@ def show() -> None:
                   "Now let's add the money that came in.",
                   "Go to Summary →", "3. Summary", "to-summary")
 
-    show_only = st.sidebar.selectbox("Show", ["All", "Not reviewed yet", "Needs attention"], key="review-filter")
-    ids = [x for x, rec in ss.receipts.items()
-           if show_only == "All" or (show_only == "Not reviewed yet" and rec.status is Status.DRAFTED)
-           or (show_only == "Needs attention" and needs_look(x, flags))]
-    if not ids:
-        st.success("You've cleared everything here.")
-        return
-    labels = {x: f"{ICON[ss.receipts[x].status]} {x} · {ss.receipts[x].place}" + (f" {FLAG_ICON}" if needs_look(x, flags) else "")
-              for x in ids}
-    # next_pick is set by "Approve" so the next receipt opens by itself. The pick is written back on every run:
-    # the labels change as you edit (place, status), and Streamlit then forgets a pick it wasn't just handed.
-    pick = ss.pop("next_pick") if ss.get("next_pick") in ids else ss.get("review-pick")
-    ss["review-pick"] = pick if pick in ids else ids[0]
-    rid = st.sidebar.radio("Receipts", ids, format_func=labels.get, key="review-pick",
-                           help=f"{ICON[Status.DRAFTED]} to review · {ICON[Status.APPROVED]} approved · "
-                                f"{ICON[Status.REJECTED]} left out · {ICON[Status.POSTED]} posted · {FLAG_ICON} has a flag")
+    ids = list(ss.receipts)
+    # next_pick is set by "Approve" so the next receipt opens by itself
+    pick = ss.pop("next_pick", None) or ss.get("review-pick")
+    rid = ss["review-pick"] = pick if pick in ids else ids[0]
+    if ss.get("all_open"):
+        all_receipts(ids, flags)
     left, right = st.columns([2, 3])
     with left:
         # Back and forward through the same list as the sidebar, so an approved receipt is one click away.
         i = ids.index(rid)
+        with st.container(horizontal=True, horizontal_alignment="center", key="all-row"):
+            st.button(f"All {len(ids)} receipts", icon=":material/grid_view:", key="all-open",
+                      on_click=ss.update, kwargs={"all_open": True})
         with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center", key="review-nav"):
             st.button("", icon=":material/arrow_back:", key="review-prev", help="Previous receipt", disabled=i == 0,
                       on_click=ss.__setitem__, args=("review-pick", ids[i - 1]))

@@ -59,6 +59,9 @@ def members_box() -> None:
         ss.roster = names  # the widget shows this event's members, even right after an Add
         st.pills("Who's in", options, selection_mode="multi", key="roster", label_visibility="collapsed",
                  on_change=pick_members, args=(options,))
+        everyone = set(names) >= set(options)  # friend's #23: one click to clear the list, or fill it again
+        st.button("Clear all" if everyone else "Select everyone", type="tertiary", key="roster-all",
+                  on_click=set_members, args=([] if everyone else options,))
 
 
 @st.cache_data(show_spinner=False, max_entries=200)
